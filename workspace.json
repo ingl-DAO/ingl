@@ -3,6 +3,7 @@
   "version": 2,
   "projects": {
     "landing": "apps/landing",
-    "landing-e2e": "apps/landing-e2e"
+    "landing-e2e": "apps/landing-e2e",
+    "program": "libs/program"
   }
 }
