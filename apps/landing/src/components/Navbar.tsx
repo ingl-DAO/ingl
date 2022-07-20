@@ -35,7 +35,7 @@ const NAV_LINKS: { name: string; link: string; isExternal: boolean }[] = [
 ];
 
 export default function Navbar() {
-  const [isSideBarOpen, setIsSideBarOpen] = useState<boolean>(true);
+  const [isSideBarOpen, setIsSideBarOpen] = useState<boolean>(false);
   const toggleDrawer = (event: React.KeyboardEvent | React.MouseEvent) => {
     if (
       event &&
