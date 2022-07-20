@@ -1,0 +1,8 @@
+/* You can add global styles to this file, and also import other style files */
+
+@font-face {
+    font-family: 'Berlin Sans FB';
+    font-style: normal;
+    font-weight: normal;
+    src: local('Berlin Sans FB'), url('BRLNSR.woff') format('woff');
+    }
