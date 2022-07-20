@@ -1,5 +1,5 @@
 import { Box, Button, Grid, Typography } from '@mui/material';
-import Hero from '../assets/Hero.png';
+import Hero from '../assets/hero.png';
 import theme from '../theme/theme';
 
 export default function HeroSection() {
