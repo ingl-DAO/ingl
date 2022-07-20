@@ -5,6 +5,7 @@
     "app": "apps/app",
     "app-e2e": "apps/app-e2e",
     "landing": "apps/landing",
-    "landing-e2e": "apps/landing-e2e"
+    "landing-e2e": "apps/landing-e2e",
+    "program": "libs/program"
   }
 }
