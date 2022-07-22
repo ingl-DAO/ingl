@@ -76,10 +76,10 @@ pub fn get_uri<'life>(class: Class, rarity: Option<Rarity>) -> &'life str{
             match rarity {
                 Some(rarity_type) => {
                     match rarity_type {
-                        Rarity::Common => {"BenitoiteCommon"}
-                        Rarity::Uncommon => {"BenitoiteUncommon"}
-                        Rarity::Rare => {"BenitoiteRare"}
-                        Rarity::Exalted => {"BenitoiteExalted"}
+                        Rarity::Common => {"https://arweave.net/jRwtQXRNLRvAdvrauKpIr5scKrVgagiAIxJmC7qwfpo"}
+                        Rarity::Uncommon => {"https://arweave.net/En6u1uvuUKMb7O1PsQ1uVBHsKshfYToKnV2kzBxx3Nw"}
+                        Rarity::Rare => {"https://arweave.net/fam42-BK6-2nHDae8pmMjNfadAkfkho42wCMoSBz0qk"}
+                        Rarity::Exalted => {"https://arweave.net/CpOk7NBU-vVD7s7N22YXoy0ffAHc-Nwj8FfLIViloiM"}
                         Rarity::Mythic => {"https://arweave.net/kvqeN_tHeVprbecix2aO4mBrdHAT8k4szgQxDnu14UQ"}
                     }
                 }
