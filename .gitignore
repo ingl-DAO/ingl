@@ -38,3 +38,10 @@ testem.log
 .DS_Store
 Thumbs.db
 /target
+
+#Program files
+/target
+/Cargo.lock
+arweave-key.json
+keypair.json
+/deploy
