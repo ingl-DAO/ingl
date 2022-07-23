@@ -9,6 +9,7 @@ pub mod constants{
     pub const COLLECTION_HOLDER_KEY: &str = "collection_holder";
     pub const GLOBAL_GEM_KEY: &str = "global_gem_account";
     pub const GEM_ACCOUNT_CONST: &str = "gem_account";
+    pub const PD_POOL_KEY: &str = "pd_pool";
 }
 
 #[derive(BorshSerialize,Copy, Clone, BorshDeserialize)]
@@ -48,6 +49,8 @@ pub enum Rarity{
 pub struct GlobalGems{
     pub counter: u32,
     pub total_raised: u64,
+    pub pd_pool_total: u64,
+    pub delegated_total: u64,
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
@@ -61,16 +64,19 @@ pub enum FundsLocation{
 pub struct GemAccountV0_0_1{
     pub struct_id: GemAccountVersions,
     pub date_created: u32,
-    pub redeemable_data: u32,
+    pub class: Class,
+    pub redeemable_date: u32,
     pub numeration: u32,
     pub rarity: Option<Rarity>,
     pub funds_location: FundsLocation,
+    pub date_allocated: Option<u32>,
+
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub enum GemAccountVersions{
     GemAccountV0_0_1,
-    BlankCase,
+    BlanckCase
 }
 impl GemAccountVersions{
     pub fn decode<T: BorshDeserialize>(data: &[u8]) -> Result<T, ProgramError>{
@@ -85,7 +91,7 @@ impl GemAccountVersions{
                 //  Do Something in Here to convert data to the appropriate struct to return
             // }
             _ => {
-                Err(InglError::InvalidStructType.utilize("GemAccountVerssions deserialize"))}
+                Err(InglError::InvalidStructType.utilize(Some("GemAccountVersions deserialize")))}
         }
 
     }
