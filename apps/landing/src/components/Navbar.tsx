@@ -126,9 +126,9 @@ export default function Navbar() {
             color="primary"
             variant="contained"
             component="a"
-            href='https://app.ingl.io/mint'
+            href="https://app.ingl.io/mint"
             rel="noreferrer"
-            target="_blank"      
+            target="_blank"
             sx={{
               borderRadius: '90px',
               justifySelf: 'end',
