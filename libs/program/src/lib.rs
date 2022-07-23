@@ -1,13 +1,21 @@
-pub fn program() -> String {
-    "program".into()
-}
+pub mod state;
+pub mod error;
+pub mod instruction;
+pub mod nfts;
+pub mod processor;
+pub mod utils;
+
+use processor::process_instruction;
+use solana_program::entrypoint;
+
+entrypoint!(process_instruction);
+
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn it_works() {
-        assert_eq!(program(), "program".to_string());
+        let result = 2 + 2;
+        assert_eq!(result, 4);
     }
 }
