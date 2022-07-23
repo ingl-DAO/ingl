@@ -123,3 +123,79 @@ def mint_nft(payer_keypair, mint_keypair, mint_class, client):
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, instruction_data))
     return client.send_transaction(transaction, payer_keypair, mint_keypair)
+
+def allocate_sol(payer_keypair, mint_pubkey, client):
+    minting_pool_pubkey, _minting_pool_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.INGL_MINTING_POOL_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
+    pd_pool_pubkey, _pd_pool_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.PD_POOL_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
+    gem_account_pubkey, _gem_account_bump = PublicKey.find_program_address([bytes(ingl_constants.GEM_ACCOUNT_CONST, 'UTF-8'), bytes(mint_pubkey)], ingl_constants.INGL_PROGRAM_ID)
+    global_gem_pubkey, _global_gem_bump = PublicKey.find_program_address([bytes(ingl_constants.GLOBAL_GEM_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
+    mint_associated_account_pubkey = assoc_instructions.get_associated_token_address(payer_keypair.public_key, mint_pubkey)
+
+    
+    payer_account_meta = AccountMeta(payer_keypair.public_key, True, True)
+    mint_account_meta = AccountMeta(mint_pubkey, False, True)
+    gem_account_meta = AccountMeta(gem_account_pubkey, False, True)
+    mint_associated_meta = AccountMeta(mint_associated_account_pubkey, False, True)
+    global_gem_meta = AccountMeta(global_gem_pubkey, False, True)
+    pd_pool_meta = AccountMeta(pd_pool_pubkey, False, True)
+    minting_pool_meta = AccountMeta(minting_pool_pubkey, False, True)
+    sysvar_clock_meta = AccountMeta(solana.sysvar.SYSVAR_CLOCK_PUBKEY, False, False)
+    system_program_meta = AccountMeta(system_program.SYS_PROGRAM_ID, False, False)
+
+
+    accounts = [
+        payer_account_meta,
+        mint_account_meta,
+        gem_account_meta,
+        mint_associated_meta,
+        global_gem_meta,
+        pd_pool_meta,
+        minting_pool_meta,
+        sysvar_clock_meta,
+
+        system_program_meta
+    ]
+
+    # print(accounts)
+    instruction_data = build_instruction("AllocateSol")
+    transaction = Transaction()
+    transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, instruction_data))
+    return client.send_transaction(transaction, payer_keypair)
+
+def deallocate_sol(payer_keypair, mint_pubkey, client):
+    minting_pool_pubkey, _minting_pool_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.INGL_MINTING_POOL_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
+    pd_pool_pubkey, _pd_pool_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.PD_POOL_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
+    gem_account_pubkey, _gem_account_bump = PublicKey.find_program_address([bytes(ingl_constants.GEM_ACCOUNT_CONST, 'UTF-8'), bytes(mint_pubkey)], ingl_constants.INGL_PROGRAM_ID)
+    global_gem_pubkey, _global_gem_bump = PublicKey.find_program_address([bytes(ingl_constants.GLOBAL_GEM_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
+    mint_associated_account_pubkey = assoc_instructions.get_associated_token_address(payer_keypair.public_key, mint_pubkey)
+
+    
+    payer_account_meta = AccountMeta(payer_keypair.public_key, True, True)
+    mint_account_meta = AccountMeta(mint_pubkey, False, True)
+    gem_account_meta = AccountMeta(gem_account_pubkey, False, True)
+    mint_associated_meta = AccountMeta(mint_associated_account_pubkey, False, True)
+    global_gem_meta = AccountMeta(global_gem_pubkey, False, True)
+    pd_pool_meta = AccountMeta(pd_pool_pubkey, False, True)
+    minting_pool_meta = AccountMeta(minting_pool_pubkey, False, True)
+    sysvar_clock_meta = AccountMeta(solana.sysvar.SYSVAR_CLOCK_PUBKEY, False, False)
+    system_program_meta = AccountMeta(system_program.SYS_PROGRAM_ID, False, False)
+
+
+    accounts = [
+        payer_account_meta,
+        mint_account_meta,
+        gem_account_meta,
+        mint_associated_meta,
+        global_gem_meta,
+        pd_pool_meta,
+        minting_pool_meta,
+        sysvar_clock_meta,
+
+        system_program_meta
+    ]
+
+    # print(accounts)
+    instruction_data = build_instruction("DeAllocateSol")
+    transaction = Transaction()
+    transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, instruction_data))
+    return client.send_transaction(transaction, payer_keypair)
