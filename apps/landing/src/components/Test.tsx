@@ -12,8 +12,7 @@ import Team from './Team';
 
 export function Test({ intl: { formatMessage } }: { intl: IntlShape }) {
   return (
-    <>
-      <Box sx={{ display: 'grid', justifyItems: 'center', minHeight:'100vh' }}>
+    <Box sx={{ display: 'grid', justifyItems: 'center', minHeight: '100vh' }}>
       <Box
         sx={{
           px: theme.spacing(8),
@@ -30,8 +29,7 @@ export function Test({ intl: { formatMessage } }: { intl: IntlShape }) {
         <Faqs />
       </Box>
       <Footer />
-      </Box>
-    </>
+    </Box>
   );
 }
 export default injectIntl(Test);
