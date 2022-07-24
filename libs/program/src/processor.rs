@@ -946,7 +946,7 @@ pub fn imprint_rarity(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
     let mut string_to_hash = btc_price.to_string();
     string_to_hash.push_str(sol_price.to_string().as_ref() as &str);
     string_to_hash.push_str(eth_price.to_string().as_ref() as &str);
-    // string_to_hash.push_str(bnb_price.to_string().as_ref() as &str);
+    string_to_hash.push_str(bnb_price.to_string().as_ref() as &str);
     let rarity_hash_string = hash(string_to_hash.as_bytes());
     let rarity_hash_bytes = rarity_hash_string.to_bytes();
 
