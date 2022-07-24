@@ -13,6 +13,7 @@ pub enum InstructionEnum {
     DeAllocateSol,
     DelegateSol,
     UnDelegateSol,
+    InitRarityImprint
 }
 
 
