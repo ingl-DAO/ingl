@@ -3,6 +3,7 @@ pub mod error;
 pub mod instruction;
 pub mod nfts;
 pub mod processor;
+pub mod utils;
 
 use processor::process_instruction;
 use solana_program::entrypoint;

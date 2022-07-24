@@ -4,7 +4,10 @@ use solana_program::{
     borsh::try_from_slice_unchecked, native_token::LAMPORTS_PER_SOL,
     program_error::ProgramError, pubkey::Pubkey,
 };
-pub mod constants {
+pub mod constants{
+    use solana_program::declare_id;
+    declare_id!("8ucRh4mMLWijjaPo8Hk94qBsvjcHsd1scA7h32ehsa5j");
+
 
     pub const INGL_NFT_COLLECTION_KEY: &str = "ingl_nft_collection_newer";
     pub const INGL_MINT_AUTHORITY_KEY: &str = "mint_authority";
@@ -17,6 +20,23 @@ pub mod constants {
     pub const SOL_FEED_PUBLIC_KEY: &str = "GvDMxPzN1sCj7L26YDK2HnMRXEQmQ2aemov8YBtPS7vR";
     pub const BNB_FEED_PUBLIC_KEY: &str = "2steFGCbo9FNXksMBGDh9NwixtdG5PdQoaCuR4knyvrB";
     pub const ETH_FEED_PUBLIC_KEY: &str = "HNStfhaLnqwF2ZtJUizaA9uHDAVB976r2AgTUx9LrdEo";
+    pub const PD_POOL_KEY: &str = "pd_pool";
+
+    pub mod spl_program{
+        use solana_program::declare_id;
+
+        declare_id!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+    }
+    pub mod metaplex{
+        use solana_program::declare_id;
+
+        declare_id!("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
+    }
+    pub mod associated_token_program{
+        use solana_program::declare_id;
+
+        declare_id!("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+    }
 }
 
 #[derive(BorshSerialize, Copy, Clone, BorshDeserialize)]
@@ -56,6 +76,8 @@ pub enum Rarity {
 pub struct GlobalGems {
     pub counter: u32,
     pub total_raised: u64,
+    pub pd_pool_total: u64,
+    pub delegated_total: u64,
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
@@ -72,17 +94,19 @@ pub struct PriceTime {}
 pub struct GemAccountV0_0_1 {
     pub struct_id: GemAccountVersions,
     pub date_created: u32,
-    pub redeemable_data: u32,
+    pub class: Class,
+    pub redeemable_date: u32,
     pub numeration: u32,
     pub rarity: Option<Rarity>,
     pub funds_location: FundsLocation,
     pub future_price_time: Option<u32>,
+    pub date_allocated: Option<u32>,
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub enum GemAccountVersions {
     GemAccountV0_0_1,
-    BlankCase,
+    BlanckCase
 }
 impl GemAccountVersions {
     pub fn decode<T: BorshDeserialize>(data: &[u8]) -> Result<T, ProgramError> {
@@ -96,7 +120,8 @@ impl GemAccountVersions {
             // GemAccountVersions::AnotherOption => {
             //  Do Something in Here to convert data to the appropriate struct to return
             // }
-            _ => Err(InglError::InvalidStructType.utilize("GemAccountVerssions deserialize")),
+            _ => {
+                Err(InglError::InvalidStructType.utilize(Some("GemAccountVersions deserialize")))}
         }
     }
 }

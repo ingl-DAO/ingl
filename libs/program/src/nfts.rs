@@ -70,8 +70,8 @@ pub fn get_uri<'life>(class: Class, rarity: Option<Rarity>) -> &'life str {
 }
 
 impl Class {
-    pub fn get_rarity(self, random_value: u64) -> Rarity {
-        match self {
+    pub fn get_rarity(self, random_value: u64) -> Option<Rarity> {
+        Some(match self {
             Class::Benitoite => match random_value {
                 2000..=u64::MAX => Rarity::Common,
                 610..=1999 => Rarity::Uncommon,
@@ -113,7 +113,7 @@ impl Class {
                 1500..=4999 => Rarity::Rare,
                 500..=1499 => Rarity::Exalted,
                 0..=499 => Rarity::Mythic,
-            }
-        }
+            },
+        })
     }
 }

@@ -1,12 +1,19 @@
 use std::str::FromStr;
-
-use crate::state::{constants::*, Class, GlobalGems, Rarity};
 use crate::{
-    error::InglError,
     instruction::InstructionEnum,
-    nfts,
-    state::{FundsLocation, GemAccountV0_0_1, GemAccountVersions},
+    error::InglError,
+    nfts, 
+    state::{
+        GemAccountV0_0_1, 
+        GemAccountVersions, 
+        FundsLocation,
+        Class, 
+        GlobalGems, 
+        constants::*
+    },
+    utils::{assert_pubkeys_exatitude, assert_program_owned, assert_owned_by},
 };
+
 use borsh::BorshSerialize;
 use mpl_token_metadata::{
     self,
@@ -44,8 +51,165 @@ pub fn process_instruction(
         InstructionEnum::MintNft(class) => mint_nft(program_id, accounts, class)?,
         InstructionEnum::InitRarityImprint => init_rarity_imprint(program_id, accounts)?,
         InstructionEnum::ImprintRarity => imprint_rarity(program_id, accounts)?,
+        InstructionEnum::AllocateSol => allocate_sol(program_id, accounts)?,
+        InstructionEnum::DeAllocateSol => deallocate_sol(program_id, accounts)?,
         _ => Err(ProgramError::InvalidInstructionData)?,
     })
+}
+
+pub fn allocate_sol(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult{
+    let account_info_iter = &mut accounts.iter();
+    let payer_account_info = next_account_info(account_info_iter)?;
+    let mint_account_info = next_account_info(account_info_iter)?;
+    let gem_account_data_info = next_account_info(account_info_iter)?;
+    let associated_token_account_info = next_account_info(account_info_iter)?;
+    let global_gem_account_info = next_account_info(account_info_iter)?;
+    let pd_pool_account_info = next_account_info(account_info_iter)?;
+    let minting_pool_account_info = next_account_info(account_info_iter)?;
+
+    assert_program_owned(gem_account_data_info)?;
+    assert_program_owned(global_gem_account_info)?;
+
+    assert_owned_by(mint_account_info, &spl_program::id())?;
+    assert_owned_by(associated_token_account_info, &associated_token_program::id())?;
+
+    
+
+    if !payer_account_info.is_signer{
+        Err(ProgramError::MissingRequiredSignature)?
+    }
+
+    let (gem_account_pubkey, _gem_account_bump) = Pubkey::find_program_address(&[GEM_ACCOUNT_CONST.as_ref(), mint_account_info.key.as_ref()], program_id);
+    assert_pubkeys_exatitude(&gem_account_pubkey, gem_account_data_info.key).expect("Error: @gem_account_info");
+
+    assert_pubkeys_exatitude(&get_associated_token_address(payer_account_info.key, mint_account_info.key), associated_token_account_info.key).expect("Error: @associated_token_address");
+    let associated_token_address_data = Account::unpack(&associated_token_account_info.data.borrow())?;
+    if associated_token_address_data.amount != 1{
+        Err(ProgramError::InsufficientFunds)?
+    }
+
+    let (global_gem_pubkey, _global_gem_bump) = Pubkey::find_program_address(&[GLOBAL_GEM_KEY.as_ref()], program_id);
+    assert_pubkeys_exatitude(&global_gem_pubkey, global_gem_account_info.key).expect("Error: @global_gem_account_info");
+
+    let(pd_pool_pubkey, _pd_pool_bump) = Pubkey::find_program_address(&[PD_POOL_KEY.as_ref()], program_id);
+    assert_pubkeys_exatitude(&pd_pool_pubkey, pd_pool_account_info.key).expect("Error: @pd_pool_account_info");
+    let mut gem_account_data: GemAccountV0_0_1 = GemAccountVersions::decode(&gem_account_data_info.data.borrow())?;
+    let mut global_gem_account_data:GlobalGems = try_from_slice_unchecked(&global_gem_account_info.data.borrow())?;
+
+    let (minting_pool_id, minting_pool_bump) =
+    Pubkey::find_program_address(&[INGL_MINTING_POOL_KEY.as_ref()], program_id);
+
+    assert_pubkeys_exatitude(&minting_pool_id, minting_pool_account_info.key).expect("Error: @minting_pool_account_info");
+
+    match gem_account_data.funds_location {
+        FundsLocation::MintingPool =>{
+            gem_account_data.funds_location = FundsLocation::PDPool;
+        }
+        _ => {Err(InglError::InvalidFundsLocation.utilize(Some("gem's funds location.")))?}
+    }
+
+
+    let mint_cost = gem_account_data.class.clone().get_class_lamports();
+    //tranfer token from mint_pool, to pd_pool
+    invoke_signed(
+        &system_instruction::transfer(&minting_pool_id, &pd_pool_pubkey, mint_cost),
+        &[
+            minting_pool_account_info.clone(),
+            pd_pool_account_info.clone(),
+        ],
+        &[&[INGL_MINTING_POOL_KEY.as_ref(), &[minting_pool_bump]]]
+    )?;
+
+    let clock = Clock::get()?;
+
+    gem_account_data.date_allocated = Some(clock.unix_timestamp as u32);
+    gem_account_data.redeemable_date = clock.unix_timestamp as u32 + /*86400**/1*365*2; //Needs to be changed back to 86400 before deployment on mainnet. reduced for testing purposes during development
+
+    global_gem_account_data.pd_pool_total += mint_cost;
+
+    gem_account_data.serialize(&mut &mut gem_account_data_info.data.borrow_mut()[..])?;
+    global_gem_account_data.serialize(&mut &mut global_gem_account_info.data.borrow_mut()[..])?;
+
+    Ok(())
+}
+
+
+pub fn deallocate_sol(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult{
+    let account_info_iter = &mut accounts.iter();
+    let payer_account_info = next_account_info(account_info_iter)?;
+    let mint_account_info = next_account_info(account_info_iter)?;
+    let gem_account_data_info = next_account_info(account_info_iter)?;
+    let associated_token_account_info = next_account_info(account_info_iter)?;
+    let global_gem_account_info = next_account_info(account_info_iter)?;
+    let pd_pool_account_info = next_account_info(account_info_iter)?;
+    let minting_pool_account_info = next_account_info(account_info_iter)?;
+    // let sysvar_clock_info = next_account_info(account_info_iter)?;
+    
+
+    assert_program_owned(gem_account_data_info)?;
+    assert_program_owned(global_gem_account_info)?;
+
+    assert_owned_by(mint_account_info, &spl_program::id())?;
+    assert_owned_by(associated_token_account_info, &associated_token_program::id())?;
+
+
+
+    if !payer_account_info.is_signer{
+        Err(ProgramError::MissingRequiredSignature)?
+    }
+
+    let (gem_account_pubkey, _gem_account_bump) = Pubkey::find_program_address(&[GEM_ACCOUNT_CONST.as_ref(), mint_account_info.key.as_ref()], program_id);
+    assert_pubkeys_exatitude(&gem_account_pubkey, gem_account_data_info.key).expect("Error: @gem_account_info");
+
+    assert_pubkeys_exatitude(&get_associated_token_address(payer_account_info.key, mint_account_info.key), associated_token_account_info.key).expect("Error: @associated_token_address");
+    let associated_token_address_data = Account::unpack(&associated_token_account_info.data.borrow())?;
+    if associated_token_address_data.amount != 1{
+        Err(ProgramError::InsufficientFunds)?
+    }
+
+    let (global_gem_pubkey, _global_gem_bump) = Pubkey::find_program_address(&[GLOBAL_GEM_KEY.as_ref()], program_id);
+    assert_pubkeys_exatitude(&global_gem_pubkey, global_gem_account_info.key).expect("Error: @global_gem_account_info");
+
+    let(pd_pool_pubkey, pd_pool_bump) = Pubkey::find_program_address(&[PD_POOL_KEY.as_ref()], program_id);
+    assert_pubkeys_exatitude(&pd_pool_pubkey, pd_pool_account_info.key).expect("Error: @pd_pool_account_info");
+
+    let mut gem_account_data: GemAccountV0_0_1 = GemAccountVersions::decode(&gem_account_data_info.data.borrow())?;
+    let mut global_gem_account_data:GlobalGems = try_from_slice_unchecked(&global_gem_account_info.data.borrow())?;
+
+    let (minting_pool_id, _minting_pool_bump) =
+    Pubkey::find_program_address(&[INGL_MINTING_POOL_KEY.as_ref()], program_id);
+    assert_pubkeys_exatitude(&minting_pool_id, minting_pool_account_info.key).expect("Error: @minting_pool_account_info");
+
+    match gem_account_data.funds_location {
+        FundsLocation::PDPool =>{
+            gem_account_data.funds_location = FundsLocation::MintingPool;
+        }
+        _ => {Err(InglError::InvalidFundsLocation.utilize(Some("gem's funds location.")))?}
+    }
+
+
+    let mint_cost = gem_account_data.class.clone().get_class_lamports();
+    //tranfer token from mint_pool, to pd_pool
+    invoke_signed(
+        &system_instruction::transfer(&pd_pool_pubkey, &minting_pool_id, mint_cost),
+        &[
+            pd_pool_account_info.clone(),
+            minting_pool_account_info.clone(),
+        ],
+        &[&[PD_POOL_KEY.as_ref(), &[pd_pool_bump]]]
+    )?;
+
+    let clock = Clock::get()?;
+
+    if (clock.unix_timestamp as u32) < gem_account_data.redeemable_date{
+        Err(InglError::TooEarly.utilize(Some("Attempting to Redeem earlier than allowed")))?;
+    }
+    global_gem_account_data.pd_pool_total -= mint_cost;
+
+    gem_account_data.serialize(&mut &mut gem_account_data_info.data.borrow_mut()[..])?;
+    global_gem_account_data.serialize(&mut &mut global_gem_account_info.data.borrow_mut()[..])?;
+
+    Ok(())
 }
 
 pub fn mint_nft(program_id: &Pubkey, accounts: &[AccountInfo], class: Class) -> ProgramResult {
@@ -61,22 +225,22 @@ pub fn mint_nft(program_id: &Pubkey, accounts: &[AccountInfo], class: Class) -> 
     let minting_pool_account_info = next_account_info(account_info_iter)?;
     let global_gem_account_info = next_account_info(account_info_iter)?;
     let gem_account_info = next_account_info(account_info_iter)?;
-    let sysvar_clock_info = next_account_info(account_info_iter)?;
+    // let sysvar_clock_info = next_account_info(account_info_iter)?;
     let edition_account_info = next_account_info(account_info_iter)?;
     let ingl_collection_mint_info = next_account_info(account_info_iter)?;
     let ingl_collection_account_info = next_account_info(account_info_iter)?;
+    
+    assert_program_owned(global_gem_account_info)?;
+    assert_owned_by(edition_account_info, &metaplex::id())?;
+    assert_owned_by(ingl_collection_account_info, &metaplex::id())?;
+    assert_owned_by(ingl_collection_mint_info, &spl_program::id())?;
 
-    let clock = Clock::from_account_info(&sysvar_clock_info)?;
+    let clock = Clock::get()?;
     // Getting timestamp
     let current_timestamp = clock.unix_timestamp as u32;
-
-    let (gem_account_pubkey, gem_account_bump) = Pubkey::find_program_address(
-        &[GEM_ACCOUNT_CONST.as_ref(), mint_account_info.key.as_ref()],
-        program_id,
-    );
-    if gem_account_pubkey != *gem_account_info.key {
-        Err(InglError::KeyPairMismatch.utilize("gem_account_info"))?
-    }
+    
+    let (gem_account_pubkey, gem_account_bump) = Pubkey::find_program_address(&[GEM_ACCOUNT_CONST.as_ref(), mint_account_info.key.as_ref()], program_id);
+    assert_pubkeys_exatitude(&gem_account_pubkey, gem_account_info.key).expect("Error: @gem_account_info");
     let space = 50;
     let rent_lamports = Rent::get()?.minimum_balance(space);
     msg!("Reached invoke");
@@ -99,11 +263,8 @@ pub fn mint_nft(program_id: &Pubkey, accounts: &[AccountInfo], class: Class) -> 
     let (global_gem_pubkey, _global_gem_bump) =
         Pubkey::find_program_address(&[GLOBAL_GEM_KEY.as_ref()], program_id);
 
-    if global_gem_pubkey != *global_gem_account_info.key {
-        Err(InglError::KeyPairMismatch.utilize("global_gem_account_info"))?
-    }
-    let mut global_gem_data: GlobalGems =
-        try_from_slice_unchecked(&global_gem_account_info.data.borrow())?;
+    assert_pubkeys_exatitude(&global_gem_pubkey, global_gem_account_info.key).expect("Error: @global_gem_account_info");
+    let mut global_gem_data: GlobalGems = try_from_slice_unchecked(&global_gem_account_info.data.borrow())?;
 
     let space = 82;
     let rent_lamports = Rent::get()?.minimum_balance(space);
@@ -111,30 +272,18 @@ pub fn mint_nft(program_id: &Pubkey, accounts: &[AccountInfo], class: Class) -> 
     let (minting_pool_id, _minting_pool_bump) =
         Pubkey::find_program_address(&[INGL_MINTING_POOL_KEY.as_ref()], program_id);
 
-    if minting_pool_id != *minting_pool_account_info.key {
-        Err(InglError::KeyPairMismatch.utilize("minting_pool_account_info"))?
-    }
+    assert_pubkeys_exatitude(&minting_pool_id, minting_pool_account_info.key).expect("Error: @minting_pool_account_info");
 
     let (mint_authority_key, mint_authority_bump) =
         Pubkey::find_program_address(&[INGL_MINT_AUTHORITY_KEY.as_ref()], program_id);
 
-    if mint_authority_key != *mint_authority_account_info.key {
-        Err(InglError::KeyPairMismatch.utilize("mint_authority_account_info"))?
-    }
+    assert_pubkeys_exatitude(&mint_authority_key, mint_authority_account_info.key).expect("Error: @mint_authority_account_info");
 
-    if get_associated_token_address(payer_account_info.key, mint_account_info.key)
-        != *associated_token_account_info.key
-    {
-        Err(InglError::KeyPairMismatch.utilize("associated_token_account_info"))?
-    }
+    assert_pubkeys_exatitude(&get_associated_token_address(payer_account_info.key, mint_account_info.key), associated_token_account_info.key).expect("Error: @associated_token_account_info");
 
-    if !system_program::check_id(system_program_account_info.key) {
-        Err(InglError::KeyPairMismatch.utilize("system_program_account_info"))?
-    }
+    assert_pubkeys_exatitude(&system_program::id(), system_program_account_info.key).expect("Error: @system_program_account_info");
 
-    if spl_token::id() != *spl_token_program_account_info.key {
-        Err(InglError::KeyPairMismatch.utilize("spl_token_program_account_info"))?
-    }
+    assert_pubkeys_exatitude(&spl_token::id(), spl_token_program_account_info.key).expect("Error: @spl_token_program_account_info");
 
     let mpl_token_metadata_id = mpl_token_metadata::id();
     let metadata_seeds = &[
@@ -146,9 +295,7 @@ pub fn mint_nft(program_id: &Pubkey, accounts: &[AccountInfo], class: Class) -> 
     let (nft_metadata_key, _nft_metadata_bump) =
         Pubkey::find_program_address(metadata_seeds, &mpl_token_metadata::id());
 
-    if nft_metadata_key != *metadata_account_info.key {
-        Err(InglError::KeyPairMismatch.utilize("meta_data_account_info"))?
-    }
+    assert_pubkeys_exatitude(&nft_metadata_key, metadata_account_info.key).expect("Error: @meta_data_account_info");
 
     let mint_cost = class.clone().get_class_lamports();
     global_gem_data.counter += 1;
@@ -231,9 +378,7 @@ pub fn mint_nft(program_id: &Pubkey, accounts: &[AccountInfo], class: Class) -> 
     let (ingl_nft_collection_key, _ingl_nft_bump) =
         Pubkey::find_program_address(&[INGL_NFT_COLLECTION_KEY.as_ref()], program_id);
 
-    if ingl_nft_collection_key != *ingl_collection_mint_info.key {
-        Err(InglError::KeyPairMismatch.utilize("ingl_collection_account_info"))?;
-    }
+    assert_pubkeys_exatitude(&ingl_nft_collection_key, ingl_collection_mint_info.key).expect("Error: @ingl_collection_account_info");
 
     let metadata_seeds = &[
         PREFIX.as_ref(),
@@ -244,9 +389,7 @@ pub fn mint_nft(program_id: &Pubkey, accounts: &[AccountInfo], class: Class) -> 
     let (collection_metadata_key, _collection_metadata_bump) =
         Pubkey::find_program_address(metadata_seeds, &mpl_token_metadata_id);
 
-    if collection_metadata_key != *ingl_collection_account_info.key {
-        Err(InglError::KeyPairMismatch.utilize("collection_metadata_info"))?
-    }
+    assert_pubkeys_exatitude(&collection_metadata_key, ingl_collection_account_info.key).expect("Error: @collection_metadata_info");
 
     msg!("starting metadata creation");
     invoke_signed(
@@ -279,18 +422,8 @@ pub fn mint_nft(program_id: &Pubkey, accounts: &[AccountInfo], class: Class) -> 
         ],
         &[&[INGL_MINT_AUTHORITY_KEY.as_ref(), &[mint_authority_bump]]],
     )?;
-    let (edition_key, _edition_bump) = Pubkey::find_program_address(
-        &[
-            b"metadata",
-            mpl_token_metadata_id.as_ref(),
-            ingl_nft_collection_key.as_ref(),
-            b"edition",
-        ],
-        &mpl_token_metadata_id,
-    );
-    if edition_key != *edition_account_info.key {
-        Err(InglError::KeyPairMismatch.utilize("edition_account_info"))?
-    }
+    let (edition_key, _edition_bump) = Pubkey::find_program_address(&[b"metadata", mpl_token_metadata_id.as_ref(), ingl_nft_collection_key.as_ref(), b"edition"], &mpl_token_metadata_id);
+    assert_pubkeys_exatitude(&edition_key, edition_account_info.key).expect("Error: @edition_account_info");
     // msg!("verifying collection");
     // invoke_signed(
     //     &mpl_token_metadata::instruction::set_and_verify_collection(
@@ -348,14 +481,15 @@ pub fn mint_nft(program_id: &Pubkey, accounts: &[AccountInfo], class: Class) -> 
     let gem_account_data = GemAccountV0_0_1 {
         struct_id: GemAccountVersions::GemAccountV0_0_1,
         date_created: current_timestamp,
-        redeemable_data: current_timestamp,
+        redeemable_date: current_timestamp,
         numeration: global_gem_data.counter,
         rarity: None,
         funds_location: FundsLocation::MintingPool,
         future_price_time: None,
+        date_allocated: None,
+        class: class,
     };
     gem_account_data.serialize(&mut &mut gem_account_info.data.borrow_mut()[..])?;
-    global_gem_data.serialize(&mut &mut global_gem_account_info.data.borrow_mut()[..])?;
     Ok(())
 }
 
@@ -376,9 +510,7 @@ pub fn mint_collection(program_id: &Pubkey, accounts: &[AccountInfo]) -> Program
     let (global_gem_pubkey, global_gem_bump) =
         Pubkey::find_program_address(&[GLOBAL_GEM_KEY.as_ref()], program_id);
 
-    if global_gem_pubkey != *global_gem_account_info.key {
-        Err(InglError::KeyPairMismatch.utilize("global_gem_account_info"))?
-    }
+    assert_pubkeys_exatitude(&global_gem_pubkey, global_gem_account_info.key).expect("Error: @global_gem_account_info");
 
     let space = 50;
     let rent_lamports = Rent::get()?.minimum_balance(space);
@@ -399,16 +531,15 @@ pub fn mint_collection(program_id: &Pubkey, accounts: &[AccountInfo]) -> Program
     let global_gem_data = GlobalGems {
         counter: 0,
         total_raised: 0,
+        pd_pool_total: 0,
+        delegated_total: 0,
     };
     global_gem_data.serialize(&mut &mut global_gem_account_info.data.borrow_mut()[..])?;
 
     let (ingl_nft_collection_key, ingl_nft_bump) =
         Pubkey::find_program_address(&[INGL_NFT_COLLECTION_KEY.as_ref()], program_id);
 
-    if ingl_nft_collection_key != *mint_account_info.key {
-        msg!("Mint account info don't match");
-        Err(InglError::KeyPairMismatch.utilize("Mint_account_info"))?
-    }
+        assert_pubkeys_exatitude(&ingl_nft_collection_key, mint_account_info.key).expect("Error: @Mint_account_info");
 
     let space = 82;
     let rent_lamports = Rent::get()?.minimum_balance(space);
@@ -429,9 +560,7 @@ pub fn mint_collection(program_id: &Pubkey, accounts: &[AccountInfo]) -> Program
     let (mint_authority_key, mint_authority_bump) =
         Pubkey::find_program_address(&[INGL_MINT_AUTHORITY_KEY.as_ref()], program_id);
 
-    if mint_authority_key != *mint_authority_account_info.key {
-        Err(InglError::KeyPairMismatch.utilize("mint_authority_account_info"))?
-    }
+    assert_pubkeys_exatitude(&mint_authority_key, mint_authority_account_info.key).expect("Error: @mint_authority_account_info",);
 
     msg!("Initialize mint account");
     invoke(
@@ -444,20 +573,12 @@ pub fn mint_collection(program_id: &Pubkey, accounts: &[AccountInfo]) -> Program
         )?,
         &[mint_account_info.clone(), sysvar_rent_account_info.clone()],
     )?;
+    
+    let (collection_holder_key, _chk_bump) = Pubkey::find_program_address(&[COLLECTION_HOLDER_KEY.as_ref()], program_id);
+    assert_pubkeys_exatitude(&collection_holder_key, collection_holder_info.key).expect("Error: @collection_holder_info");
 
-    let (collection_holder_key, _chk_bump) =
-        Pubkey::find_program_address(&[COLLECTION_HOLDER_KEY.as_ref()], program_id);
-    if collection_holder_key != *collection_holder_info.key {
-        Err(InglError::KeyPairMismatch.utilize("collection_holder_info"))?
-    }
-
-    let collection_associated_pubkey = spl_associated_token_account::get_associated_token_address(
-        &collection_holder_key,
-        mint_account_info.key,
-    );
-    if &collection_associated_pubkey != associated_token_account_info.key {
-        Err(InglError::KeyPairMismatch.utilize("Associated_token_account"))?
-    }
+    let collection_associated_pubkey = spl_associated_token_account::get_associated_token_address(&collection_holder_key, mint_account_info.key);
+    assert_pubkeys_exatitude(&collection_associated_pubkey, associated_token_account_info.key).expect("Error: @Associated_token_account");
 
     msg!("Create associated token account");
     invoke(
@@ -511,9 +632,7 @@ pub fn mint_collection(program_id: &Pubkey, accounts: &[AccountInfo]) -> Program
     let (nft_metadata_key, _nft_metadata_bump) =
         Pubkey::find_program_address(metadata_seeds, &mpl_token_metadata_id);
 
-    if nft_metadata_key != *metadata_account_info.key {
-        Err(InglError::KeyPairMismatch.utilize("nft_meta_data_account_info"))?
-    }
+    assert_pubkeys_exatitude(&nft_metadata_key, metadata_account_info.key).expect("Error: @nft_meta_data_account_info");
 
     msg!("Create metaplex nft account v3");
     invoke_signed(
@@ -547,18 +666,8 @@ pub fn mint_collection(program_id: &Pubkey, accounts: &[AccountInfo]) -> Program
         &[&[INGL_MINT_AUTHORITY_KEY.as_ref(), &[mint_authority_bump]]],
     )?;
 
-    let (edition_key, _edition_bump) = Pubkey::find_program_address(
-        &[
-            b"metadata",
-            mpl_token_metadata_id.as_ref(),
-            mint_account_info.key.as_ref(),
-            b"edition",
-        ],
-        &mpl_token_metadata_id,
-    );
-    if edition_key != *edition_account_info.key {
-        Err(InglError::KeyPairMismatch.utilize("edition_account_info"))?
-    }
+    let (edition_key, _edition_bump) = Pubkey::find_program_address(&[b"metadata", mpl_token_metadata_id.as_ref(), mint_account_info.key.as_ref(), b"edition"], &mpl_token_metadata_id);
+    assert_pubkeys_exatitude(&edition_key, edition_account_info.key).expect("Error: @edition_account_info");
 
     msg!("Creating master Edition account...");
     invoke_signed(
@@ -583,10 +692,9 @@ pub fn mint_collection(program_id: &Pubkey, accounts: &[AccountInfo]) -> Program
             system_program_account_info.clone(),
             sysvar_rent_account_info.clone(),
         ],
-        &[&[INGL_MINT_AUTHORITY_KEY.as_ref(), &[mint_authority_bump]]],
-    )?;
 
-    // Err(InglError::KeyPairMismatch.utilize("There was actually no Error found, Tada"))?
+         &[&[INGL_MINT_AUTHORITY_KEY.as_ref(), &[mint_authority_bump]]]
+        )?;
     Ok(())
 }
 
@@ -666,12 +774,7 @@ pub fn imprint_rarity(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
     let eth_feed_account_info = next_account_info(account_info_iter)?;
     let bnb_feed_account_info = next_account_info(account_info_iter)?;
 
-    if get_associated_token_address(payer_account_info.key, mint_account_info.key)
-        != *associated_token_account_info.key
-    {
-        Err(InglError::KeyPairMismatch.utilize("associated_token_account_info"))?
-    }
-
+    assert_pubkeys_exatitude(&get_associated_token_address(payer_account_info.key, mint_account_info.key), associated_token_account_info.key).expect("associated_token_account_info");
     if !payer_account_info.is_signer {
         Err(ProgramError::MissingRequiredSignature)?
     }
@@ -683,29 +786,16 @@ pub fn imprint_rarity(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
 
     let (mint_authority_key, mint_authority_bump) =
         Pubkey::find_program_address(&[INGL_MINT_AUTHORITY_KEY.as_ref()], program_id);
-    if mint_authority_key != *freeze_authority_account_info.key {
-        Err(InglError::KeyPairMismatch.utilize("freeze_authority_account_info"))?
-    }
+    assert_pubkeys_exatitude(&mint_authority_key, freeze_authority_account_info.key).expect("freeze_authority_account_info");
 
     let (gem_pubkey, _gem_bump) =
         Pubkey::find_program_address(&[GEM_ACCOUNT_CONST.as_ref()], program_id);
-    if gem_pubkey != *gem_account_info.key {
-        Err(InglError::KeyPairMismatch.utilize("gem_account_info"))?
-    }
-
-    // check feed owner
-    if *btc_feed_account_info.key != Pubkey::from_str(BTC_FEED_PUBLIC_KEY).unwrap() {
-        Err(InglError::KeyPairMismatch.utilize("btc_history_account_info_owner"))?
-    }
-    if *sol_feed_account_info.key != Pubkey::from_str(SOL_FEED_PUBLIC_KEY).unwrap() {
-        Err(InglError::KeyPairMismatch.utilize("sol_price_account_info_owner"))?
-    }
-    if *eth_feed_account_info.key != Pubkey::from_str(ETH_FEED_PUBLIC_KEY).unwrap() {
-        Err(InglError::KeyPairMismatch.utilize("eth_price_account_info_owner"))?
-    }
-    if *bnb_feed_account_info.key != Pubkey::from_str(BNB_FEED_PUBLIC_KEY).unwrap() {
-        Err(InglError::KeyPairMismatch.utilize("bnb_price_account_info_owner"))?
-    }
+    assert_pubkeys_exatitude(&gem_pubkey, gem_account_info.key).expect("gem_account_info");
+    
+    assert_pubkeys_exatitude(&Pubkey::from_str(BTC_FEED_PUBLIC_KEY).unwrap(), btc_feed_account_info.key).expect("btc_history_account_info_owner");
+    assert_pubkeys_exatitude(&Pubkey::from_str(SOL_FEED_PUBLIC_KEY).unwrap(), sol_feed_account_info.key).expect("sol_price_account_info_owner");
+    assert_pubkeys_exatitude(&Pubkey::from_str(ETH_FEED_PUBLIC_KEY).unwrap(), eth_feed_account_info.key).expect("eth_price_account_info_owner");
+    assert_pubkeys_exatitude(&Pubkey::from_str(BNB_FEED_PUBLIC_KEY).unwrap(), bnb_feed_account_info.key).expect("bnb_price_account_info_owner");
 
     invoke_signed(
         &spl_token::instruction::thaw_account(
@@ -764,17 +854,17 @@ pub fn imprint_rarity(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
     let mut string_to_hash = btc_price.to_string();
     string_to_hash.push_str(sol_price.to_string().as_ref() as &str);
     string_to_hash.push_str(eth_price.to_string().as_ref() as &str);
-    string_to_hash.push_str(bnb_price.to_string().as_ref() as &str);
+    // string_to_hash.push_str(bnb_price.to_string().as_ref() as &str);
     let rarity_hash_string = hash(string_to_hash.as_bytes());
     let rarity_hash_bytes = rarity_hash_string.to_bytes();
 
-    let mut byte_product: u128 = 1;
+    let mut byte_product: u64 = 1;
     for byte in rarity_hash_bytes {
-        byte_product = byte_product * byte as u128;
+        byte_product = byte_product * byte as u64;
     }
 
-    let match_value = byte_product * 9999 / 255.pow(rarity_hash_bytes.len()) as u128;
-    // gem_data.rarity = gem_data.class
+    let random_value = byte_product * 9999 / 255.pow(rarity_hash_bytes.len()) as u64;
+    gem_data.rarity = gem_data.class.get_rarity(random_value);
     gem_data.serialize(&mut &mut gem_account_info.data.borrow_mut()[..])?;
     Ok(())
 }

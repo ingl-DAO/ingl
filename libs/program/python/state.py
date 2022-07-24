@@ -10,6 +10,7 @@ class Constants:
     INGL_PROGRAM_ID = PublicKey("8ucRh4mMLWijjaPo8Hk94qBsvjcHsd1scA7h32ehsa5j")
     GLOBAL_GEM_KEY = "global_gem_account"
     GEM_ACCOUNT_CONST = "gem_account"
+    PD_POOL_KEY = "pd_pool"
 
 ClassEnum = Enum(
     "Ruby",

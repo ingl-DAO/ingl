@@ -11,6 +11,8 @@ pub enum InstructionEnum {
     ImprintRarity,
     AllocateSol,
     DeAllocateSol,
+    CreateVoteAccount,
+    ChangeVoteAccountsValidatorIdentity,
     DelegateSol,
     UnDelegateSol,
     InitRarityImprint
