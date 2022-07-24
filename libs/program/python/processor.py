@@ -13,9 +13,9 @@ def create_collection(payer_keypair, client):
     minting_pool_pubkey, _minting_pool_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.INGL_MINTING_POOL_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     collection_holder_pubkey, _collection_holder_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.COLLECTION_HOLDER_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     mint_associated_account_pubkey = assoc_instructions.get_associated_token_address(collection_holder_pubkey, mint_pubkey)
-    token_metadata_pubkey = PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s")
-    metadata_pda, _metadata_pda_bump = PublicKey.find_program_address([b"metadata", bytes(token_metadata_pubkey), bytes(mint_pubkey)], token_metadata_pubkey)
-    master_edition_pda, _master_edition_bump = PublicKey.find_program_address([b"metadata", bytes(token_metadata_pubkey), bytes(mint_pubkey), b"edition"], token_metadata_pubkey)
+    metaplex_program_id = PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s")
+    metadata_pda, _metadata_pda_bump = PublicKey.find_program_address([b"metadata", bytes(metaplex_program_id), bytes(mint_pubkey)], metaplex_program_id)
+    master_edition_pda, _master_edition_bump = PublicKey.find_program_address([b"metadata", bytes(metaplex_program_id), bytes(mint_pubkey), b"edition"], metaplex_program_id)
     global_gem_pubkey, _global_gem_bump = PublicKey.find_program_address([bytes(ingl_constants.GLOBAL_GEM_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
 
     payer_account_meta = AccountMeta(payer_keypair.public_key, True, True)
@@ -27,7 +27,7 @@ def create_collection(payer_keypair, client):
     sysvar_rent_account_meta = AccountMeta(solana.sysvar.SYSVAR_RENT_PUBKEY, False, False)
     system_program_meta = AccountMeta(system_program.SYS_PROGRAM_ID, False, False)
     token_metadata_meta = AccountMeta(metadata_pda, False, True)
-    metadata_program_id = AccountMeta(token_metadata_pubkey, False, False)
+    metadata_program_id = AccountMeta(metaplex_program_id, False, False)
     associated_program_meta = AccountMeta(constants.ASSOCIATED_TOKEN_PROGRAM_ID, False, False)
     global_gem_meta = AccountMeta(global_gem_pubkey, False, True)
     edition_meta = AccountMeta(master_edition_pda, False, True)
@@ -84,7 +84,7 @@ def mint_nft(payer_keypair, mint_keypair, mint_class, client):
     associated_program_meta = AccountMeta(constants.ASSOCIATED_TOKEN_PROGRAM_ID, False, False)
     global_gem_meta = AccountMeta(global_gem_pubkey, False, True)
     gem_account_meta = AccountMeta(gem_account_pubkey, False, True)
-    sysvar_clock_meta = AccountMeta(solana.sysvar.SYSVAR_CLOCK_PUBKEY, False, False)
+    # sysvar_clock_meta = AccountMeta(solana.sysvar.SYSVAR_CLOCK_PUBKEY, False, False)
     edition_meta = AccountMeta(master_edition_pda, False, False)
     collection_mint_meta = AccountMeta(collection_mint_pubkey, False, False)
     collection_account_meta = AccountMeta(collection_account_pda, False, True)
@@ -102,7 +102,7 @@ def mint_nft(payer_keypair, mint_keypair, mint_class, client):
         minting_pool_meta,
         global_gem_meta,
         gem_account_meta,
-        sysvar_clock_meta,
+        # sysvar_clock_meta,
         edition_meta,
         collection_mint_meta,
         collection_account_meta,
@@ -139,7 +139,7 @@ def allocate_sol(payer_keypair, mint_pubkey, client):
     global_gem_meta = AccountMeta(global_gem_pubkey, False, True)
     pd_pool_meta = AccountMeta(pd_pool_pubkey, False, True)
     minting_pool_meta = AccountMeta(minting_pool_pubkey, False, True)
-    sysvar_clock_meta = AccountMeta(solana.sysvar.SYSVAR_CLOCK_PUBKEY, False, False)
+    # sysvar_clock_meta = AccountMeta(solana.sysvar.SYSVAR_CLOCK_PUBKEY, False, False)
     system_program_meta = AccountMeta(system_program.SYS_PROGRAM_ID, False, False)
 
 
@@ -151,7 +151,7 @@ def allocate_sol(payer_keypair, mint_pubkey, client):
         global_gem_meta,
         pd_pool_meta,
         minting_pool_meta,
-        sysvar_clock_meta,
+        # sysvar_clock_meta,
 
         system_program_meta
     ]
@@ -177,7 +177,7 @@ def deallocate_sol(payer_keypair, mint_pubkey, client):
     global_gem_meta = AccountMeta(global_gem_pubkey, False, True)
     pd_pool_meta = AccountMeta(pd_pool_pubkey, False, True)
     minting_pool_meta = AccountMeta(minting_pool_pubkey, False, True)
-    sysvar_clock_meta = AccountMeta(solana.sysvar.SYSVAR_CLOCK_PUBKEY, False, False)
+    # sysvar_clock_meta = AccountMeta(solana.sysvar.SYSVAR_CLOCK_PUBKEY, False, False)
     system_program_meta = AccountMeta(system_program.SYS_PROGRAM_ID, False, False)
 
 
@@ -189,7 +189,7 @@ def deallocate_sol(payer_keypair, mint_pubkey, client):
         global_gem_meta,
         pd_pool_meta,
         minting_pool_meta,
-        sysvar_clock_meta,
+        # sysvar_clock_meta,
 
         system_program_meta
     ]
