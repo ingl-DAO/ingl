@@ -3,6 +3,10 @@ use solana_program::{borsh::try_from_slice_unchecked, native_token::LAMPORTS_PER
 
 use crate::error::InglError;
 pub mod constants{
+    use solana_program::declare_id;
+    declare_id!("8ucRh4mMLWijjaPo8Hk94qBsvjcHsd1scA7h32ehsa5j");
+
+
     pub const INGL_NFT_COLLECTION_KEY: &str = "ingl_nft_collection_newer";
     pub const INGL_MINT_AUTHORITY_KEY: &str = "mint_authority";
     pub const INGL_MINTING_POOL_KEY: &str = "minting_pool";
@@ -10,6 +14,22 @@ pub mod constants{
     pub const GLOBAL_GEM_KEY: &str = "global_gem_account";
     pub const GEM_ACCOUNT_CONST: &str = "gem_account";
     pub const PD_POOL_KEY: &str = "pd_pool";
+
+    pub mod spl_program{
+        use solana_program::declare_id;
+
+        declare_id!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+    }
+    pub mod metaplex{
+        use solana_program::declare_id;
+
+        declare_id!("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
+    }
+    pub mod associated_token_program{
+        use solana_program::declare_id;
+
+        declare_id!("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+    }
 }
 
 #[derive(BorshSerialize,Copy, Clone, BorshDeserialize)]
