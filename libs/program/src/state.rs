@@ -1,8 +1,10 @@
 use crate::error::InglError;
 use borsh::{BorshDeserialize, BorshSerialize};
+use serde::{Deserialize, Serialize};
 use solana_program::{
     borsh::try_from_slice_unchecked, native_token::LAMPORTS_PER_SOL,
     program_error::ProgramError, pubkey::Pubkey,
+    sysvar::{rent::Rent, Sysvar},
 };
 pub mod constants{
     use solana_program::declare_id;
@@ -37,7 +39,22 @@ pub mod constants{
 
         declare_id!("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
     }
+
+    pub mod vote_program{
+        solana_program::declare_id!("Vote111111111111111111111111111111111111111");
+    }
 }
+
+
+
+#[derive(BorshDeserialize, BorshSerialize, Copy, Clone, Serialize, Deserialize)]
+pub struct VoteInit {
+    pub node_pubkey: Pubkey,
+    pub authorized_voter: Pubkey,
+    pub authorized_withdrawer: Pubkey,
+    pub commission: u8,
+}
+
 
 #[derive(BorshSerialize, Copy, Clone, BorshDeserialize)]
 pub enum Class {
@@ -123,5 +140,16 @@ impl GemAccountVersions {
             _ => {
                 Err(InglError::InvalidStructType.utilize(Some("GemAccountVersions deserialize")))}
         }
+    }
+}
+
+pub struct VoteState{}
+
+impl VoteState {
+    pub fn space()->usize{
+        3731
+    }
+    pub fn min_lamports()->u64{
+        Rent::get().unwrap().minimum_balance(3731)
     }
 }

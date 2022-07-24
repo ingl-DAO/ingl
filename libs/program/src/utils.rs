@@ -7,7 +7,7 @@ use crate::{
     state::constants,
 };
 
-pub fn assert_pubkeys_exatitude(a: &Pubkey, b: &Pubkey) -> Result<(), ProgramError> {
+pub fn assert_pubkeys_exactitude(a: &Pubkey, b: &Pubkey) -> Result<(), ProgramError> {
     if a != b {
         return Err(InglError::KeyPairMismatch.utilize(None));
     }

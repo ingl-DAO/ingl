@@ -659,6 +659,7 @@ dependencies = [
  "mpl-token-metadata",
  "num-derive",
  "num-traits",
+ "serde",
  "solana-program",
  "spl-associated-token-account",
  "spl-token",
