@@ -41,7 +41,7 @@ Thumbs.db
 
 #Program files
 /target
-/Cargo.lock
+Cargo.lock
 arweave-key.json
 keypair.json
 /deploy
