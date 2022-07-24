@@ -15,6 +15,7 @@ pub enum InstructionEnum {
     ChangeVoteAccountsValidatorIdentity,
     DelegateSol,
     UnDelegateSol,
+    InitRarityImprint
 }
 
 
