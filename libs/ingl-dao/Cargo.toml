@@ -1,0 +1,30 @@
+[package]
+name = "ingl-dao"
+version = "0.1.0"
+description = "Ingl Governance"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+solana-program = "1.11.3"
+borsh = "0.9.3"
+spl-token = "3.3.0"
+borsh-derive = "0.9.3"
+spl-governance = "2.2.4"
+thiserror = "1.0.31"
+num-derive = "0.3"
+num-traits = "0.2"
+
+
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[package.metadata.x]
+build-deploy-address = "solana config set --url https://api.devnet.solana.com && cargo build-bpf && solana program deploy --program-id ./deploy/keypair.json ../../target/deploy/ingl-dao.so"
+build-deploy = "solana config set --url https://api.devnet.solana.com && cargo build-bpf && solana program deploy ../../target/deploy/ingl-dao.so"
+build-deploy-address-testnet = "solana config set --url https://api.testnet.solana.com && cargo build-bpf && solana program deploy --program-id ./deploy/keypair.json ../../target/deploy/ingl-dao.so"
+build-deploy-testnet = "solana config set --url https://api.testnet.solana.com && cargo build-bpf && solana program deploy ../../target/deploy/ingl-dao.so"
+build-deploy-address-local = "solana config set --url http://127.0.0.1:8899 && cargo build-bpf && solana program deploy --program-id ./deploy/keypair.json ../../target/deploy/ingl-dao.so"
+build-deploy-local = "solana config set --url http://127.0.0.1:8899 && cargo build-bpf && solana program deploy ../../target/deploy/ingl-dao.so"

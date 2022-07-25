@@ -1,0 +1,20 @@
+{
+  "name": "ingl-dao-client",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "ingl",
+  "license": "ISC",
+  "dependencies": {
+    "@project-serum/anchor": "^0.25.0",
+    "@solana/governance-program-library": "^0.16.7",
+    "@solana/spl-governance": "^0.0.34",
+    "@solana/spl-token": "^0.2.0",
+    "@solana/wallet-adapter-base": "^0.9.9",
+    "@solana/web3.js": "^1.50.0",
+    "borsh": "^0.7.0"
+  }
+}
