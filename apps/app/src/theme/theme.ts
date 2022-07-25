@@ -1,5 +1,5 @@
-import { createTheme } from "@mui/material/styles";
-import React from "react";
+import { createTheme } from '@mui/material/styles';
+import React from 'react';
 
 // thin: 100
 // extraLight: 200
@@ -12,35 +12,35 @@ import React from "react";
 // black: 900
 // 16px => 1rem
 
-declare module "@mui/material/styles" {
+declare module '@mui/material/styles' {
   interface Theme {
     common: {
-      line: React.CSSProperties["color"];
-      inputBackground: React.CSSProperties["color"];
-      adminElement: React.CSSProperties["color"];
-      background: React.CSSProperties["color"];
-      adminBackground: React.CSSProperties["color"];
-      offWhite: React.CSSProperties["color"];
-      placeholder: React.CSSProperties["color"];
-      label: React.CSSProperties["color"];
-      body: React.CSSProperties["color"];
-      titleActive: React.CSSProperties["color"];
-      dialogBackground: React.CSSProperties["color"]
+      line: React.CSSProperties['color'];
+      inputBackground: React.CSSProperties['color'];
+      adminElement: React.CSSProperties['color'];
+      background: React.CSSProperties['color'];
+      adminBackground: React.CSSProperties['color'];
+      offWhite: React.CSSProperties['color'];
+      placeholder: React.CSSProperties['color'];
+      label: React.CSSProperties['color'];
+      body: React.CSSProperties['color'];
+      titleActive: React.CSSProperties['color'];
+      dialogBackground: React.CSSProperties['color'];
     };
   }
   interface ThemeOptions {
     common: {
-      line: React.CSSProperties["color"];
-      inputBackground: React.CSSProperties["color"];
-      adminElement: React.CSSProperties["color"];
-      background: React.CSSProperties["color"];
-      adminBackground: React.CSSProperties["color"];
-      offWhite: React.CSSProperties["color"];
-      placeholder: React.CSSProperties["color"];
-      label: React.CSSProperties["color"];
-      body: React.CSSProperties["color"];
-      titleActive: React.CSSProperties["color"];
-      dialogBackground: React.CSSProperties["color"]
+      line: React.CSSProperties['color'];
+      inputBackground: React.CSSProperties['color'];
+      adminElement: React.CSSProperties['color'];
+      background: React.CSSProperties['color'];
+      adminBackground: React.CSSProperties['color'];
+      offWhite: React.CSSProperties['color'];
+      placeholder: React.CSSProperties['color'];
+      label: React.CSSProperties['color'];
+      body: React.CSSProperties['color'];
+      titleActive: React.CSSProperties['color'];
+      dialogBackground: React.CSSProperties['color'];
     };
   }
   interface TypographyVariants {
@@ -64,20 +64,34 @@ declare module "@mui/material/styles" {
 }
 
 // Update the Typography's variant prop options
-declare module "@mui/material/Typography" {
+declare module '@mui/material/Typography' {
   interface TypographyPropsVariantOverrides {
     h1: true;
     h2: true;
     h3: true;
     body1: true;
     body2: true;
-    caption: true
+    caption: true;
   }
 }
 
-const PRIMARY = "#003566"
-const LINE = "#D9D9D9"
-const SECONDARY = "#02C39A"
+declare module '@mui/material/styles' {
+  interface BreakpointOverrides {
+    xs: false; // removes the `xs` breakpoint
+    sm: false;
+    md: false;
+    lg: false;
+    xl: false;
+    mobile: true; // adds the `mobile` breakpoint
+    tablet: true;
+    laptop: true;
+    desktop: true;
+  }
+}
+
+const PRIMARY = '#003566';
+const LINE = '#D9D9D9';
+const SECONDARY = '#02C39A';
 
 const theme = createTheme({
   palette: {
@@ -88,7 +102,7 @@ const theme = createTheme({
       main: SECONDARY,
     },
     error: {
-      main: "#EF233C",
+      main: '#EF233C',
     },
     success: {
       main: SECONDARY,
@@ -96,48 +110,57 @@ const theme = createTheme({
   },
   common: {
     line: LINE,
-    inputBackground: "#F4F5F7",
-    background: "#0D203B",
-    adminBackground: "#131313",
-    adminElement: "#1D1D1D",
-    offWhite: "#726F6F",
+    inputBackground: '#F4F5F7',
+    background: '#0D203B',
+    adminBackground: '#131313',
+    adminElement: '#1D1D1D',
+    offWhite: '#726F6F',
     placeholder: LINE,
     label: LINE,
-    body: "#FFFFFF",
+    body: '#FFFFFF',
     titleActive: PRIMARY,
-    dialogBackground: "#626262"
+    dialogBackground: '#626262',
   },
   typography: {
-    fontFamily: [
-      "Berlin Sans FB",
-      "Montserrat",
-      "Roboto",
-      "serif",
-    ].join(","),
+    fontFamily: ['Poppins', 'Space Grotesk', 'Roboto', 'serif'].join(','),
     h1: {
-      fontSize: "2.8125rem",
+      fontSize: '3.125rem',
       fontWeight: 700,
+      color: 'white',
+      fontFamily: 'Space Grotesk,Poppins,Roboto,serif',
     },
     h2: {
-      fontSize: "1.875rem",
+      fontSize: '4rem',
       fontWeight: 500,
+      color: 'white',
     },
     h3: {
-      fontSize: "1.5625rem",
+      fontSize: '1.5625rem',
       fontWeight: 500,
+      color: 'white',
     },
     body1: {
-      fontSize: "1.125rem",
-      fontWeight: 400,
+      fontSize: '1.25rem',
+      fontWeight: 500,
+      color: 'white',
     },
     body2: {
-      fontSize: "1rem",
+      fontSize: '1rem',
       fontWeight: 500,
+      color: 'white',
     },
     caption: {
-      fontSize: "0.725rem",
-      fontWeight: 300,
-      color: "#828282"
+      fontSize: '0.875rem',
+      fontWeight: 400,
+      color: 'white',
+    },
+  },
+  breakpoints: {
+    values: {
+      mobile: 0,
+      tablet: 768,
+      laptop: 992,
+      desktop: 1200,
     },
   },
 });
