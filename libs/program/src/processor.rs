@@ -1,8 +1,11 @@
 use crate::{
     error::InglError,
-    instruction::{InstructionEnum, vote_create_account, vote_initialize_account},
+    instruction::{vote_create_account, vote_initialize_account, InstructionEnum},
     nfts,
-    state::{constants::*, Class, FundsLocation, GemAccountV0_0_1, GemAccountVersions, GlobalGems, VoteInit},
+    state::{
+        constants::*, Class, FundsLocation, GemAccountV0_0_1, GemAccountVersions, GlobalGems,
+        VoteInit,
+    },
     utils::{assert_owned_by, assert_program_owned, assert_pubkeys_exactitude},
 };
 use std::str::FromStr;
@@ -51,35 +54,43 @@ pub fn process_instruction(
     })
 }
 
-pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult{
+pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
     let account_info_iter = &mut accounts.iter();
 
     let validator_info = next_account_info(account_info_iter)?;
     let vote_account_info = next_account_info(account_info_iter)?;
     let sysvar_rent_info = next_account_info(account_info_iter)?;
     let sysvar_clock_info = next_account_info(account_info_iter)?;
-    let (expected_vote_pubkey, expected_vote_pubkey_nonce) = Pubkey::find_program_address(&[b"InglVote", &validator_info.key.to_bytes()[..24]], program_id);
-    let (authorized_withdrawer, _authorized_withdrawer_nonce) = Pubkey::find_program_address(&[b"InglAuthorizedWithdrawer"], program_id);
-    if *vote_account_info.key != expected_vote_pubkey{ 
+    let (expected_vote_pubkey, expected_vote_pubkey_nonce) = Pubkey::find_program_address(
+        &[b"InglVote", &validator_info.key.to_bytes()[..24]],
+        program_id,
+    );
+    let (authorized_withdrawer, _authorized_withdrawer_nonce) =
+        Pubkey::find_program_address(&[b"InglAuthorizedWithdrawer"], program_id);
+    if *vote_account_info.key != expected_vote_pubkey {
         msg!("vote account pubkey is dissimilar to the expected vote pubkey");
         Err(ProgramError::Custom(0))?
     }
-    
-    if !validator_info.is_signer{
+
+    if !validator_info.is_signer {
         msg!("validator_id account must sign the transaction");
         Err(ProgramError::Custom(1))?
     }
 
-    let vote_init = VoteInit{
+    let vote_init = VoteInit {
         node_pubkey: *validator_info.key,
         authorized_voter: *validator_info.key,
         commission: 10,
-        authorized_withdrawer: authorized_withdrawer
+        authorized_withdrawer: authorized_withdrawer,
     };
     invoke_signed(
         &vote_create_account(validator_info.key, vote_account_info.key),
         &[validator_info.clone(), vote_account_info.clone()],
-        &[&[b"InglVote", &validator_info.key.to_bytes()[..24], &[expected_vote_pubkey_nonce]]]
+        &[&[
+            b"InglVote",
+            &validator_info.key.to_bytes()[..24],
+            &[expected_vote_pubkey_nonce],
+        ]],
     )?;
     msg!("reached here: {}", vote_init.authorized_voter);
     invoke(
@@ -89,7 +100,7 @@ pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
             sysvar_rent_info.clone(),
             sysvar_clock_info.clone(),
             validator_info.clone(),
-        ]
+        ],
     )?;
 
     Ok(())
@@ -108,10 +119,7 @@ pub fn allocate_sol(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramRes
     assert_program_owned(gem_account_data_info)?;
     assert_program_owned(global_gem_account_info)?;
     assert_owned_by(mint_account_info, &spl_program::id())?;
-    assert_owned_by(
-        associated_token_account_info,
-        &spl_program::id(),
-    )?;
+    assert_owned_by(associated_token_account_info, &spl_program::id())?;
 
     if !payer_account_info.is_signer {
         Err(ProgramError::MissingRequiredSignature)?
@@ -201,10 +209,7 @@ pub fn deallocate_sol(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
     assert_program_owned(global_gem_account_info)?;
 
     assert_owned_by(mint_account_info, &spl_program::id())?;
-    assert_owned_by(
-        associated_token_account_info,
-        &spl_program::id(),
-    )?;
+    assert_owned_by(associated_token_account_info, &spl_program::id())?;
 
     if !payer_account_info.is_signer {
         Err(ProgramError::MissingRequiredSignature)?
@@ -840,8 +845,13 @@ pub fn init_rarity_imprint(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
     assert_owned_by(associated_token_account_info, &spl_program::id())?;
 
     assert_pubkeys_exactitude(&gem_account_pubkey, gem_account_info.key).expect("gem_account_info");
-    assert_pubkeys_exactitude(&mint_authority_key, freeze_authority_account_info.key).expect("freeze_authority_account_info");
-    assert_pubkeys_exactitude(&get_associated_token_address(payer_account_info.key, mint_account_info.key),associated_token_account_info.key).expect("associated_token_account_info");
+    assert_pubkeys_exactitude(&mint_authority_key, freeze_authority_account_info.key)
+        .expect("freeze_authority_account_info");
+    assert_pubkeys_exactitude(
+        &get_associated_token_address(payer_account_info.key, mint_account_info.key),
+        associated_token_account_info.key,
+    )
+    .expect("associated_token_account_info");
 
     let mut gem_data: GemAccountV0_0_1 = try_from_slice_unchecked(&gem_account_info.data.borrow())?;
     gem_data.future_price_time =
@@ -880,14 +890,25 @@ pub fn imprint_rarity(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
     let eth_feed_account_info = next_account_info(account_info_iter)?;
     let bnb_feed_account_info = next_account_info(account_info_iter)?;
 
-
     assert_program_owned(gem_account_info)?;
     assert_owned_by(mint_account_info, &spl_program::id())?;
     assert_owned_by(associated_token_account_info, &spl_program::id())?;
-    assert_owned_by(btc_feed_account_info, &SWITCHBOARD_V2_DEVNET).or(assert_owned_by(btc_feed_account_info, &SWITCHBOARD_V2_MAINNET))?;
-    assert_owned_by(sol_feed_account_info, &SWITCHBOARD_V2_DEVNET).or(assert_owned_by(sol_feed_account_info, &SWITCHBOARD_V2_MAINNET))?;
-    assert_owned_by(eth_feed_account_info, &SWITCHBOARD_V2_DEVNET).or(assert_owned_by(eth_feed_account_info, &SWITCHBOARD_V2_MAINNET))?;
-    assert_owned_by(bnb_feed_account_info, &SWITCHBOARD_V2_DEVNET).or(assert_owned_by(bnb_feed_account_info, &SWITCHBOARD_V2_MAINNET))?;
+    assert_owned_by(btc_feed_account_info, &SWITCHBOARD_V2_DEVNET).or(assert_owned_by(
+        btc_feed_account_info,
+        &SWITCHBOARD_V2_MAINNET,
+    ))?;
+    assert_owned_by(sol_feed_account_info, &SWITCHBOARD_V2_DEVNET).or(assert_owned_by(
+        sol_feed_account_info,
+        &SWITCHBOARD_V2_MAINNET,
+    ))?;
+    assert_owned_by(eth_feed_account_info, &SWITCHBOARD_V2_DEVNET).or(assert_owned_by(
+        eth_feed_account_info,
+        &SWITCHBOARD_V2_MAINNET,
+    ))?;
+    assert_owned_by(bnb_feed_account_info, &SWITCHBOARD_V2_DEVNET).or(assert_owned_by(
+        bnb_feed_account_info,
+        &SWITCHBOARD_V2_MAINNET,
+    ))?;
 
     assert_pubkeys_exactitude(
         &get_associated_token_address(payer_account_info.key, mint_account_info.key),
@@ -908,8 +929,10 @@ pub fn imprint_rarity(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
     assert_pubkeys_exactitude(&mint_authority_key, freeze_authority_account_info.key)
         .expect("freeze_authority_account_info");
 
-    let (gem_pubkey, _gem_bump) =
-        Pubkey::find_program_address(&[GEM_ACCOUNT_CONST.as_ref()], program_id);
+    let (gem_pubkey, _gem_bump) = Pubkey::find_program_address(
+        &[GEM_ACCOUNT_CONST.as_ref(), mint_account_info.key.as_ref()],
+        program_id,
+    );
     assert_pubkeys_exactitude(&gem_pubkey, gem_account_info.key).expect("gem_account_info");
 
     assert_pubkeys_exactitude(
