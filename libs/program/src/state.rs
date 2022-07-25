@@ -104,8 +104,6 @@ pub enum FundsLocation {
     VoteAccount { id: Pubkey },
 }
 
-#[derive(BorshDeserialize, BorshSerialize)]
-pub struct PriceTime {}
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct GemAccountV0_0_1 {
@@ -143,8 +141,18 @@ impl GemAccountVersions {
     }
 }
 
-pub struct VoteState{}
 
+pub struct ProgramVoteAccount{
+    total_delegated: u64,
+    validator: Pubkey,
+}
+
+pub struct GlobalVoteAccounts{
+    all_vote_accounts: Vec<Pubkey>,
+}
+
+
+pub struct VoteState{}
 impl VoteState {
     pub fn space()->usize{
         3731

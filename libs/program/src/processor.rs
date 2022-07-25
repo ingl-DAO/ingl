@@ -53,17 +53,23 @@ pub fn process_instruction(
 
 pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult{
     let account_info_iter = &mut accounts.iter();
-
+    
+    //Need to validate validator_info from the vote results.
     let validator_info = next_account_info(account_info_iter)?;
     let vote_account_info = next_account_info(account_info_iter)?;
     let sysvar_rent_info = next_account_info(account_info_iter)?;
     let sysvar_clock_info = next_account_info(account_info_iter)?;
+    let program_vote_account_info = next_account_info(account_info_iter)?;
+    let global_vote_accounts = next_account_info(account_info_iter)?;
+
+    assert_program_owned(program_vote_account_info)?;
+    assert_program_owned(global_vote_accounts)?;
+
+
     let (expected_vote_pubkey, expected_vote_pubkey_nonce) = Pubkey::find_program_address(&[b"InglVote", &validator_info.key.to_bytes()[..24]], program_id);
     let (authorized_withdrawer, _authorized_withdrawer_nonce) = Pubkey::find_program_address(&[b"InglAuthorizedWithdrawer"], program_id);
-    if *vote_account_info.key != expected_vote_pubkey{ 
-        msg!("vote account pubkey is dissimilar to the expected vote pubkey");
-        Err(ProgramError::Custom(0))?
-    }
+    assert_pubkeys_exactitude(vote_account_info.key, &expected_vote_pubkey).expect("vote account pubkey is dissimilar to the expected vote pubkey"); 
+
     
     if !validator_info.is_signer{
         msg!("validator_id account must sign the transaction");
