@@ -13,7 +13,7 @@ pub enum InglError{
     #[error("Funds Not located in the appropriate pool for this instruction")]
     InvalidFundsLocation,
 
-    #[error("Attemptint to execute earlier than allowed instruction")]
+    #[error("Attempting to execute an earlier than allowed instruction")]
     TooEarly
 }
 
