@@ -9,6 +9,12 @@ pub enum InglError{
 
     #[error("Provided Struct Type does not match expected value")]
     InvalidStructType,
+
+    #[error("Funds Not located in the appropriate pool for this instruction")]
+    InvalidFundsLocation,
+
+    #[error("Attempting to execute an earlier than allowed instruction")]
+    TooEarly
 }
 
 
@@ -19,10 +25,17 @@ impl From<InglError> for ProgramError {
 }
 
 impl InglError{
-    pub fn utilize(self, keyword: &str)->ProgramError{
+    pub fn utilize(self, keyword:Option<&str>)->ProgramError{
         match self {
-            Self::InvalidStructType => {msg!("Error:  Keyword: {:?}, Provided Struct Type does not match expected value.", keyword);}
-            Self::KeyPairMismatch => {msg!("Error:  Keyword: {:?}, Provided Keypairs do not match expected value", keyword);}
+            Self::InvalidStructType => {
+                if let Some(keyword) = keyword{msg!("Error:  keyword={:?} Provided Struct Type does not match expected value.", keyword);}}
+            Self::KeyPairMismatch => {msg!("Error:  Provided Keypairs do not match expected value");}
+            Self::InvalidFundsLocation => {
+                if let Some(keyword) = keyword{msg!("Error:  keyword={:?} Funds Not located in the appropriate pool for this instruction", keyword);}
+            }
+            Self::TooEarly => {
+                if let Some(keyword) = keyword{msg!("Error:  keyword={:?} Executing a process earlier than is allowed", keyword);}
+            }
         }
         ProgramError::from(self)
     }
