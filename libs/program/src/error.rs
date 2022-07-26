@@ -13,8 +13,14 @@ pub enum InglError{
     #[error("Funds Not located in the appropriate pool for this instruction")]
     InvalidFundsLocation,
 
-    #[error("Attempting to execute an earlier than allowed instruction")]
-    TooEarly
+    #[error("Attempting to execute an instruction earlier than allowe")]
+    TooEarly,
+
+    #[error("Attempting to execute an instruction later than allowed")]
+    TooLate,
+
+    #[error("A vote had already occured with the specifid accounts")]
+    AlreadyVoted,
 }
 
 
@@ -35,6 +41,12 @@ impl InglError{
             }
             Self::TooEarly => {
                 if let Some(keyword) = keyword{msg!("Error:  keyword={:?} Executing a process earlier than is allowed", keyword);}
+            }
+            Self::TooLate => {
+                if let Some(keyword) = keyword{msg!("Error:  keyword={:?} Executing a process later than is allowed", keyword);}
+            }
+            Self::AlreadyVoted =>{ 
+                if let Some(keyword) = keyword{msg!("Error: keyword={:?} Had already voted for this specific proposal", keyword);}
             }
         }
         ProgramError::from(self)

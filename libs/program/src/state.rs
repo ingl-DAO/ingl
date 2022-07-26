@@ -23,6 +23,7 @@ pub mod constants{
     pub const BNB_FEED_PUBLIC_KEY: &str = "2steFGCbo9FNXksMBGDh9NwixtdG5PdQoaCuR4knyvrB";
     pub const ETH_FEED_PUBLIC_KEY: &str = "HNStfhaLnqwF2ZtJUizaA9uHDAVB976r2AgTUx9LrdEo";
     pub const PD_POOL_KEY: &str = "pd_pool";
+    pub const PROPOSAL_KEY: &str ="ingl_proposals";
 
     pub mod spl_program{
         use solana_program::declare_id;
@@ -89,12 +90,15 @@ pub enum Rarity {
     Mythic,
 }
 
-#[derive(BorshDeserialize, BorshSerialize)]
+#[derive(BorshDeserialize, Clone, BorshSerialize)]
 pub struct GlobalGems {
     pub counter: u32,
     pub total_raised: u64,
     pub pd_pool_total: u64,
     pub delegated_total: u64,
+    pub is_proposal_ongoing: bool,
+    pub proposal_numeration: u32,
+    pub validator_list : Vec<Pubkey>
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
@@ -104,6 +108,12 @@ pub enum FundsLocation {
     VoteAccount { id: Pubkey },
 }
 
+
+#[derive(BorshDeserialize, BorshSerialize)]
+pub struct ValidatorVote{
+    pub proposal_id: Pubkey,
+    pub validator_index: u32,
+}
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct GemAccountV0_0_1 {
@@ -116,6 +126,8 @@ pub struct GemAccountV0_0_1 {
     pub funds_location: FundsLocation,
     pub future_price_time: Option<u32>,
     pub date_allocated: Option<u32>,
+    pub last_voted_proposal: Option<Pubkey>,
+    pub all_votes: Vec<ValidatorVote>,
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
@@ -142,13 +154,26 @@ impl GemAccountVersions {
 }
 
 
+#[derive(BorshDeserialize, BorshSerialize)]
+pub struct ValidatorProposal{
+    pub validator_ids: Vec<Pubkey>,
+    pub date_created: u32,
+    pub date_finalized: Option<u32>,
+    pub votes: Vec<u32>,
+    pub winner: Option<Pubkey>
+}
+
+
+#[derive(BorshDeserialize, BorshSerialize)]
 pub struct ProgramVoteAccount{
     total_delegated: u64,
     validator: Pubkey,
 }
 
+#[derive(BorshDeserialize, BorshSerialize)]
 pub struct GlobalVoteAccounts{
     all_vote_accounts: Vec<Pubkey>,
+
 }
 
 

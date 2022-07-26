@@ -1,9 +1,12 @@
 use crate::{
     error::InglError,
-    instruction::{InstructionEnum, vote_create_account, vote_initialize_account},
+    instruction::{vote_create_account, vote_initialize_account, InstructionEnum},
     nfts,
-    state::{constants::*, Class, FundsLocation, GemAccountV0_0_1, GemAccountVersions, GlobalGems, VoteInit},
-    utils::{assert_owned_by, assert_program_owned, assert_pubkeys_exactitude},
+    state::{
+        constants::*, Class, FundsLocation, GemAccountV0_0_1, GemAccountVersions, GlobalGems,
+        VoteInit, ValidatorProposal, ValidatorVote,
+    },
+    utils::{assert_owned_by, assert_program_owned, assert_pubkeys_exactitude, assert_is_signer},
 };
 use std::str::FromStr;
 
@@ -13,8 +16,7 @@ use mpl_token_metadata::{
     state::{Creator, PREFIX},
 };
 use num_traits::Pow;
-use solana_program::hash::hash;
-use solana_program::program_pack::Pack;
+use solana_program::{program_pack::Pack, native_token::LAMPORTS_PER_SOL};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     borsh::try_from_slice_unchecked,
@@ -27,6 +29,7 @@ use solana_program::{
     rent::Rent,
     system_instruction, system_program,
     sysvar::Sysvar,
+    hash::hash
 };
 use spl_associated_token_account::{get_associated_token_address, *};
 use spl_token::{instruction::AuthorityType, state::Account};
@@ -46,12 +49,186 @@ pub fn process_instruction(
         InstructionEnum::ImprintRarity => imprint_rarity(program_id, accounts)?,
         InstructionEnum::AllocateSol => allocate_sol(program_id, accounts)?,
         InstructionEnum::DeAllocateSol => deallocate_sol(program_id, accounts)?,
-        InstructionEnum::CreateVoteAccount => create_vote_account(program_id, accounts)?,
+        InstructionEnum::CreateVoteAccount => create_vote_account(program_id, accounts)?, //Come back to this Cyrial
+        InstructionEnum::RegisterValidatorId => register_validator_id(program_id, accounts)?,
+        InstructionEnum::CreateValidatorSelectionProposal => create_validator_selection_proposal(program_id, accounts)?,
+        InstructionEnum::VoteValidatorProposal{num_nfts, validator_index} => vote_validator_proposal(program_id, accounts, num_nfts, validator_index)?,
+        InstructionEnum::FinalizeProposal => finalize_proposal(program_id, accounts)?,
         _ => Err(ProgramError::InvalidInstructionData)?,
     })
 }
 
-pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult{
+pub fn finalize_proposal(program_id:&Pubkey, accounts: &[AccountInfo]) -> ProgramResult{
+    let account_info_iter = &mut accounts.iter();
+    let proposal_account_info = next_account_info(account_info_iter)?;
+    let global_gem_account_info = next_account_info(account_info_iter)?;
+
+    assert_program_owned(proposal_account_info)?;
+    let mut proposal_data: ValidatorProposal = try_from_slice_unchecked(&proposal_account_info.data.borrow())?;
+    if let Some(_) = proposal_data.date_finalized{
+        Err(ProgramError::InvalidAccountData)?
+    }
+
+    let (global_gem_pubkey, _global_gem_bump) =
+    Pubkey::find_program_address(&[GLOBAL_GEM_KEY.as_ref()], program_id);
+
+    assert_pubkeys_exactitude(&global_gem_pubkey, global_gem_account_info.key)
+        .expect("Error: @global_gem_account_info");
+    assert_program_owned(global_gem_account_info)?;
+    let global_gem_account_data: GlobalGems = try_from_slice_unchecked(&global_gem_account_info.data.borrow())?;
+
+    if global_gem_account_data.pd_pool_total < 10_000 * LAMPORTS_PER_SOL{
+        Err(InglError::TooEarly.utilize(Some("pd_pool_total")))?
+    }
+
+    proposal_data.date_finalized = Some(Clock::get()?.unix_timestamp as u32);
+
+    let (winner_index, _) = proposal_data.votes.iter().enumerate().fold((0, 0), |max, (ind, &val)| if val > max.1 {(ind, val)} else {max});
+    proposal_data.winner = Some(proposal_data.validator_ids[winner_index]);
+    proposal_data.serialize(&mut &mut proposal_account_info.data.borrow_mut()[..])?;
+    
+    Ok(())
+}
+
+
+pub fn vote_validator_proposal(program_id: &Pubkey, accounts: &[AccountInfo], num_nfts: u8, validator_index: u32) -> ProgramResult{
+    let account_info_iter = &mut accounts.iter();
+    let payer_account_info = next_account_info(account_info_iter)?;
+    let proposal_account_info = next_account_info(account_info_iter)?;
+    
+    assert_program_owned(proposal_account_info)?;
+    let mut proposal_data: ValidatorProposal = try_from_slice_unchecked(&proposal_account_info.data.borrow())?;
+    if let Some(_) = proposal_data.date_finalized{
+        Err(ProgramError::InvalidAccountData)?
+    }
+
+    for _ in 0..num_nfts{
+        let mint_account_info = next_account_info(account_info_iter)?;
+        let associated_token_account_info = next_account_info(account_info_iter)?;
+        let gem_account_data_info = next_account_info(account_info_iter)?;
+
+        
+        assert_program_owned(gem_account_data_info)?;
+        assert_owned_by(mint_account_info, &spl_program::id())?;
+        assert_owned_by(associated_token_account_info, &spl_program::id())?;
+
+        let (gem_account_pubkey, _gem_account_bump) = Pubkey::find_program_address(
+            &[GEM_ACCOUNT_CONST.as_ref(), mint_account_info.key.as_ref()],
+            program_id,
+        );
+        assert_pubkeys_exactitude(&gem_account_pubkey, gem_account_data_info.key)
+            .expect("Error: @gem_account_info");
+
+        assert_pubkeys_exactitude(
+            &get_associated_token_address(payer_account_info.key, mint_account_info.key),
+            associated_token_account_info.key,
+        )
+        .expect("Error: @associated_token_address");
+        let associated_token_address_data =
+            Account::unpack(&associated_token_account_info.data.borrow())?;
+        if associated_token_address_data.amount != 1 {
+            Err(ProgramError::InsufficientFunds)?
+        }
+
+        let mut gem_account_data: GemAccountV0_0_1 =
+        GemAccountVersions::decode(&gem_account_data_info.data.borrow())?;
+
+        if let Some(proposal_id) = gem_account_data.last_voted_proposal{
+            if &proposal_id == proposal_account_info.key{
+                Err(InglError::AlreadyVoted.utilize(Some(mint_account_info.key.to_string().as_ref() as &str)))?
+            }
+        }
+
+        gem_account_data.last_voted_proposal = Some(*proposal_account_info.key);
+        gem_account_data.all_votes.push(ValidatorVote{proposal_id: *proposal_account_info.key, validator_index: validator_index});
+        proposal_data.votes[validator_index as usize] += (gem_account_data.class.get_class_lamports() / LAMPORTS_PER_SOL) as u32;
+
+        gem_account_data.serialize(&mut &mut gem_account_data_info.data.borrow_mut()[..])?;
+    }
+
+    proposal_data.serialize(&mut &mut proposal_account_info.data.borrow_mut()[..])?;
+    Ok(())
+}
+
+
+
+
+pub fn create_validator_selection_proposal(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult{
+    let account_info_iter = &mut accounts.iter();
+    let payer_account_info = next_account_info(account_info_iter)?;
+    let global_gem_account_info = next_account_info(account_info_iter)?;
+    let proposal_account_info = next_account_info(account_info_iter)?;
+
+
+    let (global_gem_pubkey, _global_gem_bump) =
+    Pubkey::find_program_address(&[GLOBAL_GEM_KEY.as_ref()], program_id);
+
+    assert_pubkeys_exactitude(&global_gem_pubkey, global_gem_account_info.key)
+        .expect("Error: @global_gem_account_info");
+    assert_program_owned(global_gem_account_info)?;
+
+    let mut global_gem_data: GlobalGems = try_from_slice_unchecked(&global_gem_account_info.data.borrow())?;
+    
+    if global_gem_data.is_proposal_ongoing{
+        Err(InglError::TooEarly.utilize(Some("A Proposal Is Currently Ongoing")))?;
+    }
+    global_gem_data.is_proposal_ongoing = true;
+
+    let (expected_proposal_id, expected_proposal_bump) = Pubkey::find_program_address(&[PROPOSAL_KEY.as_ref(), &global_gem_data.proposal_numeration.to_be_bytes()], program_id);
+    assert_pubkeys_exactitude(&expected_proposal_id, proposal_account_info.key)?;
+
+    
+    let space = 10000;
+    let rent_lamports = Rent::get()?.minimum_balance(space);
+
+
+    invoke_signed(
+        &system_instruction::create_account(payer_account_info.key, &expected_proposal_id, rent_lamports, space as u64, program_id),
+        &[payer_account_info.clone(), proposal_account_info.clone()],
+        &[&[PROPOSAL_KEY.as_ref(), &global_gem_data.proposal_numeration.to_be_bytes(), &[expected_proposal_bump]]]
+    )?;
+
+    let proposal_data = ValidatorProposal{
+        validator_ids : global_gem_data.clone().validator_list,
+        date_created : Clock::get()?.unix_timestamp as u32,
+        date_finalized : None,
+        votes: Vec::new(),
+        winner: None
+    };
+
+    proposal_data.serialize(&mut &mut proposal_account_info.data.borrow_mut()[..])?;
+
+    global_gem_data.proposal_numeration += 1;
+
+    global_gem_data.serialize(&mut &mut global_gem_account_info.data.borrow_mut()[..])?;
+
+    Ok(())
+}
+
+pub fn register_validator_id(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult{
+    let account_info_iter = &mut accounts.iter();
+    let payer_account_info = next_account_info(account_info_iter)?;
+    let global_gem_account_info = next_account_info(account_info_iter)?;
+
+    let (global_gem_pubkey, _global_gem_bump) =
+    Pubkey::find_program_address(&[GLOBAL_GEM_KEY.as_ref()], program_id);
+
+    assert_pubkeys_exactitude(&global_gem_pubkey, global_gem_account_info.key)
+        .expect("Error: @global_gem_account_info");
+    assert_program_owned(global_gem_account_info)?;
+    assert_is_signer(payer_account_info)?;
+
+    let mut global_gem_data: GlobalGems = try_from_slice_unchecked(&global_gem_account_info.data.borrow())?;
+
+    
+    global_gem_data.validator_list.push(*payer_account_info.key);
+    global_gem_data.serialize(&mut &mut global_gem_account_info.data.borrow_mut()[..])?;
+
+
+    Ok(())
+}
+
+pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
     let account_info_iter = &mut accounts.iter();
     
     //Need to validate validator_info from the vote results.
@@ -76,16 +253,20 @@ pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
         Err(ProgramError::Custom(1))?
     }
 
-    let vote_init = VoteInit{
+    let vote_init = VoteInit {
         node_pubkey: *validator_info.key,
         authorized_voter: *validator_info.key,
         commission: 10,
-        authorized_withdrawer: authorized_withdrawer
+        authorized_withdrawer: authorized_withdrawer,
     };
     invoke_signed(
         &vote_create_account(validator_info.key, vote_account_info.key),
         &[validator_info.clone(), vote_account_info.clone()],
-        &[&[b"InglVote", &validator_info.key.to_bytes()[..24], &[expected_vote_pubkey_nonce]]]
+        &[&[
+            b"InglVote",
+            &validator_info.key.to_bytes()[..24],
+            &[expected_vote_pubkey_nonce],
+        ]],
     )?;
     msg!("reached here: {}", vote_init.authorized_voter);
     invoke(
@@ -95,7 +276,7 @@ pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
             sysvar_rent_info.clone(),
             sysvar_clock_info.clone(),
             validator_info.clone(),
-        ]
+        ],
     )?;
 
     Ok(())
@@ -114,10 +295,7 @@ pub fn allocate_sol(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramRes
     assert_program_owned(gem_account_data_info)?;
     assert_program_owned(global_gem_account_info)?;
     assert_owned_by(mint_account_info, &spl_program::id())?;
-    assert_owned_by(
-        associated_token_account_info,
-        &spl_program::id(),
-    )?;
+    assert_owned_by(associated_token_account_info, &spl_program::id())?;
 
     if !payer_account_info.is_signer {
         Err(ProgramError::MissingRequiredSignature)?
@@ -207,10 +385,7 @@ pub fn deallocate_sol(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
     assert_program_owned(global_gem_account_info)?;
 
     assert_owned_by(mint_account_info, &spl_program::id())?;
-    assert_owned_by(
-        associated_token_account_info,
-        &spl_program::id(),
-    )?;
+    assert_owned_by(associated_token_account_info, &spl_program::id())?;
 
     if !payer_account_info.is_signer {
         Err(ProgramError::MissingRequiredSignature)?
@@ -587,6 +762,8 @@ pub fn mint_nft(program_id: &Pubkey, accounts: &[AccountInfo], class: Class) -> 
         future_price_time: None,
         date_allocated: None,
         class: class,
+        last_voted_proposal: None,
+        all_votes: Vec::new(),
     };
     gem_account_data.serialize(&mut &mut gem_account_info.data.borrow_mut()[..])?;
     Ok(())
@@ -633,6 +810,10 @@ pub fn mint_collection(program_id: &Pubkey, accounts: &[AccountInfo]) -> Program
         total_raised: 0,
         pd_pool_total: 0,
         delegated_total: 0,
+        is_proposal_ongoing: false,
+        proposal_numeration: 0,
+        validator_list: Vec::new(),
+
     };
     global_gem_data.serialize(&mut &mut global_gem_account_info.data.borrow_mut()[..])?;
 
@@ -846,8 +1027,13 @@ pub fn init_rarity_imprint(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
     assert_owned_by(associated_token_account_info, &spl_program::id())?;
 
     assert_pubkeys_exactitude(&gem_account_pubkey, gem_account_info.key).expect("gem_account_info");
-    assert_pubkeys_exactitude(&mint_authority_key, freeze_authority_account_info.key).expect("freeze_authority_account_info");
-    assert_pubkeys_exactitude(&get_associated_token_address(payer_account_info.key, mint_account_info.key),associated_token_account_info.key).expect("associated_token_account_info");
+    assert_pubkeys_exactitude(&mint_authority_key, freeze_authority_account_info.key)
+        .expect("freeze_authority_account_info");
+    assert_pubkeys_exactitude(
+        &get_associated_token_address(payer_account_info.key, mint_account_info.key),
+        associated_token_account_info.key,
+    )
+    .expect("associated_token_account_info");
 
     let mut gem_data: GemAccountV0_0_1 = try_from_slice_unchecked(&gem_account_info.data.borrow())?;
     gem_data.future_price_time =
@@ -886,14 +1072,25 @@ pub fn imprint_rarity(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
     let eth_feed_account_info = next_account_info(account_info_iter)?;
     let bnb_feed_account_info = next_account_info(account_info_iter)?;
 
-
     assert_program_owned(gem_account_info)?;
     assert_owned_by(mint_account_info, &spl_program::id())?;
     assert_owned_by(associated_token_account_info, &spl_program::id())?;
-    assert_owned_by(btc_feed_account_info, &SWITCHBOARD_V2_DEVNET).or(assert_owned_by(btc_feed_account_info, &SWITCHBOARD_V2_MAINNET))?;
-    assert_owned_by(sol_feed_account_info, &SWITCHBOARD_V2_DEVNET).or(assert_owned_by(sol_feed_account_info, &SWITCHBOARD_V2_MAINNET))?;
-    assert_owned_by(eth_feed_account_info, &SWITCHBOARD_V2_DEVNET).or(assert_owned_by(eth_feed_account_info, &SWITCHBOARD_V2_MAINNET))?;
-    assert_owned_by(bnb_feed_account_info, &SWITCHBOARD_V2_DEVNET).or(assert_owned_by(bnb_feed_account_info, &SWITCHBOARD_V2_MAINNET))?;
+    assert_owned_by(btc_feed_account_info, &SWITCHBOARD_V2_DEVNET).or(assert_owned_by(
+        btc_feed_account_info,
+        &SWITCHBOARD_V2_MAINNET,
+    ))?;
+    assert_owned_by(sol_feed_account_info, &SWITCHBOARD_V2_DEVNET).or(assert_owned_by(
+        sol_feed_account_info,
+        &SWITCHBOARD_V2_MAINNET,
+    ))?;
+    assert_owned_by(eth_feed_account_info, &SWITCHBOARD_V2_DEVNET).or(assert_owned_by(
+        eth_feed_account_info,
+        &SWITCHBOARD_V2_MAINNET,
+    ))?;
+    assert_owned_by(bnb_feed_account_info, &SWITCHBOARD_V2_DEVNET).or(assert_owned_by(
+        bnb_feed_account_info,
+        &SWITCHBOARD_V2_MAINNET,
+    ))?;
 
     assert_pubkeys_exactitude(
         &get_associated_token_address(payer_account_info.key, mint_account_info.key),
@@ -914,8 +1111,10 @@ pub fn imprint_rarity(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
     assert_pubkeys_exactitude(&mint_authority_key, freeze_authority_account_info.key)
         .expect("freeze_authority_account_info");
 
-    let (gem_pubkey, _gem_bump) =
-        Pubkey::find_program_address(&[GEM_ACCOUNT_CONST.as_ref()], program_id);
+    let (gem_pubkey, _gem_bump) = Pubkey::find_program_address(
+        &[GEM_ACCOUNT_CONST.as_ref(), mint_account_info.key.as_ref()],
+        program_id,
+    );
     assert_pubkeys_exactitude(&gem_pubkey, gem_account_info.key).expect("gem_account_info");
 
     assert_pubkeys_exactitude(
@@ -996,7 +1195,7 @@ pub fn imprint_rarity(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
     let mut string_to_hash = btc_price.to_string();
     string_to_hash.push_str(sol_price.to_string().as_ref() as &str);
     string_to_hash.push_str(eth_price.to_string().as_ref() as &str);
-    // string_to_hash.push_str(bnb_price.to_string().as_ref() as &str);
+    string_to_hash.push_str(bnb_price.to_string().as_ref() as &str);
     let rarity_hash_string = hash(string_to_hash.as_bytes());
     let rarity_hash_bytes = rarity_hash_string.to_bytes();
 
