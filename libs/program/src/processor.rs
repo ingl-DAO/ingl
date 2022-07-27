@@ -75,9 +75,9 @@ pub fn finalize_proposal(program_id:&Pubkey, accounts: &[AccountInfo]) -> Progra
     assert_pubkeys_exactitude(&global_gem_pubkey, global_gem_account_info.key)
         .expect("Error: @global_gem_account_info");
     assert_program_owned(global_gem_account_info)?;
-    let global_gem_account_data: GlobalGems = try_from_slice_unchecked(&global_gem_account_info.data.borrow())?;
+    let mut global_gem_account_data: GlobalGems = try_from_slice_unchecked(&global_gem_account_info.data.borrow())?;
 
-    if global_gem_account_data.pd_pool_total < 10_000 * LAMPORTS_PER_SOL{
+    if global_gem_account_data.pd_pool_total < /*10_000*/ 5 * LAMPORTS_PER_SOL{ //Come back here Cyrial
         Err(InglError::TooEarly.utilize(Some("pd_pool_total")))?
     }
 
@@ -86,7 +86,10 @@ pub fn finalize_proposal(program_id:&Pubkey, accounts: &[AccountInfo]) -> Progra
     let (winner_index, _) = proposal_data.votes.iter().enumerate().fold((0, 0), |max, (ind, &val)| if val > max.1 {(ind, val)} else {max});
     proposal_data.winner = Some(proposal_data.validator_ids[winner_index]);
     proposal_data.serialize(&mut &mut proposal_account_info.data.borrow_mut()[..])?;
-    
+
+    let index = global_gem_account_data.validator_list.iter().position(|x| *x == proposal_data.winner.unwrap()).unwrap();
+    global_gem_account_data.validator_list.remove(index);
+    global_gem_account_data.serialize(&mut &mut global_gem_account_info.data.borrow_mut()[..])?;
     Ok(())
 }
 
@@ -101,16 +104,11 @@ pub fn vote_validator_proposal(program_id: &Pubkey, accounts: &[AccountInfo], nu
     if let Some(_) = proposal_data.date_finalized{
         Err(ProgramError::InvalidAccountData)?
     }
-
     for _ in 0..num_nfts{
         let mint_account_info = next_account_info(account_info_iter)?;
         let associated_token_account_info = next_account_info(account_info_iter)?;
         let gem_account_data_info = next_account_info(account_info_iter)?;
 
-        
-        assert_program_owned(gem_account_data_info)?;
-        assert_owned_by(mint_account_info, &spl_program::id())?;
-        assert_owned_by(associated_token_account_info, &spl_program::id())?;
 
         let (gem_account_pubkey, _gem_account_bump) = Pubkey::find_program_address(
             &[GEM_ACCOUNT_CONST.as_ref(), mint_account_info.key.as_ref()],
@@ -118,6 +116,10 @@ pub fn vote_validator_proposal(program_id: &Pubkey, accounts: &[AccountInfo], nu
         );
         assert_pubkeys_exactitude(&gem_account_pubkey, gem_account_data_info.key)
             .expect("Error: @gem_account_info");
+
+            assert_program_owned(gem_account_data_info)?;
+            assert_owned_by(mint_account_info, &spl_program::id())?;
+            assert_owned_by(associated_token_account_info, &spl_program::id())?;
 
         assert_pubkeys_exactitude(
             &get_associated_token_address(payer_account_info.key, mint_account_info.key),
@@ -142,15 +144,13 @@ pub fn vote_validator_proposal(program_id: &Pubkey, accounts: &[AccountInfo], nu
         gem_account_data.last_voted_proposal = Some(*proposal_account_info.key);
         gem_account_data.all_votes.push(ValidatorVote{proposal_id: *proposal_account_info.key, validator_index: validator_index});
         proposal_data.votes[validator_index as usize] += (gem_account_data.class.get_class_lamports() / LAMPORTS_PER_SOL) as u32;
-
+        msg!("helloworld");
         gem_account_data.serialize(&mut &mut gem_account_data_info.data.borrow_mut()[..])?;
     }
 
     proposal_data.serialize(&mut &mut proposal_account_info.data.borrow_mut()[..])?;
     Ok(())
 }
-
-
 
 
 pub fn create_validator_selection_proposal(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult{
@@ -192,7 +192,7 @@ pub fn create_validator_selection_proposal(program_id: &Pubkey, accounts: &[Acco
         validator_ids : global_gem_data.clone().validator_list,
         date_created : Clock::get()?.unix_timestamp as u32,
         date_finalized : None,
-        votes: Vec::new(),
+        votes: [0, global_gem_data.clone().validator_list.len() as u32].to_vec(),
         winner: None
     };
 
@@ -220,6 +220,9 @@ pub fn register_validator_id(program_id: &Pubkey, accounts: &[AccountInfo]) -> P
 
     let mut global_gem_data: GlobalGems = try_from_slice_unchecked(&global_gem_account_info.data.borrow())?;
 
+    if let Some(_) = global_gem_data.validator_list.iter().position(|x| x == payer_account_info.key){
+        Err(InglError::TooLate.utilize(Some("Already Created")))?
+    }
     
     global_gem_data.validator_list.push(*payer_account_info.key);
     global_gem_data.serialize(&mut &mut global_gem_account_info.data.borrow_mut()[..])?;
@@ -249,7 +252,7 @@ pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
 
     
     if !validator_info.is_signer{
-        msg!("validator_id account must sign the transaction");
+        // msg!("validator_id account must sign the transaction");
         Err(ProgramError::Custom(1))?
     }
 
@@ -268,7 +271,7 @@ pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
             &[expected_vote_pubkey_nonce],
         ]],
     )?;
-    msg!("reached here: {}", vote_init.authorized_voter);
+    // msg!("reached here: {}", vote_init.authorized_voter);
     invoke(
         &vote_initialize_account(vote_account_info.key, &vote_init),
         &[
@@ -450,7 +453,7 @@ pub fn deallocate_sol(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
     let clock = Clock::get()?;
 
     if (clock.unix_timestamp as u32) < gem_account_data.redeemable_date {
-        Err(InglError::TooEarly.utilize(Some("Attempting to Redeem earlier than allowed")))?;
+        Err(InglError::TooEarly.utilize(Some("Deallocating Earlier than allowed")))?;
     }
     global_gem_account_data.pd_pool_total -= mint_cost;
 
@@ -493,9 +496,9 @@ pub fn mint_nft(program_id: &Pubkey, accounts: &[AccountInfo], class: Class) -> 
     );
     assert_pubkeys_exactitude(&gem_account_pubkey, gem_account_info.key)
         .expect("Error: @gem_account_info");
-    let space = 50;
+    let space = 500;
     let rent_lamports = Rent::get()?.minimum_balance(space);
-    msg!("Reached invoke");
+    // msg!("Reached invoke");
     invoke_signed(
         &system_instruction::create_account(
             payer_account_info.key,
@@ -613,7 +616,7 @@ pub fn mint_nft(program_id: &Pubkey, accounts: &[AccountInfo], class: Class) -> 
         ],
     )?;
 
-    msg!("Mint new collection token");
+    // msg!("Mint new collection token");
     invoke_signed(
         &spl_token::instruction::mint_to(
             spl_token_program_account_info.key,
@@ -656,7 +659,7 @@ pub fn mint_nft(program_id: &Pubkey, accounts: &[AccountInfo], class: Class) -> 
     assert_pubkeys_exactitude(&collection_metadata_key, ingl_collection_account_info.key)
         .expect("Error: @collection_metadata_info");
 
-    msg!("starting metadata creation");
+    // msg!("starting metadata creation");
     invoke_signed(
         &mpl_token_metadata::instruction::create_metadata_accounts_v3(
             mpl_token_metadata_id,
@@ -698,7 +701,7 @@ pub fn mint_nft(program_id: &Pubkey, accounts: &[AccountInfo], class: Class) -> 
     );
     assert_pubkeys_exactitude(&edition_key, edition_account_info.key)
         .expect("Error: @edition_account_info");
-    // msg!("verifying collection");
+    msg!("verifying collection");
     // invoke_signed(
     //     &mpl_token_metadata::instruction::set_and_verify_collection(
     //         mpl_token_metadata_id,
@@ -721,7 +724,9 @@ pub fn mint_nft(program_id: &Pubkey, accounts: &[AccountInfo], class: Class) -> 
     //         ],
     //         &[&[INGL_MINT_AUTHORITY_KEY.as_ref(), &[mint_authority_bump]]]
     // )?;
-    msg!("setting authority");
+
+
+    // msg!("setting authority");
     invoke_signed(
         &spl_token::instruction::set_authority(
             spl_token_program_account_info.key,
@@ -737,7 +742,7 @@ pub fn mint_nft(program_id: &Pubkey, accounts: &[AccountInfo], class: Class) -> 
         ],
         &[&[INGL_MINT_AUTHORITY_KEY.as_ref(), &[mint_authority_bump]]],
     )?;
-    msg!("updating update_primary_sale_happened_via_token");
+    // msg!("updating update_primary_sale_happened_via_token");
     invoke(
         &mpl_token_metadata::instruction::update_primary_sale_happened_via_token(
             mpl_token_metadata::id(),
@@ -769,6 +774,8 @@ pub fn mint_nft(program_id: &Pubkey, accounts: &[AccountInfo], class: Class) -> 
     Ok(())
 }
 
+
+
 pub fn mint_collection(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
     let account_info_iter = &mut accounts.iter();
     let payer_account_info = next_account_info(account_info_iter)?;
@@ -789,10 +796,10 @@ pub fn mint_collection(program_id: &Pubkey, accounts: &[AccountInfo]) -> Program
     assert_pubkeys_exactitude(&global_gem_pubkey, global_gem_account_info.key)
         .expect("Error: @global_gem_account_info");
 
-    let space = 50;
+    let space = 10000;
     let rent_lamports = Rent::get()?.minimum_balance(space);
 
-    msg!("Create global_gem account");
+    // msg!("Create global_gem account");
     invoke_signed(
         &system_instruction::create_account(
             payer_account_info.key,
@@ -813,7 +820,6 @@ pub fn mint_collection(program_id: &Pubkey, accounts: &[AccountInfo]) -> Program
         is_proposal_ongoing: false,
         proposal_numeration: 0,
         validator_list: Vec::new(),
-
     };
     global_gem_data.serialize(&mut &mut global_gem_account_info.data.borrow_mut()[..])?;
 
@@ -826,7 +832,7 @@ pub fn mint_collection(program_id: &Pubkey, accounts: &[AccountInfo]) -> Program
     let space = 82;
     let rent_lamports = Rent::get()?.minimum_balance(space);
 
-    msg!("Create mint account");
+    // msg!("Create mint account");
     invoke_signed(
         &system_instruction::create_account(
             payer_account_info.key,
@@ -845,7 +851,7 @@ pub fn mint_collection(program_id: &Pubkey, accounts: &[AccountInfo]) -> Program
     assert_pubkeys_exactitude(&mint_authority_key, mint_authority_account_info.key)
         .expect("Error: @mint_authority_account_info");
 
-    msg!("Initialize mint account");
+    // msg!("Initialize mint account");
     invoke(
         &spl_token::instruction::initialize_mint(
             &spl_token::id(),
@@ -872,7 +878,7 @@ pub fn mint_collection(program_id: &Pubkey, accounts: &[AccountInfo]) -> Program
     )
     .expect("Error: @Associated_token_account");
 
-    msg!("Create associated token account");
+    // msg!("Create associated token account");
     invoke(
         &spl_associated_token_account::instruction::create_associated_token_account(
             payer_account_info.key,
@@ -889,7 +895,7 @@ pub fn mint_collection(program_id: &Pubkey, accounts: &[AccountInfo]) -> Program
         ],
     )?;
 
-    msg!("Mint new collection token");
+    // msg!("Mint new collection token");
     invoke_signed(
         &spl_token::instruction::mint_to(
             spl_token_program_account_info.key,
@@ -927,7 +933,7 @@ pub fn mint_collection(program_id: &Pubkey, accounts: &[AccountInfo]) -> Program
     assert_pubkeys_exactitude(&nft_metadata_key, metadata_account_info.key)
         .expect("Error: @nft_meta_data_account_info");
 
-    msg!("Create metaplex nft account v3");
+    // msg!("Create metaplex nft account v3");
     invoke_signed(
         &mpl_token_metadata::instruction::create_metadata_accounts_v3(
             mpl_token_metadata_id,
@@ -971,7 +977,7 @@ pub fn mint_collection(program_id: &Pubkey, accounts: &[AccountInfo]) -> Program
     assert_pubkeys_exactitude(&edition_key, edition_account_info.key)
         .expect("Error: @edition_account_info");
 
-    msg!("Creating master Edition account...");
+    // msg!("Creating master Edition account...");
     invoke_signed(
         &mpl_token_metadata::instruction::create_master_edition_v3(
             mpl_token_metadata_id,

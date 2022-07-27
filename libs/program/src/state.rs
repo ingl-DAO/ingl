@@ -8,7 +8,7 @@ use solana_program::{
 };
 pub mod constants{
     use solana_program::declare_id;
-    declare_id!("8ucRh4mMLWijjaPo8Hk94qBsvjcHsd1scA7h32ehsa5j");
+    declare_id!("555z2Gpih9WNBidBvTLgWbFGk2X61JcBrXDtDqYh8Pgk");
 
 
     pub const INGL_NFT_COLLECTION_KEY: &str = "ingl_nft_collection_newer";

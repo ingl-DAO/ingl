@@ -27,7 +27,7 @@ pub fn assert_program_owned(account_info: &AccountInfo) -> Result<(), ProgramErr
 }
 
 pub fn assert_is_signer(account_info: &AccountInfo) -> Result<(), ProgramError>{
-    if !account_info.is_signer{}{
+    if !account_info.is_signer{
         Err(ProgramError::MissingRequiredSignature)?
     }
     Ok(())

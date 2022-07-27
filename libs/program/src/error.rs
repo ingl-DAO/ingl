@@ -26,6 +26,7 @@ pub enum InglError{
 
 impl From<InglError> for ProgramError {
     fn from(e: InglError) -> Self {
+        e.to_string();
         ProgramError::Custom(e as u32)
     }
 }
