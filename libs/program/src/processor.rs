@@ -242,6 +242,8 @@ pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
     let mint_associated_token_account = next_account_info(account_info_iter)?;
     let council_mint_account_info = next_account_info(account_info_iter)?;
     let council_mint_authority_info = next_account_info(account_info_iter)?;
+    let system_program_account_info = next_account_info(account_info_iter)?;
+    let spl_token_program_account_info = next_account_info(account_info_iter)?;
 
     assert_program_owned(global_gem_account_info)?;
     assert_program_owned(proposal_account_info)?;
@@ -260,7 +262,7 @@ pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
 
     assert_pubkeys_exactitude(validator_info.key, &proposal_data.winner.unwrap()).expect("validator id, not that expected");
 
-    let (expected_vote_pubkey, expected_vote_pubkey_nonce) = Pubkey::find_program_address(&[VOTE_ACCOUNT_KEY.as_ref(), &(global_gem_data.proposal_numeration-1).to_be_bytes()], program_id);
+    let (expected_vote_pubkey, expected_vote_pubkey_bump) = Pubkey::find_program_address(&[VOTE_ACCOUNT_KEY.as_ref(), &(global_gem_data.proposal_numeration-1).to_be_bytes()], program_id);
     let (authorized_withdrawer, _authorized_withdrawer_nonce) = Pubkey::find_program_address(&[AUTHORIZED_WITHDRAWER_KEY.as_ref()], program_id);
     assert_pubkeys_exactitude(vote_account_info.key, &expected_vote_pubkey).expect("vote account pubkey is dissimilar to the expected vote pubkey");
 
@@ -272,6 +274,22 @@ pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
 
     let expected_assoc_key = get_associated_token_address(vote_account_info.key, council_mint_account_info.key);
     assert_pubkeys_exactitude(&expected_assoc_key, mint_associated_token_account.key).expect("Council associated token is not that expected");
+
+    invoke(
+        &spl_associated_token_account::instruction::create_associated_token_account(
+            validator_info.key,
+            vote_account_info.key,
+            council_mint_account_info.key,
+        ),
+        &[
+            validator_info.clone(),
+            mint_associated_token_account.clone(),
+            vote_account_info.clone(),
+            council_mint_account_info.clone(),
+            system_program_account_info.clone(),
+            spl_token_program_account_info.clone(),
+        ],
+    )?;
 
     invoke_signed(
         &spl_token::instruction::mint_to(&spl_token::id(), council_mint_account_info.key, mint_associated_token_account.key, council_mint_authority_info.key, &[], 1)?,
@@ -292,11 +310,7 @@ pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
     invoke_signed(
         &vote_create_account(validator_info.key, vote_account_info.key),
         &[validator_info.clone(), vote_account_info.clone()],
-        &[&[
-            b"InglVote",
-            &validator_info.key.to_bytes()[..24],
-            &[expected_vote_pubkey_nonce],
-        ]],
+        &[&[VOTE_ACCOUNT_KEY.as_ref(), &(global_gem_data.proposal_numeration-1).to_be_bytes(), &[expected_vote_pubkey_bump]]],
     )?;
     invoke(
         &vote_initialize_account(vote_account_info.key, &vote_init),
@@ -724,6 +738,7 @@ pub fn mint_nft(program_id: &Pubkey, accounts: &[AccountInfo], class: Class) -> 
         ],
         &mpl_token_metadata_id,
     );
+
     assert_pubkeys_exactitude(&edition_key, edition_account_info.key)
         .expect("Error: @edition_account_info");
     msg!("verifying collection");
@@ -814,12 +829,48 @@ pub fn mint_collection(program_id: &Pubkey, accounts: &[AccountInfo]) -> Program
     let metadata_account_info = next_account_info(account_info_iter)?;
     let global_gem_account_info = next_account_info(account_info_iter)?;
     let edition_account_info = next_account_info(account_info_iter)?;
+    let council_mint_account_info = next_account_info(account_info_iter)?;
+    let council_mint_authority_info = next_account_info(account_info_iter)?;
 
     let (global_gem_pubkey, global_gem_bump) =
         Pubkey::find_program_address(&[GLOBAL_GEM_KEY.as_ref()], program_id);
 
     assert_pubkeys_exactitude(&global_gem_pubkey, global_gem_account_info.key)
         .expect("Error: @global_gem_account_info");
+
+    
+
+    let (expected_mint_key, expected_mint_bump) = Pubkey::find_program_address(&[COUNCIL_MINT_KEY.as_ref()], program_id);
+    assert_pubkeys_exactitude(council_mint_account_info.key, &expected_mint_key).expect("Council mint sent, not that expected");
+
+    let (expected_council_mint_authority_key, _mint_authority_bump) = Pubkey::find_program_address(&[COUNCIL_MINT_AUTHORITY_KEY.as_ref()], program_id);
+    assert_pubkeys_exactitude(council_mint_authority_info.key, &expected_council_mint_authority_key).expect("Council mint authority is not that expected");
+    let space = 82;
+    let rent_lamports = Rent::get()?.minimum_balance(space);
+
+    // msg!("Create mint account");
+    invoke_signed(
+        &system_instruction::create_account(
+            payer_account_info.key,
+            council_mint_account_info.key,
+            rent_lamports,
+            space as u64,
+            spl_token_program_account_info.key,
+        ),
+        &[payer_account_info.clone(), council_mint_account_info.clone()],
+        &[&[COUNCIL_MINT_KEY.as_ref(), &[expected_mint_bump]]],
+    )?;
+    
+    invoke(
+        &spl_token::instruction::initialize_mint(
+            &spl_token::id(),
+            council_mint_account_info.key,
+            &expected_council_mint_authority_key,
+            Some(&expected_council_mint_authority_key),
+            0,
+        )?,
+        &[council_mint_account_info.clone(), sysvar_rent_account_info.clone()],
+    )?;
 
     let space = 10000;
     let rent_lamports = Rent::get()?.minimum_balance(space);

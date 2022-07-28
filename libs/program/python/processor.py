@@ -17,6 +17,8 @@ def create_collection(payer_keypair, client):
     metadata_pda, _metadata_pda_bump = PublicKey.find_program_address([b"metadata", bytes(metaplex_program_id), bytes(mint_pubkey)], metaplex_program_id)
     master_edition_pda, _master_edition_bump = PublicKey.find_program_address([b"metadata", bytes(metaplex_program_id), bytes(mint_pubkey), b"edition"], metaplex_program_id)
     global_gem_pubkey, _global_gem_bump = PublicKey.find_program_address([bytes(ingl_constants.GLOBAL_GEM_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
+    mint_authority_pubkey, _mint_authority_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.COUNCIL_MINT_AUTHORITY_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
+    council_mint_pubkey, _collection_mint_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.COUNCIL_MINT_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
 
     payer_account_meta = AccountMeta(payer_keypair.public_key, True, True)
     collection_holder_meta = AccountMeta(collection_holder_pubkey, False, True) #This might be the cause of a Writable escalated permission error.
@@ -31,6 +33,8 @@ def create_collection(payer_keypair, client):
     associated_program_meta = AccountMeta(constants.ASSOCIATED_TOKEN_PROGRAM_ID, False, False)
     global_gem_meta = AccountMeta(global_gem_pubkey, False, True)
     edition_meta = AccountMeta(master_edition_pda, False, True)
+    council_mint_account_meta = AccountMeta(council_mint_pubkey, False, True)
+    council_mint_authority_meta = AccountMeta(mint_authority_pubkey, False, False)
 
     accounts = [
         payer_account_meta,
@@ -44,6 +48,8 @@ def create_collection(payer_keypair, client):
         token_metadata_meta,
         global_gem_meta,
         edition_meta,
+        council_mint_account_meta,
+        council_mint_authority_meta,
 
         system_program_meta,
         system_program_meta,
@@ -293,3 +299,54 @@ def finalize_proposal(payer_keypair, proposal_numeration, client):
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, instruction_data))
     return client.send_transaction(transaction, payer_keypair)
+
+
+
+def create_vote_account(validator_keypair, proposal_numeration, client):
+    global_gem_pubkey, _global_gem_bump = PublicKey.find_program_address([bytes(ingl_constants.GLOBAL_GEM_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
+    proposal_pubkey, _proposal_bump = PublicKey.find_program_address([bytes(ingl_constants.PROPOSAL_KEY, 'UTF-8'), proposal_numeration.to_bytes(4,"big")], ingl_constants.INGL_PROGRAM_ID)
+    mint_authority_pubkey, _mint_authority_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.COUNCIL_MINT_AUTHORITY_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
+    council_mint_pubkey, _collection_mint_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.COUNCIL_MINT_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
+    expected_vote_pubkey, _expected_vote_pubkey_nonce = PublicKey.find_program_address([bytes(ingl_constants.VOTE_ACCOUNT_KEY, "UTF-8"), (proposal_numeration).to_bytes(4,"big")], ingl_constants.INGL_PROGRAM_ID)
+    mint_associated_account_pubkey = assoc_instructions.get_associated_token_address(expected_vote_pubkey, council_mint_pubkey)
+    
+
+
+    rent_account_meta = AccountMeta(solana.sysvar.SYSVAR_RENT_PUBKEY, False, False)
+    sysvar_clock_meta = AccountMeta(solana.sysvar.SYSVAR_CLOCK_PUBKEY, False, False)
+    validator_meta = AccountMeta(validator_keypair.public_key, True, True)
+    vote_account_meta = AccountMeta(expected_vote_pubkey, False, True)
+    sys_program_meta = AccountMeta(system_program.SYS_PROGRAM_ID, False, False)
+    vote_program_meta = AccountMeta(PublicKey("Vote111111111111111111111111111111111111111"), False, False)
+    global_gem_meta = AccountMeta(global_gem_pubkey, False, True)
+    proposal_meta = AccountMeta(proposal_pubkey, False, True)
+    mint_account_meta = AccountMeta(council_mint_pubkey, False, True)
+    mint_authority_meta = AccountMeta(mint_authority_pubkey, False, False)
+    mint_assoc_meta = AccountMeta(mint_associated_account_pubkey, False, True)
+    spl_program_meta = AccountMeta(constants.TOKEN_PROGRAM_ID, False, False)
+    associated_program_meta = AccountMeta(constants.ASSOCIATED_TOKEN_PROGRAM_ID, False, False)
+
+    accounts = [
+        validator_meta,
+        vote_account_meta,
+        rent_account_meta,
+        sysvar_clock_meta,
+        global_gem_meta,
+        proposal_meta,
+        mint_assoc_meta,
+        mint_account_meta,
+        mint_authority_meta,
+        sys_program_meta,
+        spl_program_meta,
+
+        
+        associated_program_meta,
+        spl_program_meta,
+        sys_program_meta,
+        vote_program_meta
+    ]
+
+    data = InstructionEnum.build(InstructionEnum.enum.CreateVoteAccount())
+    transaction = Transaction()
+    transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, data))
+    return client.send_transaction(transaction, validator_keypair)
