@@ -10,11 +10,9 @@ use crate::{
 };
 use std::str::FromStr;
 
+use anchor_lang::AnchorDeserialize;
 use borsh::BorshSerialize;
-use mpl_token_metadata::{
-    self,
-    state::{Creator, PREFIX},
-};
+use mpl_token_metadata::state::{Creator, DataV2, Metadata, PREFIX};
 use num_traits::Pow;
 use solana_program::{program_pack::Pack, native_token::LAMPORTS_PER_SOL};
 use solana_program::{
@@ -32,7 +30,7 @@ use solana_program::{
     hash::hash
 };
 use spl_associated_token_account::{get_associated_token_address, *};
-use spl_token::{instruction::AuthorityType, state::Account};
+use spl_token::{error::TokenError, instruction::AuthorityType, state::Account};
 use switchboard_v2::{
     AggregatorHistoryBuffer, AggregatorHistoryRow, SWITCHBOARD_V2_DEVNET, SWITCHBOARD_V2_MAINNET,
 };
@@ -791,7 +789,7 @@ pub fn mint_nft(program_id: &Pubkey, accounts: &[AccountInfo], class: Class) -> 
         numeration: global_gem_data.counter,
         rarity: None,
         funds_location: FundsLocation::MintingPool,
-        future_price_time: None,
+        rarity_seed_time: None,
         date_allocated: None,
         class: class,
         last_voted_proposal: None,
@@ -1050,8 +1048,9 @@ pub fn init_rarity_imprint(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
         Err(ProgramError::MissingRequiredSignature)?
     }
 
-    let Account { amount, .. } = Account::unpack(&associated_token_account_info.data.borrow())?;
-    if amount != 1 {
+    let associated_token_account_data =
+        Account::unpack(&associated_token_account_info.data.borrow())?;
+    if associated_token_account_data.amount != 1 {
         Err(ProgramError::InsufficientFunds)?
     }
 
@@ -1069,7 +1068,16 @@ pub fn init_rarity_imprint(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
     .expect("associated_token_account_info");
 
     let mut gem_data: GemAccountV0_0_1 = try_from_slice_unchecked(&gem_account_info.data.borrow())?;
-    gem_data.future_price_time =
+
+    if let Some(_) = gem_data.rarity_seed_time {
+        Err(ProgramError::InvalidAccountData)?
+    }
+
+    if associated_token_account_data.is_frozen() {
+        Err(TokenError::AccountFrozen)?
+    }
+
+    gem_data.rarity_seed_time =
         Some(Clock::get()?.unix_timestamp as u32 + PRICE_TIME_INTERVAL as u32);
     gem_data.serialize(&mut &mut gem_account_info.data.borrow_mut()[..])?;
 
@@ -1099,6 +1107,7 @@ pub fn imprint_rarity(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
     let mint_account_info = next_account_info(account_info_iter)?;
     let associated_token_account_info = next_account_info(account_info_iter)?;
     let freeze_authority_account_info = next_account_info(account_info_iter)?;
+    let metadata_account_info = next_account_info(account_info_iter)?;
 
     let btc_feed_account_info = next_account_info(account_info_iter)?;
     let sol_feed_account_info = next_account_info(account_info_iter)?;
@@ -1134,9 +1143,13 @@ pub fn imprint_rarity(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
         Err(ProgramError::MissingRequiredSignature)?
     }
 
-    let Account { amount, .. } = Account::unpack(&associated_token_account_info.data.borrow())?;
-    if amount != 1 {
+    let associated_token_account_data =
+        Account::unpack(&associated_token_account_info.data.borrow())?;
+    if associated_token_account_data.amount != 1 {
         Err(ProgramError::InsufficientFunds)?
+    }
+    if !associated_token_account_data.is_frozen() {
+        Err(TokenError::AccountFrozen)?
     }
 
     let (mint_authority_key, mint_authority_bump) =
@@ -1188,13 +1201,21 @@ pub fn imprint_rarity(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
     )?;
 
     let mut gem_data: GemAccountV0_0_1 = try_from_slice_unchecked(&gem_account_info.data.borrow())?;
+    let now = Clock::get()?;
+    msg!("now: {}, sedd_time: {}", now.unix_timestamp, gem_data.rarity_seed_time.unwrap());
+    if (now.unix_timestamp as u32) < gem_data.rarity_seed_time.unwrap() {
+        Err(InglError::TooEarly.utilize(Some("imprint_rarity")))?
+    }
+    if let Some(_) = gem_data.rarity {
+        Err(ProgramError::InvalidAccountData)?
+    }
 
     let btc_history = AggregatorHistoryBuffer::new(btc_feed_account_info)?;
     let AggregatorHistoryRow {
         value: btc_value,
         timestamp: _,
     } = btc_history
-        .lower_bound(gem_data.future_price_time.unwrap() as i64)
+        .lower_bound(gem_data.rarity_seed_time.unwrap() as i64)
         .unwrap();
     let btc_price = btc_value.mantissa * 10.pow(btc_value.scale) as i128;
 
@@ -1203,7 +1224,7 @@ pub fn imprint_rarity(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
         value: sol_value,
         timestamp: _,
     } = sol_history
-        .lower_bound(gem_data.future_price_time.unwrap() as i64)
+        .lower_bound(gem_data.rarity_seed_time.unwrap() as i64)
         .unwrap();
     let sol_price = sol_value.mantissa * 10.pow(sol_value.scale) as i128;
 
@@ -1212,7 +1233,7 @@ pub fn imprint_rarity(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
         value: eth_value,
         timestamp: _,
     } = eth_history
-        .lower_bound(gem_data.future_price_time.unwrap() as i64)
+        .lower_bound(gem_data.rarity_seed_time.unwrap() as i64)
         .unwrap();
     let eth_price = eth_value.mantissa * 10.pow(eth_value.scale) as i128;
 
@@ -1221,7 +1242,7 @@ pub fn imprint_rarity(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
         value: bnb_value,
         timestamp: _,
     } = bnb_history
-        .lower_bound(gem_data.future_price_time.unwrap() as i64)
+        .lower_bound(gem_data.rarity_seed_time.unwrap() as i64)
         .unwrap();
     let bnb_price = bnb_value.mantissa * 10.pow(bnb_value.scale) as i128;
 
@@ -1232,13 +1253,53 @@ pub fn imprint_rarity(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
     let rarity_hash_string = hash(string_to_hash.as_bytes());
     let rarity_hash_bytes = rarity_hash_string.to_bytes();
 
-    let mut byte_product: u64 = 1;
+    let mut byte_product: u64 = 0;
     for byte in rarity_hash_bytes {
-        byte_product = byte_product * byte as u64;
+        byte_product = byte_product + byte as u64;
     }
-
-    let random_value = byte_product * 9999 / 255.pow(rarity_hash_bytes.len()) as u64;
+    let random_value = byte_product * 9999 / (255 * 32) as u64;
+    msg!("Bytes product: {:?}", random_value);
     gem_data.rarity = gem_data.class.get_rarity(random_value);
+
+    let mpl_token_metadata_id = mpl_token_metadata::id();
+    let metadata_seeds = &[
+        PREFIX.as_bytes(),
+        mpl_token_metadata_id.as_ref(),
+        mint_account_info.key.as_ref(),
+    ];
+
+    let (nft_metadata_key, _nft_metadata_bump) =
+        Pubkey::find_program_address(metadata_seeds, &mpl_token_metadata::id());
+
+    assert_pubkeys_exactitude(&nft_metadata_key, metadata_account_info.key)
+        .expect("Error: @meta_data_account_info");
+
+    let gem_metadata = Metadata::deserialize(&mut &metadata_account_info.data.borrow()[..])?;
+
+    invoke_signed(
+        &mpl_token_metadata::instruction::update_metadata_accounts_v2(
+            mpl_token_metadata_id,
+            *metadata_account_info.key,
+            *freeze_authority_account_info.key,
+            Some(*freeze_authority_account_info.key),
+            Some(DataV2 {
+                uri: String::from(nfts::get_uri(gem_data.class, gem_data.rarity.clone())),
+                uses: gem_metadata.uses,
+                name: gem_metadata.data.name,
+                symbol: gem_metadata.data.symbol,
+                collection: gem_metadata.collection,
+                creators: gem_metadata.data.creators,
+                seller_fee_basis_points: gem_metadata.data.seller_fee_basis_points,
+            }),
+            Some(gem_metadata.primary_sale_happened),
+            Some(gem_metadata.is_mutable),
+        ),
+        &[
+            metadata_account_info.clone(),
+            freeze_authority_account_info.clone(),
+        ],
+        &[&[INGL_MINT_AUTHORITY_KEY.as_ref(), &[mint_authority_bump]]],
+    )?;
     gem_data.serialize(&mut &mut gem_account_info.data.borrow_mut()[..])?;
     Ok(())
 }
