@@ -7,10 +7,11 @@ class Constants:
     INGL_MINT_AUTHORITY_KEY = "mint_authority"
     INGL_MINTING_POOL_KEY = "minting_pool"
     COLLECTION_HOLDER_KEY = "collection_holder"
-    INGL_PROGRAM_ID = PublicKey("8ucRh4mMLWijjaPo8Hk94qBsvjcHsd1scA7h32ehsa5j")
+    INGL_PROGRAM_ID = PublicKey("555z2Gpih9WNBidBvTLgWbFGk2X61JcBrXDtDqYh8Pgk")
     GLOBAL_GEM_KEY = "global_gem_account"
     GEM_ACCOUNT_CONST = "gem_account"
     PD_POOL_KEY = "pd_pool"
+    PROPOSAL_KEY = "ingl_proposals"
 
 ClassEnum = Enum(
     "Ruby",
