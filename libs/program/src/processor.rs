@@ -309,7 +309,6 @@ pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
             validator_info.clone(),
         ],
     )?;
-
     Ok(())
 }
 
