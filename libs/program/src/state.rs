@@ -18,10 +18,10 @@ pub mod constants{
     pub const GLOBAL_GEM_KEY: &str = "global_gem_account";
     pub const GEM_ACCOUNT_CONST: &str = "gem_account";
     pub const PRICE_TIME_INTERVAL: u8 = 10;
-    pub const BTC_FEED_PUBLIC_KEY: &str = "8SXvChNYFhRq4EZuZvnhjrB3jJRQCv4k3P4W6hesH3Ee";
-    pub const SOL_FEED_PUBLIC_KEY: &str = "GvDMxPzN1sCj7L26YDK2HnMRXEQmQ2aemov8YBtPS7vR";
-    pub const BNB_FEED_PUBLIC_KEY: &str = "2steFGCbo9FNXksMBGDh9NwixtdG5PdQoaCuR4knyvrB";
-    pub const ETH_FEED_PUBLIC_KEY: &str = "HNStfhaLnqwF2ZtJUizaA9uHDAVB976r2AgTUx9LrdEo";
+    pub const BTC_FEED_PUBLIC_KEY: &str = "9ATrvi6epR5hVYtwNs7BB7VCiYnd4WM7e8MfafWpfiXC";
+    pub const SOL_FEED_PUBLIC_KEY: &str = "7LLvRhMs73FqcLkA8jvEE1AM2mYZXTmqfUv8GAEurymx";
+    pub const ETH_FEED_PUBLIC_KEY: &str = "6fhxFvPocWapZ5Wa2miDnrX2jYRFKvFqYnX11GGkBo2f";
+    pub const BNB_FEED_PUBLIC_KEY: &str = "DR6PqK15tD21MEGSLmDpXwLA7Fw47kwtdZeUMdT7vd7L";
     pub const PD_POOL_KEY: &str = "pd_pool";
 
     pub mod spl_program{
@@ -80,7 +80,7 @@ impl Class {
     }
 }
 
-#[derive(BorshDeserialize, BorshSerialize)]
+#[derive(BorshDeserialize, BorshSerialize, Clone)]
 pub enum Rarity {
     Common,
     Uncommon,
@@ -116,7 +116,7 @@ pub struct GemAccountV0_0_1 {
     pub numeration: u32,
     pub rarity: Option<Rarity>,
     pub funds_location: FundsLocation,
-    pub future_price_time: Option<u32>,
+    pub rarity_seed_time: Option<u32>,
     pub date_allocated: Option<u32>,
 }
 
