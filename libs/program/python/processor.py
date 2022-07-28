@@ -273,3 +273,23 @@ def vote_validator_proposal(payer_keypair, proposal_numeration, mint_pubkeys, va
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, instruction_data))
     return client.send_transaction(transaction, payer_keypair)
+
+
+def finalize_proposal(payer_keypair, proposal_numeration, client):
+    global_gem_pubkey, _global_gem_bump = PublicKey.find_program_address([bytes(ingl_constants.GLOBAL_GEM_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
+    proposal_pubkey, _proposal_bump = PublicKey.find_program_address([bytes(ingl_constants.PROPOSAL_KEY, 'UTF-8'), proposal_numeration.to_bytes(4,"big")], ingl_constants.INGL_PROGRAM_ID)
+
+    global_gem_meta = AccountMeta(global_gem_pubkey, False, True)
+    payer_account_meta = AccountMeta(payer_keypair.public_key, True, True)
+    proposal_meta = AccountMeta(proposal_pubkey, False, True)
+
+    accounts = [
+        payer_account_meta,
+        proposal_meta,
+        global_gem_meta,
+    ]
+
+    instruction_data = build_instruction(InstructionEnum.enum.FinalizeProposal())
+    transaction = Transaction()
+    transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, instruction_data))
+    return client.send_transaction(transaction, payer_keypair)

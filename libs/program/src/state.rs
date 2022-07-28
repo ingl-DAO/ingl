@@ -24,6 +24,10 @@ pub mod constants{
     pub const ETH_FEED_PUBLIC_KEY: &str = "HNStfhaLnqwF2ZtJUizaA9uHDAVB976r2AgTUx9LrdEo";
     pub const PD_POOL_KEY: &str = "pd_pool";
     pub const PROPOSAL_KEY: &str ="ingl_proposals";
+    pub const COUNCIL_MINT_KEY: &str = "council_mint";
+    pub const COUNCIL_MINT_AUTHORITY_KEY: &str = "council_mint_authority";
+    pub const AUTHORIZED_WITHDRAWER_KEY: &str = "InglAuthorizedWithdrawer";
+    pub const VOTE_ACCOUNT_KEY: &str = "InglVote";
 
     pub mod spl_program{
         use solana_program::declare_id;
@@ -98,7 +102,7 @@ pub struct GlobalGems {
     pub delegated_total: u64,
     pub is_proposal_ongoing: bool,
     pub proposal_numeration: u32,
-    pub validator_list : Vec<Pubkey>
+    pub validator_list : Vec<Pubkey>,
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
@@ -168,12 +172,6 @@ pub struct ValidatorProposal{
 pub struct ProgramVoteAccount{
     total_delegated: u64,
     validator: Pubkey,
-}
-
-#[derive(BorshDeserialize, BorshSerialize)]
-pub struct GlobalVoteAccounts{
-    all_vote_accounts: Vec<Pubkey>,
-
 }
 
 

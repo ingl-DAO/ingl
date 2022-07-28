@@ -60,6 +60,7 @@ pub fn process_instruction(
 
 pub fn finalize_proposal(program_id:&Pubkey, accounts: &[AccountInfo]) -> ProgramResult{
     let account_info_iter = &mut accounts.iter();
+    let _payer_account_info = next_account_info(account_info_iter)?;
     let proposal_account_info = next_account_info(account_info_iter)?;
     let global_gem_account_info = next_account_info(account_info_iter)?;
 
@@ -234,27 +235,55 @@ pub fn register_validator_id(program_id: &Pubkey, accounts: &[AccountInfo]) -> P
 pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
     let account_info_iter = &mut accounts.iter();
     
-    //Need to validate validator_info from the vote results.
     let validator_info = next_account_info(account_info_iter)?;
     let vote_account_info = next_account_info(account_info_iter)?;
     let sysvar_rent_info = next_account_info(account_info_iter)?;
     let sysvar_clock_info = next_account_info(account_info_iter)?;
-    let program_vote_account_info = next_account_info(account_info_iter)?;
-    let global_vote_accounts = next_account_info(account_info_iter)?;
+    let global_gem_account_info = next_account_info(account_info_iter)?;
+    let proposal_account_info = next_account_info(account_info_iter)?;
+    let mint_associated_token_account = next_account_info(account_info_iter)?;
+    let council_mint_account_info = next_account_info(account_info_iter)?;
+    let council_mint_authority_info = next_account_info(account_info_iter)?;
 
-    assert_program_owned(program_vote_account_info)?;
-    assert_program_owned(global_vote_accounts)?;
+    assert_program_owned(global_gem_account_info)?;
+    assert_program_owned(proposal_account_info)?;
 
+    let (global_gem_pubkey, _global_gem_bump) =
+        Pubkey::find_program_address(&[GLOBAL_GEM_KEY.as_ref()], program_id);
+    assert_pubkeys_exactitude(&global_gem_pubkey, global_gem_account_info.key)
+        .expect("Error: @global_gem_account_info");
 
-    let (expected_vote_pubkey, expected_vote_pubkey_nonce) = Pubkey::find_program_address(&[b"InglVote", &validator_info.key.to_bytes()[..24]], program_id);
-    let (authorized_withdrawer, _authorized_withdrawer_nonce) = Pubkey::find_program_address(&[b"InglAuthorizedWithdrawer"], program_id);
-    assert_pubkeys_exactitude(vote_account_info.key, &expected_vote_pubkey).expect("vote account pubkey is dissimilar to the expected vote pubkey"); 
-
+    let global_gem_data: GlobalGems = try_from_slice_unchecked(&global_gem_account_info.data.borrow())?;    
     
-    if !validator_info.is_signer{
-        // msg!("validator_id account must sign the transaction");
-        Err(ProgramError::Custom(1))?
-    }
+    let (expected_proposal_id, _expected_proposal_bump) = Pubkey::find_program_address(&[PROPOSAL_KEY.as_ref(), &(global_gem_data.proposal_numeration-1).to_be_bytes()], program_id);
+    assert_pubkeys_exactitude(&expected_proposal_id, proposal_account_info.key)?;
+
+    let proposal_data: ValidatorProposal = try_from_slice_unchecked(&proposal_account_info.data.borrow())?;
+
+    assert_pubkeys_exactitude(validator_info.key, &proposal_data.winner.unwrap()).expect("validator id, not that expected");
+
+    let (expected_vote_pubkey, expected_vote_pubkey_nonce) = Pubkey::find_program_address(&[VOTE_ACCOUNT_KEY.as_ref(), &(global_gem_data.proposal_numeration-1).to_be_bytes()], program_id);
+    let (authorized_withdrawer, _authorized_withdrawer_nonce) = Pubkey::find_program_address(&[AUTHORIZED_WITHDRAWER_KEY.as_ref()], program_id);
+    assert_pubkeys_exactitude(vote_account_info.key, &expected_vote_pubkey).expect("vote account pubkey is dissimilar to the expected vote pubkey");
+
+    let (expected_mint_key, _expected_mint_bump) = Pubkey::find_program_address(&[COUNCIL_MINT_KEY.as_ref()], program_id);
+    assert_pubkeys_exactitude(council_mint_account_info.key, &expected_mint_key).expect("Council mint sent, not that expected");
+
+    let (expected_council_mint_authority_key, mint_authority_bump) = Pubkey::find_program_address(&[COUNCIL_MINT_AUTHORITY_KEY.as_ref()], program_id);
+    assert_pubkeys_exactitude(council_mint_authority_info.key, &expected_council_mint_authority_key).expect("Council mint authority is not that expected");
+
+    let expected_assoc_key = get_associated_token_address(vote_account_info.key, council_mint_account_info.key);
+    assert_pubkeys_exactitude(&expected_assoc_key, mint_associated_token_account.key).expect("Council associated token is not that expected");
+
+    invoke_signed(
+        &spl_token::instruction::mint_to(&spl_token::id(), council_mint_account_info.key, mint_associated_token_account.key, council_mint_authority_info.key, &[], 1)?,
+        &[
+            council_mint_account_info.clone(),
+            mint_associated_token_account.clone(),
+            council_mint_authority_info.clone(),
+        ],
+        &[&[COUNCIL_MINT_AUTHORITY_KEY.as_ref(), &[mint_authority_bump]]]
+    )?;
 
     let vote_init = VoteInit {
         node_pubkey: *validator_info.key,
@@ -271,7 +300,6 @@ pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
             &[expected_vote_pubkey_nonce],
         ]],
     )?;
-    // msg!("reached here: {}", vote_init.authorized_voter);
     invoke(
         &vote_initialize_account(vote_account_info.key, &vote_init),
         &[
