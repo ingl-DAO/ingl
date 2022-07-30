@@ -53,7 +53,7 @@ def create_collection(payer_keypair, client):
         metadata_program_id,
         metadata_program_id,
     ]
-    data = build_instruction("MintNewCollection")
+    data = build_instruction(InstructionEnum.enum.MintNewCollection())
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, data))
     return client.send_transaction(transaction, payer_keypair)['result']
@@ -119,7 +119,7 @@ def mint_nft(payer_keypair, mint_keypair, mint_class, client):
         metadata_program_id,
     ]
     # print(accounts)
-    instruction_data = build_instruction("MintNft", mint_class)
+    instruction_data = build_instruction(InstructionEnum.enum.MintNft(), mint_class)
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, instruction_data))
     return client.send_transaction(transaction, payer_keypair, mint_keypair)
@@ -157,7 +157,7 @@ def allocate_sol(payer_keypair, mint_pubkey, client):
     ]
 
     # print(accounts)
-    instruction_data = build_instruction("AllocateSol")
+    instruction_data = build_instruction(InstructionEnum.enum.AllocateSol())
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, instruction_data))
     return client.send_transaction(transaction, payer_keypair)
@@ -195,7 +195,101 @@ def deallocate_sol(payer_keypair, mint_pubkey, client):
     ]
 
     # print(accounts)
-    instruction_data = build_instruction("DeAllocateSol")
+    instruction_data = build_instruction(InstructionEnum.enum.DeAllocateSol())
+    transaction = Transaction()
+    transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, instruction_data))
+    return client.send_transaction(transaction, payer_keypair)
+
+
+
+def register_validator_id(payer_keypair, client):
+    
+    global_gem_pubkey, _global_gem_bump = PublicKey.find_program_address([bytes(ingl_constants.GLOBAL_GEM_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
+
+
+    
+    payer_account_meta = AccountMeta(payer_keypair.public_key, True, True)
+    global_gem_meta = AccountMeta(global_gem_pubkey, False, True)
+
+    accounts = [
+        payer_account_meta,
+        global_gem_meta,
+    ]
+
+    instruction_data = build_instruction(InstructionEnum.enum.RegisterValidatorId())
+    transaction = Transaction()
+    transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, instruction_data))
+    return client.send_transaction(transaction, payer_keypair)
+
+
+def create_validator_proposal(payer_keypair, proposal_numeration, client):
+    global_gem_pubkey, _global_gem_bump = PublicKey.find_program_address([bytes(ingl_constants.GLOBAL_GEM_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
+    proposal_pubkey, _proposal_bump = PublicKey.find_program_address([bytes(ingl_constants.PROPOSAL_KEY, 'UTF-8'), proposal_numeration.to_bytes(4,"big")], ingl_constants.INGL_PROGRAM_ID)
+
+
+    
+    payer_account_meta = AccountMeta(payer_keypair.public_key, True, True)
+    global_gem_meta = AccountMeta(global_gem_pubkey, False, True)
+    proposal_meta = AccountMeta(proposal_pubkey, False, True)
+    system_program_meta = AccountMeta(system_program.SYS_PROGRAM_ID, False, False)
+
+    accounts = [
+        payer_account_meta,
+        global_gem_meta,
+        proposal_meta,
+
+        system_program_meta,
+    ]
+
+    instruction_data = build_instruction(InstructionEnum.enum.CreateValidatorSelectionProposal())
+    transaction = Transaction()
+    transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, instruction_data))
+    return client.send_transaction(transaction, payer_keypair)
+
+
+def vote_validator_proposal(payer_keypair, proposal_numeration, mint_pubkeys, val_index, client):
+    proposal_pubkey, _proposal_bump = PublicKey.find_program_address([bytes(ingl_constants.PROPOSAL_KEY, 'UTF-8'), proposal_numeration.to_bytes(4,"big")], ingl_constants.INGL_PROGRAM_ID)
+
+
+    
+    payer_account_meta = AccountMeta(payer_keypair.public_key, True, True)
+    proposal_meta = AccountMeta(proposal_pubkey, False, True)
+
+    accounts = [
+        payer_account_meta,
+        proposal_meta
+        ]
+
+    for mint in mint_pubkeys:
+        gem_account_pubkey, _ = PublicKey.find_program_address([bytes(ingl_constants.GEM_ACCOUNT_CONST, 'UTF-8'), bytes(mint)], ingl_constants.INGL_PROGRAM_ID)
+        accounts.append(AccountMeta(mint, False, False))
+        accounts.append(AccountMeta(assoc_instructions.get_associated_token_address(payer_keypair.public_key, mint), False, False))
+        accounts.append(AccountMeta(gem_account_pubkey, False, True) )
+
+
+
+
+    instruction_data = build_instruction(InstructionEnum.enum.VoteValidatorProposal(num_nfts = len(mint_pubkeys), validator_index = val_index))
+    transaction = Transaction()
+    transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, instruction_data))
+    return client.send_transaction(transaction, payer_keypair)
+
+
+def finalize_proposal(payer_keypair, proposal_numeration, client):
+    global_gem_pubkey, _global_gem_bump = PublicKey.find_program_address([bytes(ingl_constants.GLOBAL_GEM_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
+    proposal_pubkey, _proposal_bump = PublicKey.find_program_address([bytes(ingl_constants.PROPOSAL_KEY, 'UTF-8'), proposal_numeration.to_bytes(4,"big")], ingl_constants.INGL_PROGRAM_ID)
+
+    global_gem_meta = AccountMeta(global_gem_pubkey, False, True)
+    payer_account_meta = AccountMeta(payer_keypair.public_key, True, True)
+    proposal_meta = AccountMeta(proposal_pubkey, False, True)
+
+    accounts = [
+        payer_account_meta,
+        proposal_meta,
+        global_gem_meta,
+    ]
+
+    instruction_data = build_instruction(InstructionEnum.enum.FinalizeProposal())
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, instruction_data))
     return client.send_transaction(transaction, payer_keypair)

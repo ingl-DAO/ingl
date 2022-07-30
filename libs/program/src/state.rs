@@ -8,7 +8,7 @@ use solana_program::{
 };
 pub mod constants{
     use solana_program::declare_id;
-    declare_id!("8ucRh4mMLWijjaPo8Hk94qBsvjcHsd1scA7h32ehsa5j");
+    declare_id!("555z2Gpih9WNBidBvTLgWbFGk2X61JcBrXDtDqYh8Pgk");
 
 
     pub const INGL_NFT_COLLECTION_KEY: &str = "ingl_nft_collection_newer";
@@ -18,11 +18,16 @@ pub mod constants{
     pub const GLOBAL_GEM_KEY: &str = "global_gem_account";
     pub const GEM_ACCOUNT_CONST: &str = "gem_account";
     pub const PRICE_TIME_INTERVAL: u8 = 10;
-    pub const BTC_FEED_PUBLIC_KEY: &str = "8SXvChNYFhRq4EZuZvnhjrB3jJRQCv4k3P4W6hesH3Ee";
-    pub const SOL_FEED_PUBLIC_KEY: &str = "GvDMxPzN1sCj7L26YDK2HnMRXEQmQ2aemov8YBtPS7vR";
-    pub const BNB_FEED_PUBLIC_KEY: &str = "2steFGCbo9FNXksMBGDh9NwixtdG5PdQoaCuR4knyvrB";
-    pub const ETH_FEED_PUBLIC_KEY: &str = "HNStfhaLnqwF2ZtJUizaA9uHDAVB976r2AgTUx9LrdEo";
+    pub const BTC_FEED_PUBLIC_KEY: &str = "9ATrvi6epR5hVYtwNs7BB7VCiYnd4WM7e8MfafWpfiXC";
+    pub const SOL_FEED_PUBLIC_KEY: &str = "7LLvRhMs73FqcLkA8jvEE1AM2mYZXTmqfUv8GAEurymx";
+    pub const ETH_FEED_PUBLIC_KEY: &str = "6fhxFvPocWapZ5Wa2miDnrX2jYRFKvFqYnX11GGkBo2f";
+    pub const BNB_FEED_PUBLIC_KEY: &str = "DR6PqK15tD21MEGSLmDpXwLA7Fw47kwtdZeUMdT7vd7L";
     pub const PD_POOL_KEY: &str = "pd_pool";
+    pub const PROPOSAL_KEY: &str ="ingl_proposals";
+    pub const COUNCIL_MINT_KEY: &str = "council_mint";
+    pub const COUNCIL_MINT_AUTHORITY_KEY: &str = "council_mint_authority";
+    pub const AUTHORIZED_WITHDRAWER_KEY: &str = "InglAuthorizedWithdrawer";
+    pub const VOTE_ACCOUNT_KEY: &str = "InglVote";
 
     pub mod spl_program{
         use solana_program::declare_id;
@@ -80,7 +85,7 @@ impl Class {
     }
 }
 
-#[derive(BorshDeserialize, BorshSerialize)]
+#[derive(BorshDeserialize, BorshSerialize, Clone)]
 pub enum Rarity {
     Common,
     Uncommon,
@@ -89,12 +94,15 @@ pub enum Rarity {
     Mythic,
 }
 
-#[derive(BorshDeserialize, BorshSerialize)]
+#[derive(BorshDeserialize, Clone, BorshSerialize)]
 pub struct GlobalGems {
     pub counter: u32,
     pub total_raised: u64,
     pub pd_pool_total: u64,
     pub delegated_total: u64,
+    pub is_proposal_ongoing: bool,
+    pub proposal_numeration: u32,
+    pub validator_list : Vec<Pubkey>,
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
@@ -104,8 +112,12 @@ pub enum FundsLocation {
     VoteAccount { id: Pubkey },
 }
 
+
 #[derive(BorshDeserialize, BorshSerialize)]
-pub struct PriceTime {}
+pub struct ValidatorVote{
+    pub proposal_id: Pubkey,
+    pub validator_index: u32,
+}
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct GemAccountV0_0_1 {
@@ -116,8 +128,10 @@ pub struct GemAccountV0_0_1 {
     pub numeration: u32,
     pub rarity: Option<Rarity>,
     pub funds_location: FundsLocation,
-    pub future_price_time: Option<u32>,
+    pub rarity_seed_time: Option<u32>,
     pub date_allocated: Option<u32>,
+    pub last_voted_proposal: Option<Pubkey>,
+    pub all_votes: Vec<ValidatorVote>,
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
@@ -143,8 +157,25 @@ impl GemAccountVersions {
     }
 }
 
-pub struct VoteState{}
 
+#[derive(BorshDeserialize, BorshSerialize)]
+pub struct ValidatorProposal{
+    pub validator_ids: Vec<Pubkey>,
+    pub date_created: u32,
+    pub date_finalized: Option<u32>,
+    pub votes: Vec<u32>,
+    pub winner: Option<Pubkey>
+}
+
+
+#[derive(BorshDeserialize, BorshSerialize)]
+pub struct ProgramVoteAccount{
+    total_delegated: u64,
+    validator: Pubkey,
+}
+
+
+pub struct VoteState{}
 impl VoteState {
     pub fn space()->usize{
         3731

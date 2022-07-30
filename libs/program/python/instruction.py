@@ -8,26 +8,21 @@ InstructionEnum = Enum(
     "ImprintRarity",
     "AllocateSol",
     "DeAllocateSol",
+    "CreateVoteAccount",
+    "ChangeVoteAccountsValidatorIdentity",
     "DelegateSol",
-    "UndelegateSol",
+    "UnDelegateSol",
+    "InitRarityImprint",
+    "RegisterValidatorId",
+    "CreateValidatorSelectionProposal",
+    "VoteValidatorProposal" / CStruct("num_nfts"/U8, "validator_index"/ U32),
+    "FinalizeProposal",
     
     enum_name = "InstructionEnum",
 )
 
 def build_instruction(instruction, value = None):
-    if instruction == "MintNft":
-        return InstructionEnum.build(InstructionEnum.enum.MintNft()) +  ClassEnum.build(value)
-    elif instruction == "MintNewCollection":
-        return InstructionEnum.build(InstructionEnum.enum.MintNewCollection())
-    elif instruction == "Redeem":
-        return InstructionEnum.build(InstructionEnum.enum.Redeem())
-    elif instruction == "ImprintRarity":
-        return InstructionEnum.build(InstructionEnum.enum.ImprintRarity())
-    elif instruction == "AllocateSol":
-        return InstructionEnum.build(InstructionEnum.enum.AllocateSol())
-    elif instruction == "DeAllocateSol":
-        return InstructionEnum.build(InstructionEnum.enum.DeAllocateSol())
-    elif instruction == "DelegateSol":
-        return InstructionEnum.build(InstructionEnum.enum.DelegateSol())
-    elif instruction == "UndelegateSol":
-        return InstructionEnum.build(InstructionEnum.enum.UndelegateSol())
+    if instruction == InstructionEnum.enum.MintNft():
+        return InstructionEnum.build(instruction) +  ClassEnum.build(value)
+    else:
+        return InstructionEnum.build(instruction)
