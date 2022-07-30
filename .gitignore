@@ -44,4 +44,5 @@ Thumbs.db
 Cargo.lock
 arweave-key.json
 keypair.json
+keypair.js
 /deploy
