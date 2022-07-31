@@ -25,3 +25,10 @@ pub fn assert_owned_by(account_info: &AccountInfo, expected_owner: &Pubkey) ->Re
 pub fn assert_program_owned(account_info: &AccountInfo) -> Result<(), ProgramError> {
     assert_owned_by(account_info, &constants::id())
 }
+
+pub fn assert_is_signer(account_info: &AccountInfo) -> Result<(), ProgramError>{
+    if !account_info.is_signer{
+        Err(ProgramError::MissingRequiredSignature)?
+    }
+    Ok(())
+}

@@ -19,7 +19,11 @@ pub enum InstructionEnum {
     ChangeVoteAccountsValidatorIdentity,
     DelegateSol,
     UnDelegateSol,
-    InitRarityImprint
+    InitRarityImprint,
+    RegisterValidatorId,
+    CreateValidatorSelectionProposal,
+    VoteValidatorProposal{num_nfts: u8, validator_index: u32},
+    FinalizeProposal,
 }
 
 
