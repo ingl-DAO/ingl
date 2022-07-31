@@ -12,7 +12,7 @@ use std::str::FromStr;
 
 use anchor_lang::AnchorDeserialize;
 use borsh::BorshSerialize;
-use mpl_token_metadata::state::{Creator, DataV2, Metadata, PREFIX};
+use mpl_token_metadata::state::{Collection, Creator, DataV2, Metadata, PREFIX};
 use num_traits::Pow;
 use solana_program::hash::hash;
 use solana_program::program_pack::Pack;
@@ -30,7 +30,7 @@ use solana_program::{
     sysvar::Sysvar,
 };
 use spl_associated_token_account::{get_associated_token_address, *};
-use spl_token::{error::TokenError, instruction::AuthorityType, state::Account};
+use spl_token::{error::TokenError, state::Account};
 use switchboard_v2::{
     AggregatorHistoryBuffer, AggregatorHistoryRow, SWITCHBOARD_V2_DEVNET, SWITCHBOARD_V2_MAINNET,
 };
@@ -48,6 +48,7 @@ pub fn process_instruction(
         InstructionEnum::AllocateSol => allocate_sol(program_id, accounts)?,
         InstructionEnum::DeAllocateSol => deallocate_sol(program_id, accounts)?,
         InstructionEnum::CreateVoteAccount => create_vote_account(program_id, accounts)?,
+        InstructionEnum::Redeem => redeem_nft(program_id, accounts)?,
         _ => Err(ProgramError::InvalidInstructionData)?,
     })
 }
@@ -289,21 +290,26 @@ pub fn mint_nft(program_id: &Pubkey, accounts: &[AccountInfo], class: Class) -> 
     let mint_authority_account_info = next_account_info(account_info_iter)?;
     let associated_token_account_info = next_account_info(account_info_iter)?;
     let spl_token_program_account_info = next_account_info(account_info_iter)?;
-    let sysvar_rent_accoount_info = next_account_info(account_info_iter)?;
+    let sysvar_rent_account_info = next_account_info(account_info_iter)?;
     let system_program_account_info = next_account_info(account_info_iter)?;
     let metadata_account_info = next_account_info(account_info_iter)?;
     let minting_pool_account_info = next_account_info(account_info_iter)?;
     let global_gem_account_info = next_account_info(account_info_iter)?;
     let gem_account_info = next_account_info(account_info_iter)?;
-    // let sysvar_clock_info = next_account_info(account_info_iter)?;
-    let edition_account_info = next_account_info(account_info_iter)?;
+    let ingl_edition_account_info = next_account_info(account_info_iter)?;
+    let nft_edition_account_info = next_account_info(account_info_iter)?;
     let ingl_collection_mint_info = next_account_info(account_info_iter)?;
     let ingl_collection_account_info = next_account_info(account_info_iter)?;
 
+    msg!("global gem");
     assert_program_owned(global_gem_account_info)?;
-    assert_owned_by(edition_account_info, &metaplex::id())?;
+    msg!("collection edition");
+    assert_owned_by(ingl_edition_account_info, &metaplex::id())?;
+    msg!("ingl collection edition");
     assert_owned_by(ingl_collection_account_info, &metaplex::id())?;
+    msg!("ingl collection edition");
     assert_owned_by(ingl_collection_mint_info, &spl_program::id())?;
+    msg!("ingl collection mint edition");
 
     let clock = Clock::get()?;
     // Getting timestamp
@@ -416,7 +422,7 @@ pub fn mint_nft(program_id: &Pubkey, accounts: &[AccountInfo], class: Class) -> 
             Some(&mint_authority_key),
             0,
         )?,
-        &[mint_account_info.clone(), sysvar_rent_accoount_info.clone()],
+        &[mint_account_info.clone(), sysvar_rent_account_info.clone()],
     )?;
 
     invoke(
@@ -494,7 +500,10 @@ pub fn mint_nft(program_id: &Pubkey, accounts: &[AccountInfo], class: Class) -> 
             300,
             true,
             true,
-            None,
+            Some(Collection {
+                verified: false,
+                key: ingl_nft_collection_key,
+            }),
             None,
             None,
         ),
@@ -505,10 +514,100 @@ pub fn mint_nft(program_id: &Pubkey, accounts: &[AccountInfo], class: Class) -> 
             payer_account_info.clone(),
             mint_authority_account_info.clone(),
             system_program_account_info.clone(),
-            sysvar_rent_accoount_info.clone(),
+            sysvar_rent_account_info.clone(),
         ],
         &[&[INGL_MINT_AUTHORITY_KEY.as_ref(), &[mint_authority_bump]]],
     )?;
+
+    let (ingl_collection_edition_key, _collection_edition_bump) = Pubkey::find_program_address(
+        &[
+            b"metadata",
+            mpl_token_metadata_id.as_ref(),
+            ingl_nft_collection_key.as_ref(),
+            b"edition",
+        ],
+        &mpl_token_metadata_id,
+    );
+    assert_pubkeys_exactitude(&ingl_collection_edition_key, ingl_edition_account_info.key)
+        .expect("Error: @edition_account_info");
+
+    msg!("verifying collection");
+    invoke_signed(
+        &mpl_token_metadata::instruction::verify_collection(
+            mpl_token_metadata_id,
+            nft_metadata_key,
+            mint_authority_key,
+            *payer_account_info.key,
+            ingl_nft_collection_key,
+            collection_metadata_key,
+            ingl_collection_edition_key,
+            None,
+        ),
+        &[
+            metadata_account_info.clone(),
+            mint_authority_account_info.clone(),
+            payer_account_info.clone(),
+            ingl_collection_mint_info.clone(),
+            ingl_collection_account_info.clone(),
+            ingl_edition_account_info.clone(),
+        ],
+        &[&[INGL_MINT_AUTHORITY_KEY.as_ref(), &[mint_authority_bump]]],
+    )?;
+
+    let (nft_edition_key, _edition_bump) = Pubkey::find_program_address(
+        &[
+            b"metadata",
+            mpl_token_metadata_id.as_ref(),
+            mint_account_info.key.as_ref(),
+            b"edition",
+        ],
+        &mpl_token_metadata_id,
+    );
+    assert_pubkeys_exactitude(&nft_edition_key, nft_edition_account_info.key)
+        .expect("Error: @edition_account_info");
+
+    msg!("Creating master Edition account...");
+    invoke_signed(
+        &mpl_token_metadata::instruction::create_master_edition_v3(
+            mpl_token_metadata_id,
+            nft_edition_key,
+            *mint_account_info.key,
+            mint_authority_key,
+            mint_authority_key,
+            nft_metadata_key,
+            *payer_account_info.key,
+            None,
+        ),
+        &[
+            nft_edition_account_info.clone(),
+            mint_account_info.clone(),
+            mint_authority_account_info.clone(),
+            mint_authority_account_info.clone(),
+            payer_account_info.clone(),
+            metadata_account_info.clone(),
+            spl_token_program_account_info.clone(),
+            system_program_account_info.clone(),
+            sysvar_rent_account_info.clone(),
+        ],
+        &[&[INGL_MINT_AUTHORITY_KEY.as_ref(), &[mint_authority_bump]]],
+    )?;
+
+    invoke(
+        &spl_token::instruction::approve(
+            &spl_token::id(),
+            associated_token_account_info.key,
+            &mint_authority_key,
+            payer_account_info.key,
+            &[],
+            1,
+        )?,
+        &[
+            associated_token_account_info.clone(),
+            mint_authority_account_info.clone(),
+            payer_account_info.clone(),
+        ],
+    )?;
+
     let (edition_key, _edition_bump) = Pubkey::find_program_address(
         &[
             b"metadata",
@@ -518,47 +617,9 @@ pub fn mint_nft(program_id: &Pubkey, accounts: &[AccountInfo], class: Class) -> 
         ],
         &mpl_token_metadata_id,
     );
-    assert_pubkeys_exactitude(&edition_key, edition_account_info.key)
+    assert_pubkeys_exactitude(&edition_key, ingl_edition_account_info.key)
         .expect("Error: @edition_account_info");
-    // msg!("verifying collection");
-    // invoke_signed(
-    //     &mpl_token_metadata::instruction::set_and_verify_collection(
-    //         mpl_token_metadata_id,
-    //         nft_metadata_key,
-    //         mint_authority_key,
-    //         *payer_account_info.key,
-    //         mint_authority_key,
-    //         ingl_nft_collection_key,
-    //         collection_metadata_key,
-    //         *edition_account_info.key,
-    //         None),
-    //         &[
-    //             metadata_account_info.clone(),
-    //             mint_authority_account_info.clone(),
-    //             payer_account_info.clone(),
-    //             mint_authority_account_info.clone(),
-    //             ingl_collection_mint_info.clone(),
-    //             ingl_collection_account_info.clone(),
-    //             edition_account_info.clone(),
-    //         ],
-    //         &[&[INGL_MINT_AUTHORITY_KEY.as_ref(), &[mint_authority_bump]]]
-    // )?;
-    msg!("setting authority");
-    invoke_signed(
-        &spl_token::instruction::set_authority(
-            spl_token_program_account_info.key,
-            mint_account_info.key,
-            None,
-            AuthorityType::MintTokens,
-            &mint_authority_key,
-            &[],
-        )?,
-        &[
-            mint_account_info.clone(),
-            mint_authority_account_info.clone(),
-        ],
-        &[&[INGL_MINT_AUTHORITY_KEY.as_ref(), &[mint_authority_bump]]],
-    )?;
+
     msg!("updating update_primary_sale_happened_via_token");
     invoke(
         &mpl_token_metadata::instruction::update_primary_sale_happened_via_token(
@@ -797,7 +858,7 @@ pub fn mint_collection(program_id: &Pubkey, accounts: &[AccountInfo]) -> Program
             mint_authority_key,
             nft_metadata_key,
             *payer_account_info.key,
-            None,
+            Some(0),
         ),
         &[
             edition_account_info.clone(),
@@ -822,13 +883,13 @@ pub fn init_rarity_imprint(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
     let mint_account_info = next_account_info(account_info_iter)?;
     let associated_token_account_info = next_account_info(account_info_iter)?;
     let freeze_authority_account_info = next_account_info(account_info_iter)?;
+    let nft_edition_account_info = next_account_info(account_info_iter)?;
 
     let (gem_account_pubkey, _gem_account_bump) = Pubkey::find_program_address(
         &[GEM_ACCOUNT_CONST.as_ref(), mint_account_info.key.as_ref()],
         program_id,
     );
-    let (mint_authority_key, mint_authority_bump) =
-        Pubkey::find_program_address(&[INGL_MINT_AUTHORITY_KEY.as_ref()], program_id);
+
     if !payer_account_info.is_signer {
         Err(ProgramError::MissingRequiredSignature)?
     }
@@ -844,8 +905,6 @@ pub fn init_rarity_imprint(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
     assert_owned_by(associated_token_account_info, &spl_program::id())?;
 
     assert_pubkeys_exactitude(&gem_account_pubkey, gem_account_info.key).expect("gem_account_info");
-    assert_pubkeys_exactitude(&mint_authority_key, freeze_authority_account_info.key)
-        .expect("freeze_authority_account_info");
     assert_pubkeys_exactitude(
         &get_associated_token_address(payer_account_info.key, mint_account_info.key),
         associated_token_account_info.key,
@@ -866,18 +925,37 @@ pub fn init_rarity_imprint(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
         Some(Clock::get()?.unix_timestamp as u32 + PRICE_TIME_INTERVAL as u32);
     gem_data.serialize(&mut &mut gem_account_info.data.borrow_mut()[..])?;
 
-    invoke_signed(
-        &spl_token::instruction::freeze_account(
-            &spl_token::id(),
-            associated_token_account_info.key,
-            mint_account_info.key,
-            freeze_authority_account_info.key,
-            &[],
-        )?,
+    let (mint_authority_key, mint_authority_bump) =
+        Pubkey::find_program_address(&[INGL_MINT_AUTHORITY_KEY.as_ref()], program_id);
+    assert_pubkeys_exactitude(&mint_authority_key, freeze_authority_account_info.key)
+        .expect("freeze_authority_account_info");
+
+    let mpl_token_metadata_id = mpl_token_metadata::id();
+    let (nft_edition_key, _nft_edition_bump) = Pubkey::find_program_address(
         &[
-            associated_token_account_info.clone(),
-            mint_account_info.clone(),
+            b"metadata",
+            mpl_token_metadata_id.as_ref(),
+            mint_account_info.key.as_ref(),
+            b"edition",
+        ],
+        &mpl_token_metadata_id,
+    );
+    assert_pubkeys_exactitude(&nft_edition_key, nft_edition_account_info.key)
+        .expect("Error: @edition_account_info");
+
+    invoke_signed(
+        &mpl_token_metadata::instruction::freeze_delegated_account(
+            mpl_token_metadata_id,
+            mint_authority_key,
+            *associated_token_account_info.key,
+            nft_edition_key,
+            *mint_account_info.key,
+        ),
+        &[
             freeze_authority_account_info.clone(),
+            associated_token_account_info.clone(),
+            nft_edition_account_info.clone(),
+            mint_account_info.clone(),
         ],
         &[&[INGL_MINT_AUTHORITY_KEY.as_ref(), &[mint_authority_bump]]],
     )?;
@@ -893,6 +971,7 @@ pub fn imprint_rarity(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
     let associated_token_account_info = next_account_info(account_info_iter)?;
     let freeze_authority_account_info = next_account_info(account_info_iter)?;
     let metadata_account_info = next_account_info(account_info_iter)?;
+    let nft_edition_account_info = next_account_info(account_info_iter)?;
 
     let btc_feed_account_info = next_account_info(account_info_iter)?;
     let sol_feed_account_info = next_account_info(account_info_iter)?;
@@ -969,25 +1048,43 @@ pub fn imprint_rarity(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
     )
     .expect("bnb_price_account_info_owner");
 
-    invoke_signed(
-        &spl_token::instruction::thaw_account(
-            &spl_token::id(),
-            associated_token_account_info.key,
-            mint_account_info.key,
-            freeze_authority_account_info.key,
-            &[],
-        )?,
+    let mpl_token_metadata_id = mpl_token_metadata::id();
+    let (nft_edition_key, _nft_edition_bump) = Pubkey::find_program_address(
         &[
-            associated_token_account_info.clone(),
-            mint_account_info.clone(),
+            b"metadata",
+            mpl_token_metadata_id.as_ref(),
+            mint_account_info.key.as_ref(),
+            b"edition",
+        ],
+        &mpl_token_metadata_id,
+    );
+    assert_pubkeys_exactitude(&nft_edition_key, nft_edition_account_info.key)
+        .expect("Error: @edition_account_info");
+
+    invoke_signed(
+        &mpl_token_metadata::instruction::thaw_delegated_account(
+            mpl_token_metadata_id,
+            mint_authority_key,
+            *associated_token_account_info.key,
+            nft_edition_key,
+            *mint_account_info.key,
+        ),
+        &[
             freeze_authority_account_info.clone(),
+            associated_token_account_info.clone(),
+            nft_edition_account_info.clone(),
+            mint_account_info.clone(),
         ],
         &[&[INGL_MINT_AUTHORITY_KEY.as_ref(), &[mint_authority_bump]]],
     )?;
 
     let mut gem_data: GemAccountV0_0_1 = try_from_slice_unchecked(&gem_account_info.data.borrow())?;
     let now = Clock::get()?;
-    msg!("now: {}, sedd_time: {}", now.unix_timestamp, gem_data.rarity_seed_time.unwrap());
+    msg!(
+        "now: {}, sedd_time: {}",
+        now.unix_timestamp,
+        gem_data.rarity_seed_time.unwrap()
+    );
     if (now.unix_timestamp as u32) < gem_data.rarity_seed_time.unwrap() {
         Err(InglError::TooEarly.utilize(Some("imprint_rarity")))?
     }
@@ -1086,5 +1183,192 @@ pub fn imprint_rarity(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
         &[&[INGL_MINT_AUTHORITY_KEY.as_ref(), &[mint_authority_bump]]],
     )?;
     gem_data.serialize(&mut &mut gem_account_info.data.borrow_mut()[..])?;
+    Ok(())
+}
+
+pub fn redeem_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+    let account_info_iter = &mut accounts.iter();
+    let payer_account_info = next_account_info(account_info_iter)?;
+    let mint_account_info = next_account_info(account_info_iter)?;
+    let minting_pool_account_info = next_account_info(account_info_iter)?;
+    let associated_token_account_info = next_account_info(account_info_iter)?;
+    let mint_authority_account_info = next_account_info(account_info_iter)?;
+    let gem_account_info = next_account_info(account_info_iter)?;
+    let metadata_account_info = next_account_info(account_info_iter)?;
+    let edition_account_info = next_account_info(account_info_iter)?;
+    let ingl_collection_account_info = next_account_info(account_info_iter)?;
+    let spl_token_program_account_info = next_account_info(account_info_iter)?;
+    let program_treasury_account_info = next_account_info(account_info_iter)?;
+
+    if !payer_account_info.is_signer {
+        Err(ProgramError::MissingRequiredSignature)?
+    }
+    assert_program_owned(gem_account_info)?;
+    assert_owned_by(mint_account_info, &spl_program::id())?;
+    assert_owned_by(associated_token_account_info, &spl_program::id())?;
+    assert_pubkeys_exactitude(
+        &get_associated_token_address(payer_account_info.key, mint_account_info.key),
+        associated_token_account_info.key,
+    )
+    .expect("associated_token_account_info");
+
+    let (mint_authority_key, _mint_authority_bump) =
+        Pubkey::find_program_address(&[INGL_MINT_AUTHORITY_KEY.as_ref()], program_id);
+    assert_pubkeys_exactitude(&mint_authority_key, mint_authority_account_info.key)
+        .expect("mint_authority_account_info");
+
+    let (minting_pool_id, minting_pool_bump) =
+        Pubkey::find_program_address(&[INGL_MINTING_POOL_KEY.as_ref()], program_id);
+
+    assert_pubkeys_exactitude(&minting_pool_id, minting_pool_account_info.key)
+        .expect("Error: @minting_pool_account_info");
+
+    let (gem_pubkey, _gem_bump) = Pubkey::find_program_address(
+        &[GEM_ACCOUNT_CONST.as_ref(), mint_account_info.key.as_ref()],
+        program_id,
+    );
+    assert_pubkeys_exactitude(&gem_pubkey, gem_account_info.key).expect("gem_account_info");
+
+    let mpl_token_metadata_id = mpl_token_metadata::id();
+
+    let (edition_key, _edition_bump) = Pubkey::find_program_address(
+        &[
+            b"metadata",
+            mpl_token_metadata_id.as_ref(),
+            mint_account_info.key.as_ref(),
+            b"edition",
+        ],
+        &mpl_token_metadata_id,
+    );
+    assert_pubkeys_exactitude(&edition_key, edition_account_info.key)
+        .expect("Error: @edition_account_info");
+
+    let metadata_seeds = &[
+        PREFIX.as_ref(),
+        mpl_token_metadata_id.as_ref(),
+        mint_account_info.key.as_ref(),
+    ];
+    let (nft_metadata_key, _nft_metadata_bump) =
+        Pubkey::find_program_address(metadata_seeds, &mpl_token_metadata_id);
+
+    assert_pubkeys_exactitude(&nft_metadata_key, metadata_account_info.key)
+        .expect("Error: @meta_data_account_info");
+
+    let (ingl_nft_collection_key, _ingl_nft_bump) =
+        Pubkey::find_program_address(&[INGL_NFT_COLLECTION_KEY.as_ref()], program_id);
+    let metadata_seeds = &[
+        PREFIX.as_ref(),
+        mpl_token_metadata_id.as_ref(),
+        ingl_nft_collection_key.as_ref(),
+    ];
+    let (collection_metadata_key, _collection_metadata_bump) =
+        Pubkey::find_program_address(metadata_seeds, &mpl_token_metadata_id);
+
+    assert_pubkeys_exactitude(&collection_metadata_key, ingl_collection_account_info.key)
+        .expect("Error: @collection_metadata_info");
+
+    let associated_token_account_data =
+        Account::unpack(&associated_token_account_info.data.borrow())?;
+    if associated_token_account_data.amount != 1 {
+        Err(ProgramError::InsufficientFunds)?
+    }
+
+    let gem_data: GemAccountV0_0_1 = try_from_slice_unchecked(&gem_account_info.data.borrow())?;
+
+    match gem_data.funds_location {
+        FundsLocation::MintingPool => {}
+        _ => Err(InglError::InvalidFundsLocation.utilize(Some("gem_account_redeem_nft")))?,
+    };
+
+    let now = Clock::get()?.unix_timestamp as u32;
+    if gem_data.redeemable_date > now {
+        Err(InglError::TooEarly.utilize(Some("redeem_nft")))?;
+    }
+
+    let mut redeem_fees = 0.0;
+    let spent_time =
+        (now - gem_data.rarity_seed_time.unwrap()) as f32 / (60 * 60 * 24 * 365) as f32;
+    if spent_time < 1.0 {
+        redeem_fees += (1.0 - spent_time.pow(2) as f32).sqrt() * FEE_MULTIPLYER as f32 / 100.0;
+    
+        let (program_treasury_id, _treasury_bump) =
+            Pubkey::find_program_address(&[INGL_TREASURY_ACCOUNT_KEY.as_ref()], program_id);
+
+        assert_pubkeys_exactitude(&program_treasury_id, program_treasury_account_info.key)
+            .expect("Error: @progrma_treasury_account_info");
+
+        let treasury_funds = redeem_fees * TREASURY_FEE_MULTIPLYER as f32 / 100.0;
+        let mint_authority_funds = redeem_fees - treasury_funds;
+
+        invoke_signed(
+            &system_instruction::transfer(
+                &minting_pool_id,
+                &program_treasury_id,
+                treasury_funds as u64,
+            ),
+            &[
+                minting_pool_account_info.clone(),
+                program_treasury_account_info.clone(),
+            ],
+            &[&[INGL_MINTING_POOL_KEY.as_ref(), &[minting_pool_bump]]],
+        )?;
+        invoke_signed(
+            &system_instruction::transfer(
+                &minting_pool_id,
+                &mint_authority_key,
+                mint_authority_funds as u64,
+            ),
+            &[
+                minting_pool_account_info.clone(),
+                mint_authority_account_info.clone(),
+            ],
+            &[&[INGL_MINTING_POOL_KEY.as_ref(), &[minting_pool_bump]]],
+        )?;
+    }
+
+    invoke_signed(
+        &system_instruction::transfer(
+            &minting_pool_id,
+            payer_account_info.key,
+            gem_data.class.get_class_lamports() - redeem_fees as u64,
+        ),
+        &[
+            minting_pool_account_info.clone(),
+            payer_account_info.clone(),
+        ],
+        &[&[INGL_MINTING_POOL_KEY.as_ref(), &[minting_pool_bump]]],
+    )?;
+
+    invoke(
+        &mpl_token_metadata::instruction::burn_nft(
+            mpl_token_metadata_id,
+            nft_metadata_key,
+            *payer_account_info.key,
+            *mint_account_info.key,
+            *associated_token_account_info.key,
+            edition_key,
+            spl_token::id(),
+            Some(collection_metadata_key),
+        ),
+        &[
+            metadata_account_info.clone(),
+            payer_account_info.clone(),
+            mint_account_info.clone(),
+            associated_token_account_info.clone(),
+            edition_account_info.clone(),
+            spl_token_program_account_info.clone(),
+            ingl_collection_account_info.clone(),
+        ],
+    )?;
+
+    let dest_starting_lamports = payer_account_info.lamports();
+    **payer_account_info.lamports.borrow_mut() = dest_starting_lamports
+        .checked_add(gem_account_info.lamports())
+        .unwrap();
+    **gem_account_info.lamports.borrow_mut() = 0;
+
+    let mut payer_gem_data = gem_account_info.data.borrow_mut();
+    payer_gem_data.fill(0);
+
     Ok(())
 }
