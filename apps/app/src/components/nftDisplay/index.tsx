@@ -47,7 +47,6 @@ export enum NftClass {
 }
 
 export default function NftDisplay() {
-  const [mintPrice, setMintPrice] = useState<number>(10);
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const handleClose = () => {

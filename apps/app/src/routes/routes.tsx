@@ -1,7 +1,6 @@
 import { Navigate } from 'react-router';
 import Layout from '../components/layout';
 import NftDisplay from '../components/nftDisplay';
-import Test from '../components/Test';
 
 export const routes = [
   {

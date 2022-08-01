@@ -16,7 +16,6 @@ import useNotification from '../../common/utils/notification';
 import random from '../../common/utils/random';
 import ErrorMessage from '../../common/components/ErrorMessage';
 import ActionDialog from './ActionDialog';
-import SelectValidatorDialog from './SelectValidatorDialog';
 
 export default function Gem({
   gem: {
