@@ -14,7 +14,7 @@ const NAV_LINKS: { name: string; link: string; isExternal: boolean }[] = [
   },
   { name: 'DAO', link: '/dao', isExternal: false },
   { name: 'Wallet', link: '/wallet', isExternal: false },
-  { name: 'Onboard Validator', link: '/onboard', isExternal: false },
+  { name: 'Onboard Validator', link: 'https://onboarding.ingl.io', isExternal: true },
 ];
 
 export default function Navbar() {
