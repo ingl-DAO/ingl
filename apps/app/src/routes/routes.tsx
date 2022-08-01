@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router';
 import Layout from '../components/layout';
+import NftDisplay from '../components/nftDisplay';
 import Test from '../components/Test';
 
 export const routes = [
@@ -8,7 +9,7 @@ export const routes = [
     element: <Layout />,
     children: [
       { path: '/', element: <Navigate to="/nft" /> },
-      { path: '/nft', element: <Test /> },
+      { path: '/nft', element: <NftDisplay /> },
       { path: '*', element: <Navigate to="/" /> },
     ],
   },

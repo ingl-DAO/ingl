@@ -31,8 +31,15 @@ export default function Links() {
       }}
     >
       {LINKS.map(({ tooltip, link, icon }, index) => (
-        <Typography component="a" href={link} rel="noreferrer" target="_blank" sx={{display: 'grid', alignItems:'center'}}>
-          <Tooltip arrow title={tooltip} key={index}>
+        <Typography
+          component="a"
+          href={link}
+          key={index}
+          rel="noreferrer"
+          target="_blank"
+          sx={{ display: 'grid', alignItems: 'center' }}
+        >
+          <Tooltip arrow title={tooltip}>
             {icon}
           </Tooltip>
         </Typography>

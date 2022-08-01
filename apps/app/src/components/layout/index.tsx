@@ -23,7 +23,7 @@ export default function Layout() {
             borderTopRightRadius: '30px',
             borderBottom: '0px',
             height: '100%',
-            px: theme.spacing(10),
+            // px: theme.spacing(10),
           }}
         >
           <Scrollbars

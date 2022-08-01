@@ -4,15 +4,17 @@ import theme from '../../theme/theme';
 export default function SectionTitle({
   title,
   center,
+  noMargin
 }: {
   title: string;
   center?: boolean;
+  noMargin?:boolean
 }) {
   return (
     <Box
       sx={{
-        marginBottom: theme.spacing(5.875),
-        marginTop: theme.spacing(5.875),
+        marginBottom: noMargin? 0 :theme.spacing(5.875),
+        marginTop: noMargin? 0 :theme.spacing(5.875),
         textAlign: center ? 'center' : 'initial',
       }}
     >

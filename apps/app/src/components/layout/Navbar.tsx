@@ -105,18 +105,15 @@ export default function Navbar() {
         </Box>
         <Button
           color="primary"
-          variant="contained"
-          component="a"
-          href="https://app.ingl.io/mint"
-          rel="noreferrer"
-          target="_blank"
+          variant="outlined"
           sx={{
             borderRadius: '90px',
             justifySelf: 'end',
+            color:'white',
             display: { laptop: 'initial', mobile: 'none' },
           }}
         >
-          Get Started
+          Connect Wallet
         </Button>
         <IconButton
           onClick={toggleDrawer}
