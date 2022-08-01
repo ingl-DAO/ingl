@@ -765,7 +765,6 @@ pub fn mint_nft(program_id: &Pubkey, accounts: &[AccountInfo], class: Class) -> 
     //         &[&[INGL_MINT_AUTHORITY_KEY.as_ref(), &[mint_authority_bump]]]
     // )?;
 
-
     // msg!("setting authority");
     invoke_signed(
         &spl_token::instruction::set_authority(

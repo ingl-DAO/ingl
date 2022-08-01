@@ -80,7 +80,7 @@ def mint_nft(payer_keypair, mint_keypair, mint_class, client):
     payer_account_meta = AccountMeta(payer_keypair.public_key, True, True)
     mint_account_meta = AccountMeta(mint_keypair.public_key, True, True)
     minting_pool_meta = AccountMeta(minting_pool_pubkey, False, True)
-    mint_authority_meta = AccountMeta(mint_authority_pubkey, False, False)
+    mint_authority_meta = AccountMeta(mint_authority_pubkey, False, True)
     mint_associated_meta = AccountMeta(mint_associated_account_pubkey, False, True)
     spl_program_meta = AccountMeta(constants.TOKEN_PROGRAM_ID, False, False)
     sysvar_rent_account_meta = AccountMeta(solana.sysvar.SYSVAR_RENT_PUBKEY, False, False)
@@ -90,9 +90,8 @@ def mint_nft(payer_keypair, mint_keypair, mint_class, client):
     associated_program_meta = AccountMeta(constants.ASSOCIATED_TOKEN_PROGRAM_ID, False, False)
     global_gem_meta = AccountMeta(global_gem_pubkey, False, True)
     gem_account_meta = AccountMeta(gem_account_pubkey, False, True)
-    # sysvar_clock_meta = AccountMeta(solana.sysvar.SYSVAR_CLOCK_PUBKEY, False, False)
-    edition_meta = AccountMeta(master_edition_pda, False, False)
-    collection_mint_meta = AccountMeta(collection_mint_pubkey, False, False)
+    edition_meta = AccountMeta(master_edition_pda, False, True)
+    collection_mint_meta = AccountMeta(collection_mint_pubkey, False, True)
     collection_account_meta = AccountMeta(collection_account_pda, False, True)
 
 
@@ -124,7 +123,7 @@ def mint_nft(payer_keypair, mint_keypair, mint_class, client):
         spl_program_meta,
         metadata_program_id,
     ]
-    # print(accounts)
+    print(accounts)
     instruction_data = build_instruction(InstructionEnum.enum.MintNft(), mint_class)
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, instruction_data))
