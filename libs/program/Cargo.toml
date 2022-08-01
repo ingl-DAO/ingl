@@ -4,14 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 solana-program = "1.10.29"
 borsh = "0.9.3"
 spl-token = "3.3.0"
 borsh-derive = "0.9.3"
 spl-associated-token-account = "1.0.5"
-mpl-token-metadata = { version = "1.3.2", features = ["no-entrypoint"]}
+mpl-token-metadata = { version = "1.3.2", features = ["no-entrypoint"] }
 thiserror = "1.0.31"
 num-derive = "0.3"
 num-traits = "0.2"
@@ -24,6 +23,8 @@ serde = "1.0.112"
 crate-type = ["cdylib", "lib"]
 
 [package.metadata.x]
+deploy-pubkey = "solana-keygen pubkey ./deploy/keypair.json"
+new-deploy-address = "solana-keygen new -o ./deploy/keypair.json --force"
 build-deploy-address = "solana config set --url https://api.devnet.solana.com && cargo build-bpf && solana program deploy --program-id ./deploy/keypair.json ../../target/deploy/ingl.so"
 build-deploy = "solana config set --url https://api.devnet.solana.com && cargo build-bpf && solana program deploy ../../target/deploy/ingl.so"
 build-deploy-address-testnet = "solana config set --url https://api.testnet.solana.com && cargo build-bpf && solana program deploy --program-id ./deploy/keypair.json ../../target/deploy/ingl.so"

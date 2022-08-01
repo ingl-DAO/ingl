@@ -11,13 +11,16 @@ pub mod constants{
     declare_id!("4au6MZAQnjGYnMpGM5zKKQbDdTDuMgtkvWryHQV7mryy");
 
 
+    pub const INGL_TREASURY_ACCOUNT_KEY: &str = "ingl_treasury_account_key";
     pub const INGL_NFT_COLLECTION_KEY: &str = "ingl_nft_collection_newer";
     pub const INGL_MINT_AUTHORITY_KEY: &str = "mint_authority";
     pub const INGL_MINTING_POOL_KEY: &str = "minting_pool";
     pub const COLLECTION_HOLDER_KEY: &str = "collection_holder";
     pub const GLOBAL_GEM_KEY: &str = "global_gem_account";
     pub const GEM_ACCOUNT_CONST: &str = "gem_account";
-    pub const PRICE_TIME_INTERVAL: u8 = 10;
+    pub const FEE_MULTIPLYER: u8 = 10;
+    pub const PRICE_TIME_INTERVAL: u8 = 20;
+    pub const TREASURY_FEE_MULTIPLYER: u8 = 70;
     pub const BTC_FEED_PUBLIC_KEY: &str = "9ATrvi6epR5hVYtwNs7BB7VCiYnd4WM7e8MfafWpfiXC";
     pub const SOL_FEED_PUBLIC_KEY: &str = "7LLvRhMs73FqcLkA8jvEE1AM2mYZXTmqfUv8GAEurymx";
     pub const ETH_FEED_PUBLIC_KEY: &str = "6fhxFvPocWapZ5Wa2miDnrX2jYRFKvFqYnX11GGkBo2f";
