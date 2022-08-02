@@ -1,6 +1,6 @@
 import { DoneAllRounded } from '@mui/icons-material';
 import { CircularProgress } from '@mui/material';
-import { randomUUID as uuidv4 } from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 import { Id, toast } from 'react-toastify';
 
 export class useNotification {
