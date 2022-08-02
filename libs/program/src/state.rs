@@ -8,7 +8,7 @@ use solana_program::{
 };
 pub mod constants{
     use solana_program::declare_id;
-    declare_id!("4au6MZAQnjGYnMpGM5zKKQbDdTDuMgtkvWryHQV7mryy");
+    declare_id!("E2zLL1Ag94mvhbqa8Dg3LUM793q8BEh2wMBdsSQAXVxA");
 
 
     pub const INGL_TREASURY_ACCOUNT_KEY: &str = "ingl_treasury_account_key";
@@ -31,6 +31,8 @@ pub mod constants{
     pub const COUNCIL_MINT_AUTHORITY_KEY: &str = "council_mint_authority";
     pub const AUTHORIZED_WITHDRAWER_KEY: &str = "InglAuthorizedWithdrawer";
     pub const VOTE_ACCOUNT_KEY: &str = "InglVote";
+    pub const VOTE_DATA_ACCOUNT_KEY: &str = "InglVoteData";
+    pub const STAKE_ACCOUNT_KEY: &str = "staking_account_key";
 
     pub mod spl_program{
         use solana_program::declare_id;
@@ -177,6 +179,17 @@ pub struct ProgramVoteAccount{
     validator: Pubkey,
 }
 
+#[derive(BorshDeserialize, BorshSerialize)]
+pub struct VoteRewards{
+    pub epoch_number: u64,
+    pub total_delegated: u64,
+}
+#[derive(BorshDeserialize, BorshSerialize)]
+pub struct InglVoteAccountData{
+    pub total_delegated: u64,
+    pub last_withdraw_epoch: u64,
+    pub vote_rewards: Vec<VoteRewards>,
+}
 
 pub struct VoteState{}
 impl VoteState {

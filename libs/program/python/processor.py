@@ -17,7 +17,7 @@ def create_collection(payer_keypair, client):
     metadata_pda, _metadata_pda_bump = PublicKey.find_program_address([b"metadata", bytes(metaplex_program_id), bytes(mint_pubkey)], metaplex_program_id)
     master_edition_pda, _master_edition_bump = PublicKey.find_program_address([b"metadata", bytes(metaplex_program_id), bytes(mint_pubkey), b"edition"], metaplex_program_id)
     global_gem_pubkey, _global_gem_bump = PublicKey.find_program_address([bytes(ingl_constants.GLOBAL_GEM_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
-    mint_authority_pubkey, _mint_authority_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.COUNCIL_MINT_AUTHORITY_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
+    council_mint_authority_pubkey, _mint_authority_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.COUNCIL_MINT_AUTHORITY_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     council_mint_pubkey, _collection_mint_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.COUNCIL_MINT_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
 
     payer_account_meta = AccountMeta(payer_keypair.public_key, True, True)
@@ -34,7 +34,7 @@ def create_collection(payer_keypair, client):
     global_gem_meta = AccountMeta(global_gem_pubkey, False, True)
     edition_meta = AccountMeta(master_edition_pda, False, True)
     council_mint_account_meta = AccountMeta(council_mint_pubkey, False, True)
-    council_mint_authority_meta = AccountMeta(mint_authority_pubkey, False, False)
+    council_mint_authority_meta = AccountMeta(council_mint_authority_pubkey, False, False)
 
     accounts = [
         payer_account_meta,
@@ -73,9 +73,13 @@ def mint_nft(payer_keypair, mint_keypair, mint_class, client):
     metaplex_program_id = PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s")
     metadata_pda, _metadata_pda_bump = PublicKey.find_program_address([b"metadata", bytes(metaplex_program_id), bytes(mint_keypair.public_key)], metaplex_program_id)
     global_gem_pubkey, _global_gem_bump = PublicKey.find_program_address([bytes(ingl_constants.GLOBAL_GEM_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
-    master_edition_pda, _master_edition_bump = PublicKey.find_program_address([b"metadata", bytes(metaplex_program_id), bytes(collection_mint_pubkey), b"edition"], metaplex_program_id)
+    collection_master_edition_pda, _master_edition_bump = PublicKey.find_program_address([b"metadata", bytes(metaplex_program_id), bytes(collection_mint_pubkey), b"edition"], metaplex_program_id)
+    mint_edition_pda, _mint_edition_bump = PublicKey.find_program_address([b"metadata", bytes(metaplex_program_id), bytes(mint_keypair.public_key), b"edition"], metaplex_program_id)
     collection_account_pda, _collection_account_bump = PublicKey.find_program_address([b"metadata", bytes(metaplex_program_id), bytes(collection_mint_pubkey)], metaplex_program_id)
     gem_account_pubkey, _gem_account_bump = PublicKey.find_program_address([bytes(ingl_constants.GEM_ACCOUNT_CONST, 'UTF-8'), bytes(mint_keypair.public_key)], ingl_constants.INGL_PROGRAM_ID)
+
+    
+    print(mint_authority_pubkey)
 
     payer_account_meta = AccountMeta(payer_keypair.public_key, True, True)
     mint_account_meta = AccountMeta(mint_keypair.public_key, True, True)
@@ -90,7 +94,8 @@ def mint_nft(payer_keypair, mint_keypair, mint_class, client):
     associated_program_meta = AccountMeta(constants.ASSOCIATED_TOKEN_PROGRAM_ID, False, False)
     global_gem_meta = AccountMeta(global_gem_pubkey, False, True)
     gem_account_meta = AccountMeta(gem_account_pubkey, False, True)
-    edition_meta = AccountMeta(master_edition_pda, False, True)
+    collection_master_edition_meta = AccountMeta(collection_master_edition_pda, False, True)
+    mint_edition_meta = AccountMeta(mint_edition_pda, False, True)
     collection_mint_meta = AccountMeta(collection_mint_pubkey, False, True)
     collection_account_meta = AccountMeta(collection_account_pda, False, True)
 
@@ -107,8 +112,8 @@ def mint_nft(payer_keypair, mint_keypair, mint_class, client):
         minting_pool_meta,
         global_gem_meta,
         gem_account_meta,
-        # sysvar_clock_meta,
-        edition_meta,
+        collection_master_edition_meta,
+        mint_edition_meta,
         collection_mint_meta,
         collection_account_meta,
 
@@ -123,7 +128,7 @@ def mint_nft(payer_keypair, mint_keypair, mint_class, client):
         spl_program_meta,
         metadata_program_id,
     ]
-    print(accounts)
+    # print(accounts)
     instruction_data = build_instruction(InstructionEnum.enum.MintNft(), mint_class)
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, instruction_data))
