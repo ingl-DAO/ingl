@@ -4,11 +4,11 @@ use crate::{
     nfts,
     state::{
         constants::*, Class, FundsLocation, GemAccountV0_0_1, GemAccountVersions, GlobalGems,
-        VoteInit, ValidatorProposal, ValidatorVote,
+        VoteInit, ValidatorProposal, ValidatorVote, InglVoteAccountData,
     },
     utils::{assert_owned_by, assert_program_owned, assert_pubkeys_exactitude, assert_is_signer},
 };
-use std::str::FromStr;
+use std::{str::FromStr};
 
 use anchor_lang::AnchorDeserialize;
 use borsh::BorshSerialize;
@@ -27,7 +27,8 @@ use solana_program::{
     rent::Rent,
     system_instruction, system_program,
     sysvar::Sysvar,
-    hash::hash
+    hash::hash,
+    stake::{state::{Authorized, Lockup, StakeState}, self},
 };
 use spl_associated_token_account::{get_associated_token_address, *};
 use spl_token::{error::TokenError, state::Account};
@@ -53,6 +54,7 @@ pub fn process_instruction(
         InstructionEnum::CreateValidatorSelectionProposal => create_validator_selection_proposal(program_id, accounts)?,
         InstructionEnum::VoteValidatorProposal{num_nfts, validator_index} => vote_validator_proposal(program_id, accounts, num_nfts, validator_index)?,
         InstructionEnum::FinalizeProposal => finalize_proposal(program_id, accounts)?,
+        // InstructionEnum::DelegateSol => delegate_nft(program_id, accounts)?,
         _ => Err(ProgramError::InvalidInstructionData)?,
     })
 }
@@ -245,9 +247,18 @@ pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
     let council_mint_authority_info = next_account_info(account_info_iter)?;
     let system_program_account_info = next_account_info(account_info_iter)?;
     let spl_token_program_account_info = next_account_info(account_info_iter)?;
+    let ingl_vote_data_account_info = next_account_info(account_info_iter)?;
+    let stake_account_info = next_account_info(account_info_iter)?;
+    let pd_pool_account_info = next_account_info(account_info_iter)?;
+
 
     assert_program_owned(global_gem_account_info)?;
     assert_program_owned(proposal_account_info)?;
+
+    let (pd_pool_pubkey, _pd_pool_bump) =
+        Pubkey::find_program_address(&[PD_POOL_KEY.as_ref()], program_id);
+    assert_pubkeys_exactitude(&pd_pool_pubkey, pd_pool_account_info.key)
+        .expect("Error: @pd_pool_account_info");
 
     let (global_gem_pubkey, _global_gem_bump) =
         Pubkey::find_program_address(&[GLOBAL_GEM_KEY.as_ref()], program_id);
@@ -256,6 +267,9 @@ pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
 
     let global_gem_data: GlobalGems = try_from_slice_unchecked(&global_gem_account_info.data.borrow())?;    
     
+    let (expected_vote_data_pubkey, expected_vote_data_bump) = Pubkey::find_program_address(&[VOTE_DATA_ACCOUNT_KEY.as_ref(), vote_account_info.key.as_ref()], program_id);
+    assert_pubkeys_exactitude(&expected_vote_data_pubkey, ingl_vote_data_account_info.key).expect("Error: @vote_data_account_info");
+
     let (expected_proposal_id, _expected_proposal_bump) = Pubkey::find_program_address(&[PROPOSAL_KEY.as_ref(), &(global_gem_data.proposal_numeration-1).to_be_bytes()], program_id);
     assert_pubkeys_exactitude(&expected_proposal_id, proposal_account_info.key)?;
 
@@ -275,6 +289,25 @@ pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
 
     let expected_assoc_key = get_associated_token_address(vote_account_info.key, council_mint_account_info.key);
     assert_pubkeys_exactitude(&expected_assoc_key, mint_associated_token_account.key).expect("Council associated token is not that expected");
+    
+    let (expected_stake_key, expected_stake_bump) = Pubkey::find_program_address(&[STAKE_ACCOUNT_KEY.as_ref(), expected_vote_pubkey.as_ref()], program_id);
+    assert_pubkeys_exactitude(&expected_stake_key, stake_account_info.key).expect("stake account info");
+
+    let space = 30000;
+    let lamports = Rent::get()?.minimum_balance(space);
+
+    invoke_signed(
+        &system_instruction::create_account(validator_info.key, &expected_vote_data_pubkey, lamports, space as u64, program_id),
+        &[validator_info.clone(), ingl_vote_data_account_info.clone()],
+        &[&[VOTE_DATA_ACCOUNT_KEY.as_ref(), vote_account_info.key.as_ref(), &[expected_vote_data_bump]]]
+    )?;
+    let ingl_vote_data = InglVoteAccountData{
+        total_delegated:0,
+        last_withdraw_epoch:Clock::get()?.epoch,
+        vote_rewards: Vec::new(),
+    };
+
+    ingl_vote_data.serialize(&mut &mut ingl_vote_data_account_info.data.borrow_mut()[..])?;
 
     invoke(
         &spl_associated_token_account::instruction::create_associated_token_account(
@@ -322,6 +355,25 @@ pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
             validator_info.clone(),
         ],
     )?;
+
+
+    let authorized = &Authorized{staker :*pd_pool_account_info.key, withdrawer: *pd_pool_account_info.key};
+    let lockup =  &Lockup{unix_timestamp: 0, epoch: 0, custodian: *pd_pool_account_info.key};
+    
+    let lamports = Rent::get()?.minimum_balance(std::mem::size_of::<StakeState>() as usize);
+    msg!("creating account");
+    invoke_signed(
+        &system_instruction::create_account(validator_info.key, stake_account_info.key, lamports, std::mem::size_of::<StakeState>() as u64, &stake::config::id()),
+        &[validator_info.clone(), stake_account_info.clone()],
+        &[&[STAKE_ACCOUNT_KEY.as_ref(), expected_vote_pubkey.as_ref(), &[expected_stake_bump]]]
+    )?;
+    msg!("Initializing stake");
+    invoke(
+        &solana_program::stake::instruction::initialize(stake_account_info.key, authorized, lockup ),
+        &[stake_account_info.clone(), sysvar_rent_info.clone()]
+    )?;
+
+
     Ok(())
 }
 
@@ -1632,3 +1684,17 @@ pub fn redeem_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResul
 
     Ok(())
 }
+
+
+// pub fn delegate_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+//     let account_info_iter = &mut accounts.iter();
+//     let payer_account_info = next_account_info(account_info_iter)?;
+//     let pd_pool_account_info = next_account_info(account_info_iter)?;
+//     let vote_account_info = next_account_info(account_info_iter)?;
+//     let ingl_vote_data_account_info = next_account_info(account_info_iter)?;
+//     let vote_stake_account = next_account_info(account_info_iter)?;
+//     let stake_account_info = next_account_info(account_info_iter)?;
+
+
+//     Ok(())
+// }
