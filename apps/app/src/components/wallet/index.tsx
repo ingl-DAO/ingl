@@ -1,5 +1,14 @@
 import { PriorityHighRounded, ReportRounded } from '@mui/icons-material';
-import { Box, Button, Table, TableBody, TableContainer } from '@mui/material';
+import {
+  Box,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableRow,
+  Typography,
+} from '@mui/material';
 import Scrollbars from 'rc-scrollbars';
 import { useEffect, useState } from 'react';
 import ErrorMessage from '../../common/components/ErrorMessage';
@@ -23,7 +32,7 @@ const maxClaimableNft = 100;
 
 export default function Wallet() {
   const [isClaimDialogOpen, setIsClaimDialogOpen] = useState<boolean>(false);
-  const [isClaimingDialog, setIsClaimingDialog] = useState<boolean>(false);
+  const [isClaimingRewards, setIsClaimingRewards] = useState<boolean>(false);
 
   const [nfts, setNfts] = useState<Gem[]>([]);
   const [isNftsLoading, setIsNftsLoading] = useState<boolean>(true);
@@ -126,7 +135,7 @@ export default function Wallet() {
       if (notifs) setNotifs([...notifs, notif]);
       else setNotifs([notif]);
       notif.notify({ render: 'Claiming Rewards' });
-      setIsClaimingDialog(true);
+      setIsClaimingRewards(true);
 
       setTimeout(() => {
         if (random() > 5) {
@@ -150,7 +159,7 @@ export default function Wallet() {
             icon: () => <ReportRounded fontSize="large" color="error" />,
           });
         }
-        setIsClaimingDialog(false);
+        setIsClaimingRewards(false);
       }, 3000);
     } else {
       const notif = new useNotification();
@@ -214,7 +223,7 @@ export default function Wallet() {
             justifySelf: { laptop: 'end', mobile: 'center' },
           }}
           onClick={() => setIsClaimDialogOpen(true)}
-          disabled={isClaimingDialog || isClaimDialogOpen}
+          disabled={isClaimingRewards || isClaimDialogOpen}
         >
           Claim rewards
         </Button>
@@ -239,7 +248,6 @@ export default function Wallet() {
       <Box
         sx={{
           backgroundColor: '#0d33345e',
-          margin: theme.spacing(3),
           height: '100%',
           padding: '0 16px',
         }}
@@ -252,8 +260,9 @@ export default function Wallet() {
           <Table size="small" sx={{ height: 'inherit' }}>
             <Scrollbars autoHide>
               <WalletTableHead
-                isDataLoading={false}
-                isSubmittingExamSuccess={false}
+                isDisabled={
+                  isNftsLoading || nfts.length === 0 || isClaimingRewards
+                }
                 onSelectAllClick={selectFirstHundred}
                 isHundredSelected={
                   selectedGems.length === maxClaimableNft ||
@@ -261,23 +270,37 @@ export default function Wallet() {
                 }
               />
               <TableBody>
-                {nfts
-                  .sort((el1, el2) => (el1.rewards > el2.rewards ? -1 : 1))
-                  .map((nft) => (
-                    <NftRow
-                      isChecked={
-                        selectedGems.find(
-                          (gem) => gem.nft_id === nft.nft_id
-                        ) !== undefined
-                          ? true
-                          : false
-                      }
-                      selectNft={() => selectNft(nft)}
-                      isClaimingDialog={isClaimingDialog}
-                      isNftsLoading={isNftsLoading}
-                      rowData={nft}
-                    />
-                  ))}
+                {nfts.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={4}
+                      sx={{
+                        '&.MuiTableCell-root': { borderBottom: '0px' },
+                        textAlign: 'center',
+                      }}
+                    >
+                      <Typography>You have no delegated gems</Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  nfts
+                    .sort((el1, el2) => (el1.rewards > el2.rewards ? -1 : 1))
+                    .map((nft) => (
+                      <NftRow
+                        isChecked={
+                          selectedGems.find(
+                            (gem) => gem.nft_id === nft.nft_id
+                          ) !== undefined
+                            ? true
+                            : false
+                        }
+                        selectNft={() => selectNft(nft)}
+                        isClaimingDialog={isClaimingRewards}
+                        isNftsLoading={isNftsLoading}
+                        rowData={nft}
+                      />
+                    ))
+                )}
               </TableBody>
             </Scrollbars>
           </Table>
