@@ -20,6 +20,7 @@ import SelectValidatorDialog from './SelectValidatorDialog';
 export interface inglGem {
   nft_id: string;
   image_ref: string;
+  video_ref:string;
   generation: number;
   rarity?: string;
   gemClass: string;
@@ -98,17 +99,19 @@ export default function NftDisplay() {
     {
       image_ref:
         'https://i2.wp.com/static.highsnobiety.com/thumbor/fv3lCYCfr6qZwmnh0eDHGzy_Xf4=/1600x1067/static.highsnobiety.com/wp-content/uploads/2021/04/24104434/chadwick-boseman-nft-art-01.jpg',
-      nft_id: 'helloworld',
-      generation: 1,
-      gemClass: 'Sapphire',
-      is_allocated: true,
-      is_delegated: false,
-      has_loan: false,
-      allocation_date: new Date(),
-    },
-    {
-      image_ref:
+        video_ref: 'https://arweave.net/l94pcNrsykFM27koaEAfdL3NkBhD6pJIrsdZWCfqcNY',
+        nft_id: 'helloworld',
+        generation: 1,
+        gemClass: 'Sapphire',
+        is_allocated: true,
+        is_delegated: false,
+        has_loan: false,
+        allocation_date: new Date(),
+      },
+      {
+        image_ref:
         'https://i2.wp.com/static.highsnobiety.com/thumbor/fv3lCYCfr6qZwmnh0eDHGzy_Xf4=/1600x1067/static.highsnobiety.com/wp-content/uploads/2021/04/24104434/chadwick-boseman-nft-art-01.jpg',
+        video_ref: 'https://arweave.net/l94pcNrsykFM27koaEAfdL3NkBhD6pJIrsdZWCfqcNY',
       nft_id: 'helloworlds',
       generation: 1,
       gemClass: 'Sapphire',
