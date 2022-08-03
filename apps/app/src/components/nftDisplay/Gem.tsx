@@ -24,6 +24,7 @@ export default function Gem({
     rarity_reveal_date,
     generation,
     image_ref,
+    video_ref,
     nft_id,
     is_allocated,
     is_delegated,
@@ -48,7 +49,6 @@ export default function Gem({
   isDialogOpen: boolean;
   openDelegationDialog?: (nft_id: string) => void;
 }) {
-
   const gemActions: {
     title: string;
     condition: boolean;
@@ -285,12 +285,19 @@ export default function Gem({
               {generation}
             </Typography>
           </Box>
-          <img
-            src={image_ref}
-            alt="gem"
-            height="100%"
-            width="100%"
-            style={{ objectFit: 'cover', borderRadius: theme.spacing(2.5) }}
+          <video
+            src={video_ref}
+            playsInline
+            autoPlay
+            muted
+            loop
+            style={{
+              objectFit: 'cover',
+              height: '100%',
+              width: '100%',
+              borderRadius: theme.spacing(2.5)
+            }}
+            poster={image_ref}
           />
         </Box>
       </Box>
