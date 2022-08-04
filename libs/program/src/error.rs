@@ -5,7 +5,7 @@ use num_derive::FromPrimitive;
 #[derive(Clone, Debug, Eq, Error, FromPrimitive, PartialEq)]
 pub enum InglError{
     #[error("Provided Keypairs do not match.")]
-    KeyPairMismatch,
+    AddressMismatch,
 
     #[error("Provided Struct Type does not match expected value")]
     InvalidStructType,
@@ -36,7 +36,7 @@ impl InglError{
         match self {
             Self::InvalidStructType => {
                 if let Some(keyword) = keyword{msg!("Error:  keyword={:?} Provided Struct Type does not match expected value.", keyword);}}
-            Self::KeyPairMismatch => {msg!("Error:  Provided Keypairs do not match expected value");}
+            Self::AddressMismatch => {msg!("Error:  Provided address do not match expected value");}
             Self::InvalidFundsLocation => {
                 if let Some(keyword) = keyword{msg!("Error:  keyword={:?} Funds Not located in the appropriate pool for this instruction", keyword);}
             }
