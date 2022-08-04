@@ -5,6 +5,7 @@ import theme from '../../theme/theme';
 import { Button, IconButton, SwipeableDrawer, Tooltip } from '@mui/material';
 import NavItem, { ExternalNavItem } from './NavItem';
 import { MenuRounded } from '@mui/icons-material';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 
 const NAV_LINKS: { name: string; link: string; isExternal: boolean }[] = [
   {
@@ -14,7 +15,11 @@ const NAV_LINKS: { name: string; link: string; isExternal: boolean }[] = [
   },
   { name: 'DAO', link: '/dao', isExternal: false },
   { name: 'Wallet', link: '/wallet', isExternal: false },
-  { name: 'Onboard Validator', link: 'https://onboarding.ingl.io', isExternal: true },
+  {
+    name: 'Onboard Validator',
+    link: 'https://onboarding.ingl.io',
+    isExternal: true,
+  },
 ];
 
 export default function Navbar() {
@@ -103,18 +108,19 @@ export default function Navbar() {
             )
           )}
         </Box>
-        <Button
+        {/* <Button
           color="primary"
           variant="outlined"
           sx={{
             borderRadius: '90px',
             justifySelf: 'end',
-            color:'white',
+            color: 'white',
             display: { laptop: 'initial', mobile: 'none' },
           }}
         >
           Connect Wallet
-        </Button>
+        </Button> */}
+        <WalletMultiButton />
         <IconButton
           onClick={toggleDrawer}
           sx={{ display: { laptop: 'none', mobile: 'initial' } }}

@@ -16,6 +16,9 @@ import useNotification from '../../common/utils/notification';
 import random from '../../common/utils/random';
 import ErrorMessage from '../../common/components/ErrorMessage';
 import ActionDialog from './ActionDialog';
+import { imprintRarity } from '../../services/nft.service';
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { PublicKey } from '@solana/web3.js';
 
 export default function Gem({
   gem: {
@@ -48,7 +51,6 @@ export default function Gem({
   isDialogOpen: boolean;
   openDelegationDialog?: (nft_id: string) => void;
 }) {
-
   const gemActions: {
     title: string;
     condition: boolean;
@@ -127,8 +129,12 @@ export default function Gem({
     setMenuAnchor(null);
   };
 
+  const wallet = useWallet();
+  const { connection } = useConnection();
+
   const [isRevealingRarity, setIsRevealingRarity] = useState<boolean>(false);
   const [notifs, setNotifs] = useState<useNotification[]>();
+
   const revealRarity = () => {
     if (notifs) notifs.map((publishedNotif) => publishedNotif.dismiss());
     const notif = new useNotification();
@@ -137,29 +143,29 @@ export default function Gem({
     notif.notify({ render: "Revealing gem's rarity" });
     setIsRevealingRarity(true);
 
-    setTimeout(() => {
-      if (random() > 5) {
-        // TODO CALL API HERE TO  REVEAL NFT ID
+    imprintRarity({ connection, wallet }, new PublicKey(nft_id))
+      .then(() => {
         notif.update({
           render: 'successfully revealed ingl gem rarity',
         });
-      } else {
+      })
+      .catch((error) => {
         notif.update({
           type: 'ERROR',
           render: (
             <ErrorMessage
               retryFunction={revealRarity}
               notification={notif}
-              //TODO: this message is that coming from the backend
-              message="There was a problem revealing your gem's rarity"
+              message={
+                error?.message ||
+                "There was a problem revealing your gem's rarity"
+              }
             />
           ),
           autoClose: false,
           icon: () => <ReportRounded fontSize="large" color="error" />,
         });
-      }
-      setIsRevealingRarity(false);
-    }, 3000);
+      });
   };
 
   const [isRevealRarityDialogOpen, setIsRevealRarityDialogOpen] =

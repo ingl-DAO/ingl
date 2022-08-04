@@ -18,7 +18,7 @@
         "assets": ["apps/app/src/favicon.ico", "apps/app/src/assets"],
         "styles": ["apps/app/src/styles.css"],
         "scripts": [],
-        "webpackConfig": "@nrwl/react/plugins/webpack"
+        "webpackConfig": "./config-overrides.js"
       },
       "configurations": {
         "development": {
@@ -48,7 +48,8 @@
       "defaultConfiguration": "development",
       "options": {
         "buildTarget": "app:build",
-        "hmr": true
+        "hmr": true,
+        "webpackConfig": "./config-overrides.js"
       },
       "configurations": {
         "development": {
