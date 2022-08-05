@@ -5,7 +5,7 @@ use num_derive::FromPrimitive;
 #[derive(Clone, Debug, Eq, Error, FromPrimitive, PartialEq)]
 pub enum InglError{
     #[error("Provided Keypairs do not match.")]
-    KeyPairMismatch,
+    AddressMismatch,
 
     #[error("Provided Struct Type does not match expected value")]
     InvalidStructType,
@@ -21,6 +21,9 @@ pub enum InglError{
 
     #[error("A vote had already occured with the specifid accounts")]
     AlreadyVoted,
+
+    #[error("A certain operation yielded a value beyond bounds")]
+    BeyondBounds
 }
 
 
@@ -36,7 +39,7 @@ impl InglError{
         match self {
             Self::InvalidStructType => {
                 if let Some(keyword) = keyword{msg!("Error:  keyword={:?} Provided Struct Type does not match expected value.", keyword);}}
-            Self::KeyPairMismatch => {msg!("Error:  Provided Keypairs do not match expected value");}
+            Self::AddressMismatch => {msg!("Error:  Provided address do not match expected value");}
             Self::InvalidFundsLocation => {
                 if let Some(keyword) = keyword{msg!("Error:  keyword={:?} Funds Not located in the appropriate pool for this instruction", keyword);}
             }
@@ -48,6 +51,9 @@ impl InglError{
             }
             Self::AlreadyVoted =>{ 
                 if let Some(keyword) = keyword{msg!("Error: keyword={:?} Had already voted for this specific proposal", keyword);}
+            }
+            Self::BeyondBounds => {
+                if let Some(keyword) = keyword{msg!("Error: keyword={:} Value yielded beyond the specified boundaries", keyword);}
             }
         }
         ProgramError::from(self)

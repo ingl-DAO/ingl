@@ -9,7 +9,7 @@ use crate::{
 
 pub fn assert_pubkeys_exactitude(a: &Pubkey, b: &Pubkey) -> Result<(), ProgramError> {
     if a != b {
-        return Err(InglError::KeyPairMismatch.utilize(None));
+        return Err(InglError::AddressMismatch.utilize(None));
     }
     Ok(())
 

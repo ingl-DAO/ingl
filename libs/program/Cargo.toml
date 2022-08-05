@@ -18,6 +18,10 @@ anchor-lang = "0.25.0"
 anchor-spl = "0.25.0"
 switchboard-v2 = "0.1.12"
 serde = "1.0.112"
+fstrings = "0.2.3"
+
+[profile.release]
+overflow-checks = true
 
 [lib]
 crate-type = ["cdylib", "lib"]

@@ -1,10 +1,18 @@
 import { Navigate } from 'react-router';
-import Test from '../components/Test';
+import Layout from '../components/layout';
+import NftDisplay from '../components/nftDisplay';
+import Wallet from '../components/wallet';
 
 export const routes = [
   {
     path: '/',
-    element: <Test />,
+    element: <Layout />,
+    children: [
+      { path: '/', element: <Navigate to="/nft" /> },
+      { path: '/nft', element: <NftDisplay /> },
+      { path: '/wallet', element: <Wallet /> },
+      { path: '*', element: <Navigate to="/" /> },
+    ],
   },
   { path: '*', element: <Navigate to="/" /> },
 ];
