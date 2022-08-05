@@ -1,14 +1,14 @@
 use crate::{
     error::InglError,
-    instruction::{vote_create_account, vote_initialize_account, InstructionEnum},
+    instruction::{vote_create_account, vote_initialize_account, vote_withdraw, InstructionEnum},
     nfts,
     state::{
         constants::*, Class, FundsLocation, GemAccountV0_0_1, GemAccountVersions, GlobalGems,
-        VoteInit, ValidatorProposal, ValidatorVote, InglVoteAccountData,
+        VoteInit, ValidatorProposal, ValidatorVote, InglVoteAccountData, VoteRewards,
     },
     utils::{assert_owned_by, assert_program_owned, assert_pubkeys_exactitude, assert_is_signer},
 };
-use std::{str::FromStr};
+use std::{str::FromStr, cmp};
 
 use anchor_lang::AnchorDeserialize;
 use borsh::BorshSerialize;
@@ -307,8 +307,9 @@ pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
     let ingl_vote_data = InglVoteAccountData{
         total_delegated:0,
         last_withdraw_epoch:Clock::get()?.epoch,
-        vote_rewards: Vec::new(),
         dealloced: 0,
+        validator_id: *validator_info.key,
+        vote_rewards: Vec::new(),
     };
 
     ingl_vote_data.serialize(&mut &mut ingl_vote_data_account_info.data.borrow_mut()[..])?;
@@ -917,9 +918,10 @@ pub fn mint_nft(program_id: &Pubkey, accounts: &[AccountInfo], class: Class) -> 
         date_allocated: None,
         class: class,
         last_voted_proposal: None,
+        last_withdrawal_epoch: None,
+        last_delegation_epoch: None,
+        all_withdraws: Vec::new(),
         all_votes: Vec::new(),
-        last_redeem_date: None,
-        last_delegation_date: None,
     };
     gem_account_data.serialize(&mut &mut gem_account_info.data.borrow_mut()[..])?;
     Ok(())
@@ -1681,7 +1683,6 @@ pub fn redeem_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResul
     Ok(())
 }
 
-
 pub fn delegate_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
     let account_info_iter = &mut accounts.iter();
     let payer_account_info = next_account_info(account_info_iter)?;
@@ -1751,6 +1752,7 @@ pub fn delegate_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramRes
     match gem_account_data.funds_location {
         FundsLocation::PDPool => {
             gem_account_data.funds_location = FundsLocation::VoteAccount { vote_account_id: *vote_account_info.key};
+            gem_account_data.last_delegation_epoch = Some(Clock::get()?.epoch);
         }
         _ => Err(InglError::InvalidFundsLocation.utilize(Some("gem's funds location.")))?,
     }
@@ -1780,7 +1782,6 @@ pub fn delegate_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramRes
     global_gem_account_data.serialize(&mut &mut global_gem_account_info.data.borrow_mut()[..])?;
     gem_account_data.serialize(&mut &mut gem_account_data_info.data.borrow_mut()[..])?;
     ingl_vote_account_data.serialize(&mut &mut ingl_vote_data_account_info.data.borrow_mut()[..])?;
-
 
     Ok(())
 }
@@ -1862,6 +1863,156 @@ pub fn undelegate_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
     global_gem_account_data.serialize(&mut &mut global_gem_account_info.data.borrow_mut()[..])?;
     ingl_vote_account_data.serialize(&mut &mut ingl_vote_data_account_info.data.borrow_mut()[..])?;
     gem_account_data.serialize(&mut &mut gem_account_data_info.data.borrow_mut()[..])?;
+
+
+    Ok(())
+}
+
+pub fn process_rewards(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+    let account_info_iter = &mut accounts.iter();
+    let _payer_account_info = next_account_info(account_info_iter)?;
+    let validator_info = next_account_info(account_info_iter)?;
+    let vote_account_info = next_account_info(account_info_iter)?;
+    let ingl_vote_data_account_info = next_account_info(account_info_iter)?;
+    let authorized_withdrawer_info = next_account_info(account_info_iter)?;
+    let mint_authority_account_info = next_account_info(account_info_iter)?;
+    let treasury_account_info = next_account_info(account_info_iter)?;
+
+    let (mint_authority_key, _mint_authority_bump) =
+    Pubkey::find_program_address(&[INGL_MINT_AUTHORITY_KEY.as_ref()], program_id);
+    assert_pubkeys_exactitude(&mint_authority_key, mint_authority_account_info.key)
+    .expect("Error: @mint_authority_account_info");
+
+    let (treasury_key, _treasury_bump) = Pubkey::find_program_address(&[TREASURY_ACCOUNT_KEY.as_ref()], program_id);
+    assert_pubkeys_exactitude(&treasury_key, treasury_account_info.key).expect("Error: @Treasury_account_info");
+
+
+    let (expected_vote_data_pubkey, _expected_vote_data_bump) = Pubkey::find_program_address(&[VOTE_DATA_ACCOUNT_KEY.as_ref(), vote_account_info.key.as_ref()], program_id);
+    assert_pubkeys_exactitude(&expected_vote_data_pubkey, ingl_vote_data_account_info.key).expect("Error: @vote_data_account_info");
+    assert_program_owned(ingl_vote_data_account_info)?;
+    let mut ingl_vote_account_data: InglVoteAccountData = try_from_slice_unchecked(&ingl_vote_data_account_info.data.borrow())?;
+
+
+    let validator_id = ingl_vote_account_data.validator_id;
+    assert_pubkeys_exactitude(&validator_id, validator_info.key).expect("validator_id");
+    
+    let (authorized_withdrawer, authorized_withdrawer_bump) = Pubkey::find_program_address(&[AUTHORIZED_WITHDRAWER_KEY.as_ref()], program_id);
+    assert_pubkeys_exactitude(authorized_withdrawer_info.key, &authorized_withdrawer).expect("vote account pubkey is dissimilar to the expected vote pubkey");
+
+    let lamports = vote_account_info.lamports().checked_sub(Rent::get()?.minimum_balance(vote_account_info.data_len())).unwrap();
+    let one_percent:u64 = lamports.checked_div(100).unwrap();
+
+    invoke_signed(
+        &vote_withdraw(vote_account_info.key, authorized_withdrawer_info.key, lamports, &authorized_withdrawer),
+        &[vote_account_info.clone(), authorized_withdrawer_info.clone(), authorized_withdrawer_info.clone()],
+        &[&[AUTHORIZED_WITHDRAWER_KEY.as_ref(), &[authorized_withdrawer_bump]]]
+    )?;
+
+    if ingl_vote_account_data.vote_rewards[ingl_vote_account_data.vote_rewards.len() - 1].epoch_number >= Clock::get()?.epoch{
+        Err(InglError::TooEarly.utilize(Some("processing reward")))?
+    }
+
+    invoke_signed(
+        &system_instruction::transfer(authorized_withdrawer_info.key, mint_authority_account_info.key, one_percent.checked_mul(TEAM_SHARE).unwrap()),
+        &[authorized_withdrawer_info.clone(), mint_authority_account_info.clone()],
+        &[&[AUTHORIZED_WITHDRAWER_KEY.as_ref(), &[authorized_withdrawer_bump]]]
+    )?;
+
+    invoke_signed(
+        &system_instruction::transfer(authorized_withdrawer_info.key, validator_info.key, one_percent.checked_mul(VALIDATOR_ID_SHARE).unwrap()),
+        &[authorized_withdrawer_info.clone(), validator_info.clone()],
+        &[&[AUTHORIZED_WITHDRAWER_KEY.as_ref(), &[authorized_withdrawer_bump]]]
+    )?;
+
+    invoke_signed(
+        &system_instruction::transfer(authorized_withdrawer_info.key, treasury_account_info.key, one_percent.checked_mul(TREASURY_SHARE).unwrap()),
+        &[authorized_withdrawer_info.clone(), treasury_account_info.clone()],
+        &[&[AUTHORIZED_WITHDRAWER_KEY.as_ref(), &[authorized_withdrawer_bump]]]
+    )?;
+
+    ingl_vote_account_data.vote_rewards.push(VoteRewards{epoch_number: Clock::get()?.epoch, total_stake: ingl_vote_account_data.total_delegated, total_reward: lamports });
+    ingl_vote_account_data.last_withdraw_epoch = Clock::get()?.epoch;
+
+    ingl_vote_account_data.serialize(&mut &mut ingl_vote_data_account_info.data.borrow_mut()[..])?;
+    Ok(())
+}
+
+pub fn nft_withdrawal(program_id: &Pubkey, accounts: &[AccountInfo], cnt: usize) -> ProgramResult {
+    let account_info_iter = &mut accounts.iter();
+    let payer_account_info = next_account_info(account_info_iter)?;
+    let vote_account_info = next_account_info(account_info_iter)?;
+    let validator_info = next_account_info(account_info_iter)?;
+    let ingl_vote_data_account_info = next_account_info(account_info_iter)?;
+    let authorized_withdrawer_info = next_account_info(account_info_iter)?;
+
+    let (expected_vote_data_pubkey, _expected_vote_data_bump) = Pubkey::find_program_address(&[VOTE_DATA_ACCOUNT_KEY.as_ref(), vote_account_info.key.as_ref()], program_id);
+    assert_pubkeys_exactitude(&expected_vote_data_pubkey, ingl_vote_data_account_info.key).expect("Error: @vote_data_account_info");
+    assert_program_owned(ingl_vote_data_account_info)?;
+    let ingl_vote_account_data: InglVoteAccountData = try_from_slice_unchecked(&ingl_vote_data_account_info.data.borrow())?;
+
+    
+    let (authorized_withdrawer, authorized_withdrawer_bump) = Pubkey::find_program_address(&[AUTHORIZED_WITHDRAWER_KEY.as_ref()], program_id);
+    assert_pubkeys_exactitude(authorized_withdrawer_info.key, &authorized_withdrawer).expect("vote account pubkey is dissimilar to the expected vote pubkey");
+
+    let validator_id = ingl_vote_account_data.validator_id;
+    assert_pubkeys_exactitude(&validator_id, validator_info.key).expect("validator_id");
+    
+
+    assert_is_signer(payer_account_info).expect("Payer must be Signer, couldn't find its signature");
+    let mut general_rewards: u64 = 0;
+    for _ in 0..cnt{
+        let associated_token_account_info = next_account_info(account_info_iter)?;
+        let mint_account_info = next_account_info(account_info_iter)?;
+        let gem_account_data_info = next_account_info(account_info_iter)?;
+
+
+        let (gem_account_pubkey, _gem_account_bump) = Pubkey::find_program_address(
+            &[GEM_ACCOUNT_CONST.as_ref(), mint_account_info.key.as_ref()],
+            program_id,
+        );
+        assert_pubkeys_exactitude(&gem_account_pubkey, gem_account_data_info.key)
+            .expect("Error: @gem_account_info");
+
+            assert_program_owned(gem_account_data_info)?;
+            assert_owned_by(mint_account_info, &spl_program::id())?;
+            assert_owned_by(associated_token_account_info, &spl_program::id())?;
+
+        assert_pubkeys_exactitude(
+            &get_associated_token_address(payer_account_info.key, mint_account_info.key),
+            associated_token_account_info.key,
+        )
+        .expect("Error: @associated_token_address");
+        let associated_token_address_data =
+            Account::unpack(&associated_token_account_info.data.borrow())?;
+        if associated_token_address_data.amount != 1 {
+            Err(ProgramError::InsufficientFunds)?
+        }
+
+        let mut gem_account_data: GemAccountV0_0_1 = GemAccountVersions::decode(&gem_account_data_info.data.borrow())?;
+        if let FundsLocation::VoteAccount { vote_account_id} = gem_account_data.funds_location{
+            assert_pubkeys_exactitude(&vote_account_id, vote_account_info.key).expect("Error: @vote_account_info in funds location");
+        }
+        else{
+            Err(InglError::InvalidFundsLocation.utilize(Some("Gem's fund location")))?
+        }
+
+        let interested_epoch = gem_account_data.last_withdrawal_epoch.unwrap().max(gem_account_data.last_delegation_epoch.unwrap());
+        let interested_index =1 + ingl_vote_account_data.vote_rewards.iter().position(|x| x.epoch_number == interested_epoch).expect("couldn't fine the last withdrawal epoch");
+        let mut total_reward: u64 = 0;
+        for i in interested_index..ingl_vote_account_data.vote_rewards.len(){
+            let epoch_reward = ingl_vote_account_data.vote_rewards[i];
+            total_reward = total_reward.checked_add((gem_account_data.class.get_class_lamports() as f64 * (NFTS_SHARE as f64 * (epoch_reward.total_reward as f64 / 100.0) / epoch_reward.total_stake as f64))as u64).unwrap();
+        }
+        gem_account_data.last_withdrawal_epoch = Some(Clock::get()?.epoch);
+        gem_account_data.all_withdraws.push(total_reward);
+        general_rewards = general_rewards.checked_add(total_reward).unwrap();
+        gem_account_data.serialize(&mut &mut gem_account_data_info.data.borrow_mut()[..])?;
+    }
+    invoke_signed(
+        &system_instruction::transfer(authorized_withdrawer_info.key, payer_account_info.key, general_rewards),
+        &[authorized_withdrawer_info.clone(), payer_account_info.clone()],
+        &[&[AUTHORIZED_WITHDRAWER_KEY.as_ref(), &[authorized_withdrawer_bump]]]
+    )?;
 
     Ok(())
 }

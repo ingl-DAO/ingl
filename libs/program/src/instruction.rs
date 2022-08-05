@@ -23,11 +23,11 @@ pub enum InstructionEnum {
     RegisterValidatorId,
     CreateValidatorSelectionProposal,
     VoteValidatorProposal{num_nfts: u8, validator_index: u32},
-    ProcessVoteFeesRewards,
     FinalizeProposal,
     ValidatorWithdraw,
     NFTWithdraw,
     InitUndelegation,
+    ProcessRewards,
 }
 
 

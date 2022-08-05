@@ -34,6 +34,12 @@ pub mod constants{
     pub const VOTE_ACCOUNT_KEY: &str = "InglVote";
     pub const VOTE_DATA_ACCOUNT_KEY: &str = "InglVoteData";
     pub const STAKE_ACCOUNT_KEY: &str = "staking_account_key";
+    pub const TREASURY_ACCOUNT_KEY: &str = "Treasury_account_key";
+
+    pub const VALIDATOR_ID_SHARE: u64 = 15;
+    pub const TREASURY_SHARE: u64 = 13;
+    pub const TEAM_SHARE: u64 = 12;
+    pub const NFTS_SHARE: u64 = 60;
 
     pub mod spl_program{
         use solana_program::declare_id;
@@ -136,9 +142,10 @@ pub struct GemAccountV0_0_1 {
     pub rarity_seed_time: Option<u32>,
     pub date_allocated: Option<u32>,
     pub last_voted_proposal: Option<Pubkey>,
+    pub last_withdrawal_epoch: Option<u64>,
+    pub last_delegation_epoch: Option<u64>,
+    pub all_withdraws: Vec<u64>,
     pub all_votes: Vec<ValidatorVote>,
-    pub last_redeem_date: Option<u32>,
-    pub last_delegation_date: Option<u32>,
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
@@ -181,17 +188,19 @@ pub struct ProgramVoteAccount{
     validator: Pubkey,
 }
 
-#[derive(BorshDeserialize, BorshSerialize)]
+#[derive(BorshDeserialize, Copy, Clone, BorshSerialize)]
 pub struct VoteRewards{
     pub epoch_number: u64,
-    pub total_delegated: u64,
+    pub total_reward: u64,
+    pub total_stake: u64,
 }
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct InglVoteAccountData{
     pub total_delegated: u64,
     pub last_withdraw_epoch: u64,
-    pub vote_rewards: Vec<VoteRewards>,
     pub dealloced: u64,
+    pub validator_id: Pubkey, //To Reconsider.
+    pub vote_rewards: Vec<VoteRewards>,
 }
 
 pub struct VoteState{}
