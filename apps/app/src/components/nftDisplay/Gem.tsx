@@ -13,10 +13,9 @@ import { inglGem } from '.';
 import theme from '../../theme/theme';
 import moment from 'moment';
 import useNotification from '../../common/utils/notification';
-import random from '../../common/utils/random';
 import ErrorMessage from '../../common/components/ErrorMessage';
 import ActionDialog from './ActionDialog';
-import { imprintRarity } from '../../services/nft.service';
+import { imprintRarity, loadGem } from '../../services/nft.service';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 
@@ -34,11 +33,13 @@ export default function Gem({
     has_loan,
     allocation_date,
   },
+  setGems,
   isDialogOpen,
   activateDialog,
   openDelegationDialog,
 }: {
   gem: inglGem;
+  setGems: React.Dispatch<React.SetStateAction<inglGem[]>>;
   activateDialog: (
     action:
       | 'redeem'
@@ -145,10 +146,16 @@ export default function Gem({
     setIsRevealingRarity(true);
 
     imprintRarity({ connection, wallet }, new PublicKey(nft_id))
-      .then(() => {
+      .then(async () => {
         notif.update({
           render: 'successfully revealed ingl gem rarity',
         });
+        const newGem = await loadGem(connection, new PublicKey(nft_id));
+        setGems((gems) =>
+          gems.map((gem) => {
+            return nft_id === gem.nft_id ? newGem : gem;
+          })
+        );
       })
       .catch((error) => {
         notif.update({
@@ -210,6 +217,7 @@ export default function Gem({
                 disabled={isRevealingRarity}
                 onClick={() => setIsRevealRarityDialogOpen(true)}
                 sx={{
+                  zIndex: 1,
                   color: 'white',
                   borderRadius: '30px',
                   fontSize: { mobile: '0.55rem', laptop: 'initial' },
@@ -263,6 +271,7 @@ export default function Gem({
               <Tooltip arrow title="more">
                 <MoreHorizRounded
                   sx={{
+                    zIndex: 1,
                     color: 'white',
                     fontSize: { laptop: '35px', mobile: '25px' },
                   }}
@@ -302,7 +311,7 @@ export default function Gem({
               objectFit: 'cover',
               height: '100%',
               width: '100%',
-              borderRadius: theme.spacing(2.5)
+              borderRadius: theme.spacing(2.5),
             }}
             poster={image_ref}
           />
