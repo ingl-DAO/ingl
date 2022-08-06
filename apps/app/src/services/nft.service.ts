@@ -70,13 +70,40 @@ const [pd_pool_account_key] = PublicKey.findProgramAddressSync(
   INGL_PROGRAM_ID
 );
 
+const signAndConfirmTransaction = async (
+  walletConnection: { connection: Connection; wallet: WalletContextState },
+  instruction: TransactionInstruction,
+  signingKeypair?: Keypair
+) => {
+  const {
+    connection,
+    wallet: { publicKey: payerKey, sendTransaction, signTransaction },
+  } = walletConnection;
+
+  const transaction = new Transaction();
+  transaction.add(instruction).feePayer = payerKey as PublicKey;
+
+  const blockhashObj = await connection.getLatestBlockhash();
+  transaction.recentBlockhash = blockhashObj.blockhash;
+
+  if (signingKeypair) transaction.sign(...[signingKeypair]);
+  const signedTransaction = signTransaction
+    ? await signTransaction(transaction)
+    : null;
+
+  const signature = await sendTransaction(
+    signedTransaction as Transaction,
+    connection
+  );
+  await connection.confirmTransaction({ ...blockhashObj, signature });
+};
+
 export async function mintInglGem(
   walletConnection: { connection: Connection; wallet: WalletContextState },
   nftClass: NftClass
 ) {
   const {
-    connection,
-    wallet: { publicKey: payerKey, sendTransaction, signTransaction },
+    wallet: { publicKey: payerKey },
   } = walletConnection;
   if (!payerKey) throw new Error('Please connect your wallet');
 
@@ -253,24 +280,11 @@ export async function mintInglGem(
     ],
   });
   try {
-    const transaction = new Transaction();
-
-    transaction.add(mintNftInstruction).feePayer = payerKey as PublicKey;
-
-    const blockhashObj = await connection.getLatestBlockhash();
-    transaction.recentBlockhash = blockhashObj.blockhash;
-
-    transaction.sign(...[mintKeyPair]);
-    const signedTransaction = signTransaction
-      ? await signTransaction(transaction)
-      : null;
-
-    const signature = await sendTransaction(
-      signedTransaction as Transaction,
-      connection
+    await signAndConfirmTransaction(
+      walletConnection,
+      mintNftInstruction,
+      mintKeyPair
     );
-    console.log('Hello world');
-    return await connection.confirmTransaction({ ...blockhashObj, signature });
   } catch (error) {
     throw new Error(
       'Collection Minting transaction failed with error ' + error
@@ -283,8 +297,7 @@ export async function imprintRarity(
   tokenMint: PublicKey
 ) {
   const {
-    connection,
-    wallet: { publicKey: payerKey, sendTransaction, signTransaction },
+    wallet: { publicKey: payerKey },
   } = walletConnection;
   if (!payerKey) throw new WalletNotConnectedError();
 
@@ -426,31 +439,19 @@ export async function imprintRarity(
     ],
   });
 
-  const execute = async (instruction: TransactionInstruction) => {
-    const transaction = new Transaction();
-    transaction.add(instruction).feePayer = payerKey as PublicKey;
-
-    const blockhashObj = await connection.getLatestBlockhash();
-    transaction.recentBlockhash = blockhashObj.blockhash;
-
-    const signedTransaction = signTransaction
-      ? await signTransaction(transaction)
-      : null;
-
-    const signature = await sendTransaction(
-      signedTransaction as Transaction,
-      connection
-    );
-    await connection.confirmTransaction({ ...blockhashObj, signature });
-  };
-
   try {
-    await execute(initRarityImprintIntrustion);
+    await signAndConfirmTransaction(
+      walletConnection,
+      initRarityImprintIntrustion
+    );
 
     await new Promise((resolve, reject) =>
       setTimeout(async () => {
         try {
-          const transactionId = await execute(imprintRarityInstruction);
+          const transactionId = await signAndConfirmTransaction(
+            walletConnection,
+            imprintRarityInstruction
+          );
           resolve(transactionId);
         } catch (error) {
           reject(error);
@@ -467,8 +468,7 @@ export async function redeemInglGem(
   tokenMint: PublicKey
 ) {
   const {
-    connection,
-    wallet: { publicKey: payerKey, sendTransaction, signTransaction },
+    wallet: { publicKey: payerKey },
   } = walletConnection;
   if (!payerKey) throw new WalletNotConnectedError();
 
@@ -571,7 +571,7 @@ export async function redeemInglGem(
     isWritable: false,
   };
 
-  const redeemNftInstruction = new TransactionInstruction({
+  const redeemInglGemInstruction = new TransactionInstruction({
     programId: INGL_PROGRAM_ID,
     data: Buffer.from([Instruction.Redeem]),
     keys: [
@@ -593,25 +593,47 @@ export async function redeemInglGem(
   });
 
   try {
-    const transaction = new Transaction();
-    transaction.add(redeemNftInstruction).feePayer = payerKey as PublicKey;
-
-    const blockhashObj = await connection.getLatestBlockhash();
-    transaction.recentBlockhash = blockhashObj.blockhash;
-
-    const signedTransaction = signTransaction
-      ? await signTransaction(transaction)
-      : null;
-
-    const signature = await sendTransaction(
-      signedTransaction as Transaction,
-      connection
-    );
-    await connection.confirmTransaction({ ...blockhashObj, signature });
+    await signAndConfirmTransaction(walletConnection, redeemInglGemInstruction);
   } catch (error) {
     throw new Error('Failed to imprint rarity with error ' + error);
   }
 }
+const getInglGemFromNft = async (connection: Connection, nft: Nft) => {
+  const {
+    mint: { address },
+    json,
+  } = nft;
+  if (json) {
+    const { attributes, image, properties } = json;
+    const [gem_pubkey] = PublicKey.findProgramAddressSync(
+      [Buffer.from(GEM_ACCOUNT_CONST), address.toBuffer()],
+      INGL_PROGRAM_ID
+    );
+    const accountInfo = await connection.getAccountInfo(gem_pubkey);
+    const decodedData = await decodeInglData(
+      GemAccountV0_0_1,
+      accountInfo?.data as Buffer
+    );
+    return {
+      image_ref: image,
+      generation: Number(
+        attributes?.find(({ trait_type }) => trait_type === 'Generation')?.value
+      ),
+      nft_id: address.toString(),
+      gemClass: attributes?.find(({ trait_type }) => trait_type === 'Class')
+        ?.value,
+      has_loan: false,
+      video_ref: properties?.files?.find((file) => file.type === 'video/mp4')
+        ?.uri,
+      rarity: decodedData['rarity'],
+      is_allocated: decodedData['funds_location']['enum'] === 'pDPool',
+      is_delegated: decodedData['funds_location']['enum'] === 'voteAccount',
+      allocation_date: decodedData['date_allocated'],
+      rarity_reveal_date: decodedData['rarity_seed_time'],
+    };
+  }
+  throw new Error('No json fields was found on metadata');
+};
 
 export async function loadInglGems(
   connection: Connection,
@@ -650,39 +672,116 @@ export async function loadGem(connection: Connection, tokenMint: PublicKey) {
   }
 }
 
-const getInglGemFromNft = async (connection: Connection, nft: Nft) => {
-  const {
-    mint: { address },
-    json,
-  } = nft;
-  if (json) {
-    const { attributes, image, properties } = json;
-    const [gem_pubkey] = PublicKey.findProgramAddressSync(
-      [Buffer.from(GEM_ACCOUNT_CONST), address.toBuffer()],
-      INGL_PROGRAM_ID
-    );
-    const accountInfo = await connection.getAccountInfo(gem_pubkey);
-    const decodedData = await decodeInglData(
-      GemAccountV0_0_1,
-      accountInfo?.data as Buffer
-    );
-    return {
-      image_ref: image,
-      generation: Number(
-        attributes?.find(({ trait_type }) => trait_type === 'Generation')?.value
-      ),
-      nft_id: address.toString(),
-      gemClass: attributes?.find(({ trait_type }) => trait_type === 'Class')
-        ?.value,
-      has_loan: false,
-      video_ref: properties?.files?.find((file) => file.type === 'video/mp4')
-        ?.uri,
-      rarity: decodedData['rarity'],
-      is_allocated: decodedData['funds_location']['enum'] === 'pDPool',
-      is_delegated: decodedData['funds_location']['enum'] === 'voteAccount',
-      allocation_date: decodedData['date_allocated'],
-      rarity_reveal_date: decodedData['rarity_seed_time'],
-    };
-  }
-  throw new Error('No json fields was found on metadata');
+const getAllocateInstructionAccounts = async (
+  tokenMint: PublicKey,
+  payerKey: PublicKey
+) => {
+  const payerAccount: AccountMeta = {
+    pubkey: payerKey as PublicKey,
+    isSigner: true,
+    isWritable: true,
+  };
+  const [gem_pubkey] = PublicKey.findProgramAddressSync(
+    [Buffer.from(GEM_ACCOUNT_CONST), tokenMint.toBuffer()],
+    INGL_PROGRAM_ID
+  );
+  const gemAccount: AccountMeta = {
+    pubkey: gem_pubkey,
+    isSigner: false,
+    isWritable: true,
+  };
+
+  const mintAccount: AccountMeta = {
+    pubkey: tokenMint,
+    isSigner: false,
+    isWritable: false,
+  };
+  const associatedTokenAccount: AccountMeta = {
+    pubkey: await getAssociatedTokenAddress(
+      mintAccount.pubkey,
+      payerAccount.pubkey
+    ),
+    isSigner: false,
+    isWritable: true,
+  };
+  const globalGemAccount: AccountMeta = {
+    pubkey: global_gem_pubkey,
+    isSigner: false,
+    isWritable: true,
+  };
+  const pDPoolAccount: AccountMeta = {
+    pubkey: pd_pool_account_key,
+    isSigner: false,
+    isWritable: true,
+  };
+  const mintingPoolAccount: AccountMeta = {
+    pubkey: minting_pool_key,
+    isSigner: false,
+    isWritable: true,
+  };
+  const systemProgramAccount: AccountMeta = {
+    pubkey: SystemProgram.programId,
+    isSigner: false,
+    isWritable: false,
+  };
+
+  return [
+    payerAccount,
+    mintAccount,
+    gemAccount,
+    associatedTokenAccount,
+    globalGemAccount,
+    pDPoolAccount,
+    mintingPoolAccount,
+
+    systemProgramAccount,
+  ];
 };
+
+export async function allocateSol(
+  walletConnection: { connection: Connection; wallet: WalletContextState },
+  tokenMint: PublicKey
+) {
+  const {
+    wallet: { publicKey: payerKey },
+  } = walletConnection;
+
+  const allocationNftInstruction = new TransactionInstruction({
+    programId: INGL_PROGRAM_ID,
+    data: Buffer.from([Instruction.AllocateSol]),
+    keys: await getAllocateInstructionAccounts(
+      tokenMint,
+      payerKey as PublicKey
+    ),
+  });
+
+  try {
+    await signAndConfirmTransaction(walletConnection, allocationNftInstruction);
+  } catch (error) {
+    throw new Error('Failed to allocate gem sol with error ' + error);
+  }
+}
+
+export async function deallocatedSol(
+  walletConnection: { connection: Connection; wallet: WalletContextState },
+  tokenMint: PublicKey
+) {
+  const {
+    wallet: { publicKey: payerKey },
+  } = walletConnection;
+
+  const allocationNftInstruction = new TransactionInstruction({
+    programId: INGL_PROGRAM_ID,
+    data: Buffer.from([Instruction.DeAllocateSol]),
+    keys: await getAllocateInstructionAccounts(
+      tokenMint,
+      payerKey as PublicKey
+    ),
+  });
+
+  try {
+    await signAndConfirmTransaction(walletConnection, allocationNftInstruction);
+  } catch (error) {
+    throw new Error('Failed to deallocate gem sol with error ' + error);
+  }
+}

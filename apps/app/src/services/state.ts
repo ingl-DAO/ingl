@@ -204,7 +204,7 @@ const INGL_SCHEMA = new Map([
       field: 'enum',
       values: [
         ['mintingPool', MintingPoolOption],
-        ['pDpool', PDPoolOption],
+        ['pDPool', PDPoolOption],
         ['voteAccount', VoteAccountOption],
       ],
     },

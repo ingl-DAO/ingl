@@ -13,6 +13,8 @@ import { useState } from 'react';
 import ErrorMessage from '../../common/components/ErrorMessage';
 import useNotification from '../../common/utils/notification';
 import {
+  allocateSol,
+  deallocatedSol,
   loadInglGems,
   mintInglGem,
   redeemInglGem,
@@ -291,7 +293,7 @@ export default function NftDisplay() {
     },
   };
 
-  const redeemGem = (
+  const executeAction = (
     action:
       | 'redeem'
       | 'take loan'
@@ -301,7 +303,51 @@ export default function NftDisplay() {
       | 'undelegate',
     nft_id: string
   ) => {
-    redeemInglGem({ connection, wallet }, new PublicKey(nft_id))
+    if (actionNotifs)
+      setActionNotifs(
+        actionNotifs?.filter((publishedNotif) => {
+          const { action: notifAction, nft_id: notifNft_id } = publishedNotif;
+          if (notifAction === action && nft_id === notifNft_id) {
+            publishedNotif.notif.dismiss();
+          }
+          return notifAction !== action || nft_id !== notifNft_id;
+        })
+      );
+    if (actionNotifs)
+      setActionNotifs([
+        ...actionNotifs,
+        { action, nft_id, isExecuting: true, notif },
+      ]);
+    else setActionNotifs([{ action, nft_id, isExecuting: true, notif }]);
+    const tokenMint = new PublicKey(nft_id);
+    notif.notify({ render: notificationContent[action].executing });
+    const actions: Record<
+      | 'redeem'
+      | 'take loan'
+      | 'allocate'
+      | 'deallocate'
+      | 'delegate'
+      | 'undelegate',
+      () => Promise<void>
+    > = {
+      redeem: async () =>
+        await redeemInglGem({ connection, wallet }, tokenMint),
+      'take loan': async () => {
+        console.log('take a loan');
+      },
+      allocate: async () =>
+        await allocateSol({ connection, wallet }, tokenMint),
+      deallocate: async () =>
+        await deallocatedSol({ connection, wallet }, tokenMint),
+      delegate: async () => {
+        console.log('delegate');
+      },
+      undelegate: async () => {
+        console.log('undelegate');
+      },
+    };
+
+    actions[action]()
       .then(() => {
         notif.update({
           render: notificationContent[action].success,
@@ -346,114 +392,6 @@ export default function NftDisplay() {
         });
         setIsMintingGem(false);
       });
-  };
-
-  const executeAction = (
-    action:
-      | 'redeem'
-      | 'take loan'
-      | 'allocate'
-      | 'deallocate'
-      | 'delegate'
-      | 'undelegate',
-    nft_id: string
-  ) => {
-    if (actionNotifs)
-      setActionNotifs(
-        actionNotifs?.filter((publishedNotif) => {
-          const { action: notifAction, nft_id: notifNft_id } = publishedNotif;
-          if (notifAction === action && nft_id === notifNft_id) {
-            publishedNotif.notif.dismiss();
-          }
-          return notifAction !== action || nft_id !== notifNft_id;
-        })
-      );
-    if (actionNotifs)
-      setActionNotifs([
-        ...actionNotifs,
-        { action, nft_id, isExecuting: true, notif },
-      ]);
-    else setActionNotifs([{ action, nft_id, isExecuting: true, notif }]);
-
-    notif.notify({ render: notificationContent[action].executing });
-    const executeAction: Record<
-      | 'redeem'
-      | 'take loan'
-      | 'allocate'
-      | 'deallocate'
-      | 'delegate'
-      | 'undelegate',
-      () => void
-    > = {
-      redeem: () => redeemGem(action, nft_id),
-      'take loan': () => {
-        console.log('take a loan');
-        setActionNotifs(
-          actionNotifs?.filter((publishedNotif) => {
-            const { action: notifAction, nft_id: notifNft_id } = publishedNotif;
-            if (notifAction === action && nft_id === notifNft_id) {
-              publishedNotif.notif.dismiss();
-            }
-            return notifAction !== action || nft_id !== notifNft_id;
-          })
-        );
-        setIsMintingGem(false);
-      },
-      allocate: () => {
-        console.log('allocate');
-        setActionNotifs(
-          actionNotifs?.filter((publishedNotif) => {
-            const { action: notifAction, nft_id: notifNft_id } = publishedNotif;
-            if (notifAction === action && nft_id === notifNft_id) {
-              publishedNotif.notif.dismiss();
-            }
-            return notifAction !== action || nft_id !== notifNft_id;
-          })
-        );
-        setIsMintingGem(false);
-      },
-      deallocate: () => {
-        console.log('deallocate');
-        setActionNotifs(
-          actionNotifs?.filter((publishedNotif) => {
-            const { action: notifAction, nft_id: notifNft_id } = publishedNotif;
-            if (notifAction === action && nft_id === notifNft_id) {
-              publishedNotif.notif.dismiss();
-            }
-            return notifAction !== action || nft_id !== notifNft_id;
-          })
-        );
-        setIsMintingGem(false);
-      },
-      delegate: () => {
-        console.log('delegate');
-        setActionNotifs(
-          actionNotifs?.filter((publishedNotif) => {
-            const { action: notifAction, nft_id: notifNft_id } = publishedNotif;
-            if (notifAction === action && nft_id === notifNft_id) {
-              publishedNotif.notif.dismiss();
-            }
-            return notifAction !== action || nft_id !== notifNft_id;
-          })
-        );
-        setIsMintingGem(false);
-      },
-      undelegate: () => {
-        console.log('undelegate');
-        setActionNotifs(
-          actionNotifs?.filter((publishedNotif) => {
-            const { action: notifAction, nft_id: notifNft_id } = publishedNotif;
-            if (notifAction === action && nft_id === notifNft_id) {
-              publishedNotif.notif.dismiss();
-            }
-            return notifAction !== action || nft_id !== notifNft_id;
-          })
-        );
-        setIsMintingGem(false);
-      },
-    };
-
-    executeAction[action]();
   };
 
   const [notifs, setNotifs] = useState<useNotification[]>();
