@@ -71,7 +71,7 @@ export function App() {
           >
             <ThemeProvider theme={theme}>
               <ToastContainer
-                position="top-right"
+                position="top-left"
                 autoClose={5000}
                 newestOnTop
                 closeOnClick

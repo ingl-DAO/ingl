@@ -17,6 +17,7 @@ import {
   mintInglGem,
   redeemInglGem,
 } from '../../services/nft.service';
+import { Rarity } from '../../services/state';
 import theme from '../../theme/theme';
 import SectionTitle from '../layout/SectionTitle';
 import ActionDialog from './ActionDialog';
@@ -29,7 +30,7 @@ export interface inglGem {
   image_ref?: string;
   video_ref?: string;
   generation?: number;
-  rarity?: string;
+  rarity?: Rarity;
   gemClass?: string;
   allocation_date?: string | Date;
   is_allocated: boolean;
@@ -590,7 +591,7 @@ export default function NftDisplay() {
               ? 'auto'
               : {
                   laptop: 'repeat(auto-fit, minmax(300px, 300px))',
-                  mobile: 'repeat(auto-fit, minmax(150px, 150px))',
+                  // mobile: 'repeat(auto-fit, minmax(150px, 150px))',
                 },
           columnGap: '53px',
           rowGap: '20px',

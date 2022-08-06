@@ -18,6 +18,7 @@ import ActionDialog from './ActionDialog';
 import { imprintRarity, loadGem } from '../../services/nft.service';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
+import { Rarity } from '../../services/state';
 
 export default function Gem({
   gem: {
@@ -77,14 +78,14 @@ export default function Gem({
         closeMenu();
       },
     },
-    {
-      title: 'take loan',
-      condition: !has_loan,
-      onClick: () => {
-        activateDialog('take loan', nft_id);
-        closeMenu();
-      },
-    },
+    // {
+    //   title: 'take loan',
+    //   condition: !has_loan,
+    //   onClick: () => {
+    //     activateDialog('take loan', nft_id);
+    //     closeMenu();
+    //   },
+    // },
     {
       title: 'allocate',
       condition: !is_delegated && !is_allocated,
@@ -179,6 +180,13 @@ export default function Gem({
   const [isRevealRarityDialogOpen, setIsRevealRarityDialogOpen] =
     useState<boolean>(false);
 
+  const rarityDisplayName = {
+    [Rarity.Common]: 'Common',
+    [Rarity.Uncommon]: 'Uncommon',
+    [Rarity.Rare]: 'Rare',
+    [Rarity.Exalted]: 'Exalted',
+    [Rarity.Mythic]: 'Mythic',
+  };
   return (
     <>
       <Box
@@ -210,7 +218,7 @@ export default function Gem({
               borderBottomLeftRadius: theme.spacing(2.5),
             }}
           >
-            {!rarity || !rarity_reveal_date ? (
+            {rarity === undefined || !rarity_reveal_date ? (
               <Button
                 variant="contained"
                 color="secondary"
@@ -230,7 +238,7 @@ export default function Gem({
                 variant="h3"
                 sx={{ fontSize: { laptop: 'initial', mobile: '0.80rem' } }}
               >
-                {rarity}
+                {rarityDisplayName[rarity]}
               </Typography>
             )}
           </Box>
@@ -298,7 +306,7 @@ export default function Gem({
                 textAlign: 'center',
               }}
             >
-              {generation}
+              {`G${generation}`}
             </Typography>
           </Box>
           <video

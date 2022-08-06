@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Box from '@mui/material/Box';
 import Logo from '../../assets/logo.png';
 import theme from '../../theme/theme';
-import { Button, IconButton, SwipeableDrawer, Tooltip } from '@mui/material';
+import { IconButton, SwipeableDrawer, Tooltip } from '@mui/material';
 import NavItem, { ExternalNavItem } from './NavItem';
 import { MenuRounded } from '@mui/icons-material';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';

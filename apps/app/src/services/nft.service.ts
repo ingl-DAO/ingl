@@ -14,6 +14,7 @@ import {
   INGL_TREASURY_ACCOUNT_KEY,
   GemAccountV0_0_1,
   decodeInglData,
+  PD_POOL_KEY,
 } from './state';
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -36,18 +37,51 @@ import { LazyNft, Metaplex, Nft } from '@metaplex-foundation/js';
 import { inglGem } from '../components/nftDisplay';
 import { WalletNotConnectedError } from '@solana/wallet-adapter-base';
 
+const [minting_pool_key] = PublicKey.findProgramAddressSync(
+  [Buffer.from(INGL_MINTING_POOL_KEY)],
+  INGL_PROGRAM_ID
+);
+const [mint_authority_key] = PublicKey.findProgramAddressSync(
+  [Buffer.from(INGL_MINT_AUTHORITY_KEY)],
+  INGL_PROGRAM_ID
+);
+const [ingl_nft_collection_mint_key] = PublicKey.findProgramAddressSync(
+  [Buffer.from(INGL_NFT_COLLECTION_KEY)],
+  INGL_PROGRAM_ID
+);
+const [ingl_nft_collection_key] = PublicKey.findProgramAddressSync(
+  [
+    Buffer.from('metadata'),
+    METAPLEX_PROGRAM_ID.toBuffer(),
+    ingl_nft_collection_mint_key.toBuffer(),
+  ],
+  METAPLEX_PROGRAM_ID
+);
+const [program_treasury_key] = PublicKey.findProgramAddressSync(
+  [Buffer.from(INGL_TREASURY_ACCOUNT_KEY)],
+  INGL_PROGRAM_ID
+);
+const [global_gem_pubkey] = PublicKey.findProgramAddressSync(
+  [Buffer.from(GLOBAL_GEM_KEY)],
+  INGL_PROGRAM_ID
+);
+const [pd_pool_account_key] = PublicKey.findProgramAddressSync(
+  [Buffer.from(PD_POOL_KEY)],
+  INGL_PROGRAM_ID
+);
+
 export async function mintInglGem(
   walletConnection: { connection: Connection; wallet: WalletContextState },
   nftClass: NftClass
 ) {
   const {
     connection,
-    wallet: { publicKey, sendTransaction, signTransaction },
+    wallet: { publicKey: payerKey, sendTransaction, signTransaction },
   } = walletConnection;
-  if (!publicKey) throw new Error('Please connect your wallet');
+  if (!payerKey) throw new Error('Please connect your wallet');
 
   const payerAccount: AccountMeta = {
-    pubkey: publicKey as PublicKey,
+    pubkey: payerKey as PublicKey,
     isSigner: true,
     isWritable: true,
   };
@@ -59,13 +93,8 @@ export async function mintInglGem(
     isWritable: true,
   };
 
-  const [mint_authority] = await PublicKey.findProgramAddress(
-    [Buffer.from(INGL_MINT_AUTHORITY_KEY)],
-    INGL_PROGRAM_ID
-  );
-
   const mintAuthorityAccount: AccountMeta = {
-    pubkey: mint_authority,
+    pubkey: mint_authority_key,
     isSigner: false,
     isWritable: true,
   };
@@ -103,11 +132,6 @@ export async function mintInglGem(
     isWritable: true,
   };
 
-  const [global_gem_pubkey] = PublicKey.findProgramAddressSync(
-    [Buffer.from(GLOBAL_GEM_KEY)],
-    INGL_PROGRAM_ID
-  );
-
   const globalGemAccount: AccountMeta = {
     pubkey: global_gem_pubkey,
     isSigner: false,
@@ -131,12 +155,8 @@ export async function mintInglGem(
     isWritable: false,
   };
 
-  const [miting_pool_key] = await PublicKey.findProgramAddress(
-    [Buffer.from(INGL_MINTING_POOL_KEY)],
-    INGL_PROGRAM_ID
-  );
   const mintingPoolAccount: AccountMeta = {
-    pubkey: miting_pool_key,
+    pubkey: minting_pool_key,
     isSigner: false,
     isWritable: true,
   };
@@ -150,10 +170,6 @@ export async function mintInglGem(
     isWritable: true,
   };
 
-  const [ingl_nft_collection_key] = PublicKey.findProgramAddressSync(
-    [Buffer.from(INGL_NFT_COLLECTION_KEY)],
-    INGL_PROGRAM_ID
-  );
   const inglNftCollectionMintAccount: AccountMeta = {
     pubkey: ingl_nft_collection_key,
     isSigner: false,
@@ -239,7 +255,7 @@ export async function mintInglGem(
   try {
     const transaction = new Transaction();
 
-    transaction.add(mintNftInstruction).feePayer = publicKey as PublicKey;
+    transaction.add(mintNftInstruction).feePayer = payerKey as PublicKey;
 
     const blockhashObj = await connection.getLatestBlockhash();
     transaction.recentBlockhash = blockhashObj.blockhash;
@@ -268,12 +284,12 @@ export async function imprintRarity(
 ) {
   const {
     connection,
-    wallet: { publicKey, sendTransaction, signTransaction },
+    wallet: { publicKey: payerKey, sendTransaction, signTransaction },
   } = walletConnection;
-  if (!publicKey) throw new WalletNotConnectedError();
+  if (!payerKey) throw new WalletNotConnectedError();
 
   const payerAccount: AccountMeta = {
-    pubkey: publicKey as PublicKey,
+    pubkey: payerKey as PublicKey,
     isSigner: true,
     isWritable: true,
   };
@@ -412,7 +428,7 @@ export async function imprintRarity(
 
   const execute = async (instruction: TransactionInstruction) => {
     const transaction = new Transaction();
-    transaction.add(instruction).feePayer = publicKey as PublicKey;
+    transaction.add(instruction).feePayer = payerKey as PublicKey;
 
     const blockhashObj = await connection.getLatestBlockhash();
     transaction.recentBlockhash = blockhashObj.blockhash;
@@ -452,12 +468,12 @@ export async function redeemInglGem(
 ) {
   const {
     connection,
-    wallet: { publicKey, sendTransaction, signTransaction },
+    wallet: { publicKey: payerKey, sendTransaction, signTransaction },
   } = walletConnection;
-  if (!publicKey) throw new WalletNotConnectedError();
+  if (!payerKey) throw new WalletNotConnectedError();
 
   const payerAccount: AccountMeta = {
-    pubkey: publicKey as PublicKey,
+    pubkey: payerKey as PublicKey,
     isSigner: true,
     isWritable: true,
   };
@@ -467,13 +483,9 @@ export async function redeemInglGem(
     isSigner: false,
     isWritable: true,
   };
-  const [mitingPoolKey] = await PublicKey.findProgramAddress(
-    [Buffer.from(INGL_MINTING_POOL_KEY)],
-    INGL_PROGRAM_ID
-  );
 
   const mintingPoolAccount: AccountMeta = {
-    pubkey: mitingPoolKey,
+    pubkey: minting_pool_key,
     isSigner: false,
     isWritable: true,
   };
@@ -483,10 +495,6 @@ export async function redeemInglGem(
     isSigner: false,
     isWritable: true,
   };
-  const [mint_authority_key] = await PublicKey.findProgramAddress(
-    [Buffer.from(INGL_MINT_AUTHORITY_KEY)],
-    INGL_PROGRAM_ID
-  );
 
   const mintAuthorityAccount: AccountMeta = {
     pubkey: mint_authority_key,
@@ -503,11 +511,6 @@ export async function redeemInglGem(
     isSigner: false,
     isWritable: true,
   };
-
-  const [ingl_nft_collection_mint_key] = PublicKey.findProgramAddressSync(
-    [Buffer.from(INGL_NFT_COLLECTION_KEY)],
-    INGL_PROGRAM_ID
-  );
 
   const [metaplexAccountKey] = await PublicKey.findProgramAddress(
     [
@@ -539,14 +542,6 @@ export async function redeemInglGem(
     isWritable: true,
   };
 
-  const [ingl_nft_collection_key] = PublicKey.findProgramAddressSync(
-    [
-      Buffer.from('metadata'),
-      METAPLEX_PROGRAM_ID.toBuffer(),
-      ingl_nft_collection_mint_key.toBuffer(),
-    ],
-    METAPLEX_PROGRAM_ID
-  );
   const inglNftCollectionAccount: AccountMeta = {
     pubkey: ingl_nft_collection_key,
     isSigner: false,
@@ -559,12 +554,8 @@ export async function redeemInglGem(
     isWritable: false,
   };
 
-  const [program_treasury_id] = PublicKey.findProgramAddressSync(
-    [Buffer.from(INGL_TREASURY_ACCOUNT_KEY)],
-    INGL_PROGRAM_ID
-  );
   const programTreasuryAccount: AccountMeta = {
-    pubkey: program_treasury_id,
+    pubkey: program_treasury_key,
     isSigner: false,
     isWritable: true,
   };
@@ -603,7 +594,7 @@ export async function redeemInglGem(
 
   try {
     const transaction = new Transaction();
-    transaction.add(redeemNftInstruction).feePayer = publicKey as PublicKey;
+    transaction.add(redeemNftInstruction).feePayer = payerKey as PublicKey;
 
     const blockhashObj = await connection.getLatestBlockhash();
     transaction.recentBlockhash = blockhashObj.blockhash;
@@ -622,11 +613,6 @@ export async function redeemInglGem(
   }
 }
 
-const [ingl_nft_collection_mint_key] = PublicKey.findProgramAddressSync(
-  [Buffer.from(INGL_NFT_COLLECTION_KEY)],
-  INGL_PROGRAM_ID
-);
-
 export async function loadInglGems(
   connection: Connection,
   ownerPubkey: PublicKey
@@ -644,24 +630,8 @@ export async function loadInglGems(
     const myInglGems: inglGem[] = [];
     for (let i = 0; i < lazyNfts.length; i++) {
       const inglNft = await metaplexNft.loadNft(lazyNfts[i] as LazyNft).run();
-      const [gem_pubkey] = PublicKey.findProgramAddressSync(
-        [Buffer.from(GEM_ACCOUNT_CONST), inglNft.mintAddress.toBuffer()],
-        INGL_PROGRAM_ID
-      );
-      const accountInfo = await connection.getAccountInfo(gem_pubkey);
-      const decodedData = await decodeInglData(
-        GemAccountV0_0_1,
-        accountInfo?.data as Buffer
-      );
-      myInglGems.push({
-        ...getInglGemFromNft(inglNft),
-        is_allocated: decodedData['funds_location']['enum'] === 'pDPool',
-        is_delegated: decodedData['funds_location']['enum'] === 'voteAccount',
-        allocation_date: decodedData['date_allocated'],
-        rarity_reveal_date: decodedData['rarity_seed_time'],
-      });
+      myInglGems.push(await getInglGemFromNft(connection, inglNft));
     }
-    console.log(myInglGems);
     return myInglGems;
   } catch (error) {
     throw new Error('Failed to load metadata with error ' + error);
@@ -674,19 +644,28 @@ export async function loadGem(connection: Connection, tokenMint: PublicKey) {
 
   try {
     const inglNft = await metaplexNft.findByMint(tokenMint).run();
-    return getInglGemFromNft(inglNft);
+    return await getInglGemFromNft(connection, inglNft);
   } catch (error) {
     throw new Error('Failed to load by mint with error ' + error);
   }
 }
 
-const getInglGemFromNft = (nft: Nft) => {
+const getInglGemFromNft = async (connection: Connection, nft: Nft) => {
   const {
     mint: { address },
     json,
   } = nft;
   if (json) {
     const { attributes, image, properties } = json;
+    const [gem_pubkey] = PublicKey.findProgramAddressSync(
+      [Buffer.from(GEM_ACCOUNT_CONST), address.toBuffer()],
+      INGL_PROGRAM_ID
+    );
+    const accountInfo = await connection.getAccountInfo(gem_pubkey);
+    const decodedData = await decodeInglData(
+      GemAccountV0_0_1,
+      accountInfo?.data as Buffer
+    );
     return {
       image_ref: image,
       generation: Number(
@@ -696,10 +675,13 @@ const getInglGemFromNft = (nft: Nft) => {
       gemClass: attributes?.find(({ trait_type }) => trait_type === 'Class')
         ?.value,
       has_loan: false,
-      is_allocated: false,
-      is_delegated: false,
       video_ref: properties?.files?.find((file) => file.type === 'video/mp4')
         ?.uri,
+      rarity: decodedData['rarity'],
+      is_allocated: decodedData['funds_location']['enum'] === 'pDPool',
+      is_delegated: decodedData['funds_location']['enum'] === 'voteAccount',
+      allocation_date: decodedData['date_allocated'],
+      rarity_reveal_date: decodedData['rarity_seed_time'],
     };
   }
   throw new Error('No json fields was found on metadata');
