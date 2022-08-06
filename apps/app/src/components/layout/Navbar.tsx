@@ -5,7 +5,7 @@ import theme from '../../theme/theme';
 import { IconButton, SwipeableDrawer, Tooltip } from '@mui/material';
 import NavItem, { ExternalNavItem } from './NavItem';
 import { MenuRounded } from '@mui/icons-material';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import ConnectButton from './ConnectButton';
 
 const NAV_LINKS: { name: string; link: string; isExternal: boolean }[] = [
   {
@@ -46,7 +46,7 @@ export default function Navbar() {
         paddingTop: theme.spacing(5),
         display: 'grid',
         rowGap: theme.spacing(5),
-        gridTemplateRows: 'auto auto auto auto 1fr',
+        gridTemplateRows: 'auto auto auto auto auto 1fr',
       }}
       role="presentation"
       onClick={toggleDrawer}
@@ -65,6 +65,7 @@ export default function Navbar() {
           <ExternalNavItem link={{ link, name }} />
         )
       )}
+      <ConnectButton isSideNavElement={true}/>
     </Box>
   );
 
@@ -108,19 +109,7 @@ export default function Navbar() {
             )
           )}
         </Box>
-        {/* <Button
-          color="primary"
-          variant="outlined"
-          sx={{
-            borderRadius: '90px',
-            justifySelf: 'end',
-            color: 'white',
-            display: { laptop: 'initial', mobile: 'none' },
-          }}
-        >
-          Connect Wallet
-        </Button> */}
-        <WalletMultiButton />
+        <ConnectButton />
         <IconButton
           onClick={toggleDrawer}
           sx={{ display: { laptop: 'none', mobile: 'initial' } }}
