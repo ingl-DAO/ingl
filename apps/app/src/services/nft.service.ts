@@ -26,6 +26,7 @@ import {
   Connection,
   Keypair,
   PublicKey,
+  sendAndConfirmRawTransaction,
   SystemProgram,
   SYSVAR_RENT_PUBKEY,
   Transaction,
@@ -90,12 +91,14 @@ const signAndConfirmTransaction = async (
   const signedTransaction = signTransaction
     ? await signTransaction(transaction)
     : null;
+    const txn = signedTransaction?.serialize();
 
-  const signature = await sendTransaction(
-    signedTransaction as Transaction,
-    connection
-  );
-  await connection.confirmTransaction({ ...blockhashObj, signature });
+    const transactionId = await sendAndConfirmRawTransaction(connection, txn as Buffer);
+  // const signature = await sendTransaction(
+  //   signedTransaction as Transaction,
+  //   connection
+  // );
+  // await connection.confirmTransaction({ ...blockhashObj, signature });
 };
 
 export async function mintInglGem(
@@ -198,7 +201,7 @@ export async function mintInglGem(
   };
 
   const inglNftCollectionMintAccount: AccountMeta = {
-    pubkey: ingl_nft_collection_key,
+    pubkey: ingl_nft_collection_mint_key,
     isSigner: false,
     isWritable: false,
   };
@@ -207,7 +210,7 @@ export async function mintInglGem(
     [
       Buffer.from('metadata'),
       METAPLEX_PROGRAM_ID.toBuffer(),
-      ingl_nft_collection_key.toBuffer(),
+      ingl_nft_collection_mint_key.toBuffer(),
     ],
     METAPLEX_PROGRAM_ID
   );
@@ -236,7 +239,7 @@ export async function mintInglGem(
     [
       Buffer.from('metadata'),
       METAPLEX_PROGRAM_ID.toBuffer(),
-      ingl_nft_collection_key.toBuffer(),
+      ingl_nft_collection_mint_key.toBuffer(),
       Buffer.from('edition'),
     ],
     METAPLEX_PROGRAM_ID
@@ -598,6 +601,7 @@ export async function redeemInglGem(
     throw new Error('Failed to imprint rarity with error ' + error);
   }
 }
+
 const getInglGemFromNft = async (connection: Connection, nft: Nft) => {
   const {
     mint: { address },
@@ -634,7 +638,6 @@ const getInglGemFromNft = async (connection: Connection, nft: Nft) => {
   }
   throw new Error('No json fields was found on metadata');
 };
-
 export async function loadInglGems(
   connection: Connection,
   ownerPubkey: PublicKey
@@ -785,3 +788,5 @@ export async function deallocatedSol(
     throw new Error('Failed to deallocate gem sol with error ' + error);
   }
 }
+
+// export async function delegate
