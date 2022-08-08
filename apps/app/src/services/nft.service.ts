@@ -91,14 +91,12 @@ const signAndConfirmTransaction = async (
   const signedTransaction = signTransaction
     ? await signTransaction(transaction)
     : null;
-    const txn = signedTransaction?.serialize();
 
-    const transactionId = await sendAndConfirmRawTransaction(connection, txn as Buffer);
-  // const signature = await sendTransaction(
-  //   signedTransaction as Transaction,
-  //   connection
-  // );
-  // await connection.confirmTransaction({ ...blockhashObj, signature });
+  const signature = await sendTransaction(
+    signedTransaction as Transaction,
+    connection
+  );
+  await connection.confirmTransaction({ ...blockhashObj, signature });
 };
 
 export async function mintInglGem(
