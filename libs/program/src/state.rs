@@ -8,7 +8,7 @@ use solana_program::{
 };
 pub mod constants{
     use solana_program::{declare_id, native_token::LAMPORTS_PER_SOL};
-    declare_id!("E2zLL1Ag94mvhbqa8Dg3LUM793q8BEh2wMBdsSQAXVxA");
+    declare_id!("E6PkWBF2vdztwVJ3gMnhavUqYUadZtD4sM3QYi9T1kiK");
 
 
     pub const INGL_TREASURY_ACCOUNT_KEY: &str = "ingl_treasury_account_key";
@@ -113,7 +113,7 @@ pub struct GlobalGems {
     pub dealloced_total: u64,
     pub is_proposal_ongoing: bool,
     pub proposal_numeration: u32,
-    pub validator_list : Vec<Pubkey>,
+    pub validator_list : Vec<Pubkey>,//This is not the validator list to display for proposals
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
