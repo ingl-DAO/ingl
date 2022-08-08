@@ -55,7 +55,7 @@ pub fn process_instruction(
         InstructionEnum::VoteValidatorProposal{num_nfts, validator_index} => vote_validator_proposal(program_id, accounts, num_nfts, validator_index)?,
         InstructionEnum::FinalizeProposal => finalize_proposal(program_id, accounts)?,
         InstructionEnum::DelegateNFT => delegate_nft(program_id, accounts)?,
-        InstructionEnum::InitUndelegation => undelegate_nft(program_id, accounts)?,
+        InstructionEnum::UnDelegateNFT => undelegate_nft(program_id, accounts)?,
         InstructionEnum::ProcessRewards => process_rewards(program_id, accounts)?,
         InstructionEnum::NFTWithdraw{cnt} => nft_withdraw(program_id, accounts, cnt as usize)?,
         _ => Err(ProgramError::InvalidInstructionData)?,
@@ -1805,18 +1805,10 @@ pub fn undelegate_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
     let pd_pool_account_info = next_account_info(account_info_iter)?;
     let vote_account_info = next_account_info(account_info_iter)?;
     let ingl_vote_data_account_info = next_account_info(account_info_iter)?;
-    let stake_account_info = next_account_info(account_info_iter)?;
     let mint_account_info = next_account_info(account_info_iter)?;
     let gem_account_data_info = next_account_info(account_info_iter)?;
     let associated_token_account_info = next_account_info(account_info_iter)?;
     let global_gem_account_info = next_account_info(account_info_iter)?;
-    let sysvar_clock_info = next_account_info(account_info_iter)?;
-    let sysvar_stake_history_info = next_account_info(account_info_iter)?;
-    let stake_config_program_info = next_account_info(account_info_iter)?;
-
-    assert_pubkeys_exactitude(sysvar_clock_info.key, &sysvar::clock::id())?;
-    assert_pubkeys_exactitude(sysvar_stake_history_info.key, &sysvar::stake_history::id())?;
-    assert_pubkeys_exactitude(stake_config_program_info.key, &solana_program::stake::config::id())?;
 
     assert_is_signer(payer_account_info).unwrap();
 
@@ -1837,10 +1829,6 @@ pub fn undelegate_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
     if associated_token_address_data.amount != 1 {
         Err(ProgramError::InsufficientFunds)?
     }
-
-
-    let (expected_stake_key, _expected_stake_bump) = Pubkey::find_program_address(&[STAKE_ACCOUNT_KEY.as_ref(), vote_account_info.key.as_ref()], program_id);
-    assert_pubkeys_exactitude(&expected_stake_key, stake_account_info.key).expect("stake account info");
 
 
     let (expected_vote_data_pubkey, _expected_vote_data_bump) = Pubkey::find_program_address(&[VOTE_DATA_ACCOUNT_KEY.as_ref(), vote_account_info.key.as_ref()], program_id);

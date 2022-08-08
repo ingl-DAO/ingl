@@ -26,7 +26,6 @@ pub enum InstructionEnum {
     FinalizeProposal,
     ValidatorWithdraw,
     NFTWithdraw{cnt: u32},
-    InitUndelegation,
     ProcessRewards,
 }
 

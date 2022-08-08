@@ -20,6 +20,7 @@ class Constants:
     VOTE_DATA_ACCOUNT_KEY = "InglVoteData"
     STAKE_ACCOUNT_KEY = "staking_account_key"
     TREASURY_ACCOUNT_KEY = "Treasury_account_key"
+    STAKE_CONFIG_PROGRAM_ID = PublicKey("StakeConfig11111111111111111111111111111111")
 
     VALIDATOR_ID_SHARE = 15
     TREASURY_SHARE = 13
