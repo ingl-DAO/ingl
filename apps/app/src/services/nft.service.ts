@@ -26,7 +26,6 @@ import {
   Connection,
   Keypair,
   PublicKey,
-  sendAndConfirmRawTransaction,
   SystemProgram,
   SYSVAR_RENT_PUBKEY,
   Transaction,
