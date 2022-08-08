@@ -5,10 +5,12 @@ export const ErrorMessage = ({
   retryFunction,
   notification,
   message,
+  closeFunction
 }: {
   retryFunction: () => void;
   notification: useNotification;
   message: string;
+  closeFunction?: ()=>void;
 }) => (
   <Box sx={{ textAlign: 'center' }}>
     {message}
@@ -34,7 +36,7 @@ export const ErrorMessage = ({
       <Button
         size="small"
         variant="outlined"
-        onClick={() => notification.dismiss()}
+        onClick={() => closeFunction? closeFunction(): notification.dismiss()}
       >
         Close
       </Button>
