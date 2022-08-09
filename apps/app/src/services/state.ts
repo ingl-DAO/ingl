@@ -1,5 +1,5 @@
 import { PublicKey } from '@solana/web3.js';
-import { deserializeUnchecked, } from 'borsh';
+import { deserializeUnchecked } from 'borsh';
 
 export enum NftClass {
   Ruby,
@@ -241,4 +241,3 @@ export async function decodeInglData<T>(
 ) {
   return deserializeUnchecked(INGL_SCHEMA, classType, buffer);
 }
-

@@ -35,9 +35,11 @@ export default function MintGemDialog({
   closeDialog: () => void;
   onValidate: (mintClass: NftClass) => void;
 }) {
-  const [selectedMintClass, setSelectedMintClass] = useState<NftClass>(NftClass.Benitoite);
+  const [selectedMintClass, setSelectedMintClass] = useState<NftClass>(
+    NftClass.Benitoite
+  );
   const [NftClasses, setNftClasses] = useState<
-    { price: number, value: NftClass; label: string }[]
+    { price: number; value: NftClass; label: string }[]
   >([
     { price: 1, label: 'Benitoite', value: NftClass.Benitoite },
     { price: 100, label: 'Diamond', value: NftClass.Diamond },
