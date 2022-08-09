@@ -7,8 +7,8 @@ use solana_program::{
     sysvar::{rent::Rent, Sysvar},
 };
 pub mod constants{
-    use solana_program::declare_id;
-    declare_id!("E2zLL1Ag94mvhbqa8Dg3LUM793q8BEh2wMBdsSQAXVxA");
+    use solana_program::{declare_id, native_token::LAMPORTS_PER_SOL};
+    declare_id!("E6PkWBF2vdztwVJ3gMnhavUqYUadZtD4sM3QYi9T1kiK");
 
 
     pub const INGL_TREASURY_ACCOUNT_KEY: &str = "ingl_treasury_account_key";
@@ -21,6 +21,7 @@ pub mod constants{
     pub const FEE_MULTIPLYER: u8 = 10;
     pub const PRICE_TIME_INTERVAL: u8 = 20;
     pub const TREASURY_FEE_MULTIPLYER: u8 = 70;
+    pub const MAXIMUM_DELEGATABLE_STAKE: u64 = 10000*LAMPORTS_PER_SOL;
     pub const BTC_FEED_PUBLIC_KEY: &str = "9ATrvi6epR5hVYtwNs7BB7VCiYnd4WM7e8MfafWpfiXC";
     pub const SOL_FEED_PUBLIC_KEY: &str = "7LLvRhMs73FqcLkA8jvEE1AM2mYZXTmqfUv8GAEurymx";
     pub const ETH_FEED_PUBLIC_KEY: &str = "6fhxFvPocWapZ5Wa2miDnrX2jYRFKvFqYnX11GGkBo2f";
@@ -33,15 +34,19 @@ pub mod constants{
     pub const VOTE_ACCOUNT_KEY: &str = "InglVote";
     pub const VOTE_DATA_ACCOUNT_KEY: &str = "InglVoteData";
     pub const STAKE_ACCOUNT_KEY: &str = "staking_account_key";
+    pub const TREASURY_ACCOUNT_KEY: &str = "Treasury_account_key";
+
+    pub const VALIDATOR_ID_SHARE: u64 = 15;
+    pub const TREASURY_SHARE: u64 = 13;
+    pub const TEAM_SHARE: u64 = 12;
+    pub const NFTS_SHARE: u64 = 60;
 
     pub mod spl_program{
         use solana_program::declare_id;
-
         declare_id!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
     }
     pub mod metaplex{
         use solana_program::declare_id;
-
         declare_id!("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
     }
     pub mod associated_token_program{
@@ -105,16 +110,17 @@ pub struct GlobalGems {
     pub total_raised: u64,
     pub pd_pool_total: u64,
     pub delegated_total: u64,
+    pub dealloced_total: u64,
     pub is_proposal_ongoing: bool,
     pub proposal_numeration: u32,
-    pub validator_list : Vec<Pubkey>,
+    pub validator_list : Vec<Pubkey>,//This is not the validator list to display for proposals
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub enum FundsLocation {
     MintingPool,
     PDPool,
-    VoteAccount { id: Pubkey },
+    VoteAccount { vote_account_id: Pubkey},
 }
 
 
@@ -136,6 +142,9 @@ pub struct GemAccountV0_0_1 {
     pub rarity_seed_time: Option<u32>,
     pub date_allocated: Option<u32>,
     pub last_voted_proposal: Option<Pubkey>,
+    pub last_withdrawal_epoch: Option<u64>,
+    pub last_delegation_epoch: Option<u64>,
+    pub all_withdraws: Vec<u64>,
     pub all_votes: Vec<ValidatorVote>,
 }
 
@@ -179,15 +188,18 @@ pub struct ProgramVoteAccount{
     validator: Pubkey,
 }
 
-#[derive(BorshDeserialize, BorshSerialize)]
+#[derive(BorshDeserialize, Copy, Clone, BorshSerialize)]
 pub struct VoteRewards{
     pub epoch_number: u64,
-    pub total_delegated: u64,
+    pub total_reward: u64,
+    pub total_stake: u64,
 }
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct InglVoteAccountData{
     pub total_delegated: u64,
     pub last_withdraw_epoch: u64,
+    pub dealloced: u64,
+    pub validator_id: Pubkey, //To Reconsider.
     pub vote_rewards: Vec<VoteRewards>,
 }
 

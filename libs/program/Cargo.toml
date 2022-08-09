@@ -19,6 +19,9 @@ anchor-spl = "0.25.0"
 switchboard-v2 = "0.1.12"
 serde = "1.0.112"
 
+[profile.release]
+overflow-checks = true
+
 [lib]
 crate-type = ["cdylib", "lib"]
 

@@ -21,6 +21,9 @@ pub enum InglError{
 
     #[error("A vote had already occured with the specifid accounts")]
     AlreadyVoted,
+
+    #[error("A certain operation yielded a value beyond bounds")]
+    BeyondBounds
 }
 
 
@@ -48,6 +51,9 @@ impl InglError{
             }
             Self::AlreadyVoted =>{ 
                 if let Some(keyword) = keyword{msg!("Error: keyword={:?} Had already voted for this specific proposal", keyword);}
+            }
+            Self::BeyondBounds => {
+                if let Some(keyword) = keyword{msg!("Error: keyword={:} Value yielded beyond the specified boundaries", keyword);}
             }
         }
         ProgramError::from(self)
