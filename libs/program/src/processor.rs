@@ -1818,6 +1818,7 @@ pub fn redeem_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResul
 }
 
 pub fn delegate_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+    msg!("Accounts: {}", accounts.len());
     let account_info_iter = &mut accounts.iter();
     let payer_account_info = next_account_info(account_info_iter)?;
     let pd_pool_account_info = next_account_info(account_info_iter)?;
@@ -1895,12 +1896,14 @@ pub fn delegate_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramRes
         global_gem_account_data.dealloced_total = global_gem_account_data.dealloced_total.checked_sub(gem_account_data.class.get_class_lamports()).unwrap();
         ingl_vote_account_data.dealloced = ingl_vote_account_data.dealloced.checked_sub(gem_account_data.class.get_class_lamports()).unwrap();
     }
-    else {    
+    else {  
+        msg!("tranfer sol"); 
         invoke_signed(
             &system_instruction::transfer(pd_pool_account_info.key, stake_account_info.key, gem_account_data.class.get_class_lamports()),
             &[pd_pool_account_info.clone(), stake_account_info.clone()],
             &[&[PD_POOL_KEY.as_ref(), &[pd_pool_bump]]],
         )?;
+        msg!("delegate stake");  
         invoke_signed(
             &solana_program::stake::instruction::delegate_stake(stake_account_info.key, pd_pool_account_info.key, vote_account_info.key),
         &[stake_account_info.clone(), vote_account_info.clone(), sysvar_clock_info.clone(), sysvar_stake_history_info.clone(), stake_config_program_info.clone(), pd_pool_account_info.clone()],

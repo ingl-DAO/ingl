@@ -8,7 +8,7 @@ use solana_program::{
 };
 pub mod constants{
     use solana_program::{declare_id, native_token::LAMPORTS_PER_SOL};
-    declare_id!("6rdpYzThSFYtEa9bSJYGemkN2MSNU8JWh1SNT67YZJ1v");
+    declare_id!("Gt22mK6p26CGDU6b545bvVgwqiyb1dTGkGQ7aeHwvaTQ");
 
 
     pub const INGL_TREASURY_ACCOUNT_KEY: &str = "ingl_treasury_account_key";
