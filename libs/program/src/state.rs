@@ -113,7 +113,7 @@ pub struct GlobalGems {
     pub dealloced_total: u64,
     pub is_proposal_ongoing: bool,
     pub proposal_numeration: u32,
-    pub validator_list : Vec<Pubkey>,
+    pub validator_list : Vec<Pubkey>,//This is not the validator list to display for proposals
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
