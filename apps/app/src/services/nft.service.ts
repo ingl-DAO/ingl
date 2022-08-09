@@ -15,6 +15,7 @@ import {
   GemAccountV0_0_1,
   decodeInglData,
   PD_POOL_KEY,
+  VOTE_DATA_ACCOUNT_KEY,
 } from './state';
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -26,7 +27,9 @@ import {
   Connection,
   Keypair,
   PublicKey,
+  STAKE_CONFIG_ID,
   SystemProgram,
+  SYSVAR_CLOCK_PUBKEY,
   SYSVAR_RENT_PUBKEY,
   Transaction,
   TransactionInstruction,
@@ -786,4 +789,128 @@ export async function deallocatedSol(
   }
 }
 
-// export async function delegate
+export async function delegateNft(
+  walletConnection: { connection: Connection; wallet: WalletContextState },
+  tokenMint: PublicKey
+) {
+  const {
+    wallet: { publicKey: payerKey },
+  } = walletConnection;
+
+  const payerAccount: AccountMeta = {
+    pubkey: payerKey as PublicKey,
+    isSigner: true,
+    isWritable: true,
+  };
+  const pDPoolAccount: AccountMeta = {
+    pubkey: pd_pool_account_key,
+    isSigner: false,
+    isWritable: true,
+  };
+
+  const vote_account_key = Keypair.generate();
+  const voteAccount: AccountMeta = {
+    pubkey: vote_account_key.publicKey,
+    isSigner: false,
+    isWritable: false,
+  };
+
+  const [ignl_vote_data_account_key] = PublicKey.findProgramAddressSync(
+    [Buffer.from(VOTE_DATA_ACCOUNT_KEY), vote_account_key.publicKey.toBuffer()],
+    INGL_PROGRAM_ID
+  );
+
+  const ignlVoteDataAccount: AccountMeta = {
+    pubkey: ignl_vote_data_account_key,
+    isSigner: false,
+    isWritable: false,
+  };
+  const [stake_account_key] = PublicKey.findProgramAddressSync(
+    [Buffer.from(VOTE_DATA_ACCOUNT_KEY), vote_account_key.publicKey.toBuffer()],
+    INGL_PROGRAM_ID
+  );
+  const stakeAccount: AccountMeta = {
+    pubkey: stake_account_key,
+    isSigner: false,
+    isWritable: false,
+  };
+
+  const mintAccount: AccountMeta = {
+    pubkey: tokenMint,
+    isSigner: false,
+    isWritable: false,
+  };
+
+  const [gem_pubkey] = PublicKey.findProgramAddressSync(
+    [Buffer.from(GEM_ACCOUNT_CONST), tokenMint.toBuffer()],
+    INGL_PROGRAM_ID
+  );
+  const gemAccount: AccountMeta = {
+    pubkey: gem_pubkey,
+    isSigner: false,
+    isWritable: true,
+  };
+
+  const associatedTokenAccount: AccountMeta = {
+    pubkey: await getAssociatedTokenAddress(
+      mintAccount.pubkey,
+      payerAccount.pubkey
+    ),
+    isSigner: false,
+    isWritable: true,
+  };
+  const globalGemAccount: AccountMeta = {
+    pubkey: global_gem_pubkey,
+    isSigner: false,
+    isWritable: true,
+  };
+
+  const sysvarClockAccount: AccountMeta = {
+    pubkey: SYSVAR_CLOCK_PUBKEY,
+    isSigner: false,
+    isWritable: true,
+  };
+  const stakeConfigProgramAccount: AccountMeta = {
+    pubkey: STAKE_CONFIG_ID,
+    isSigner: false,
+    isWritable: false,
+  };
+  const systemProgramAccount: AccountMeta = {
+    pubkey: SystemProgram.programId,
+    isSigner: false,
+    isWritable: false,
+  };
+
+  const delegateSolInstruction = new TransactionInstruction({
+    programId: INGL_PROGRAM_ID,
+    data: Buffer.from([Instruction.DelegateSol]),
+    keys: [
+      payerAccount,
+      pDPoolAccount,
+      voteAccount,
+      ignlVoteDataAccount,
+      stakeAccount,
+      mintAccount,
+      gemAccount,
+      associatedTokenAccount,
+      globalGemAccount,
+      sysvarClockAccount,
+      stakeConfigProgramAccount,
+
+      systemProgramAccount,
+    ],
+  });
+
+  try {
+    await signAndConfirmTransaction(walletConnection, delegateSolInstruction);
+  } catch (error) {
+    throw new Error('Failed to deallocate gem sol with error ' + error);
+  }
+}
+
+// export async function undelegateNft(
+//   walletConnection: { connection: Connection; wallet: WalletContextState },
+//   tokenMint: PublicKey
+// ) {
+
+// }

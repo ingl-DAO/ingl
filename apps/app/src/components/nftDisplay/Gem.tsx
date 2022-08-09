@@ -44,7 +44,7 @@ export default function Gem({
   activateDialog: (
     action:
       | 'redeem'
-      | 'take loan'
+      | 'take_loan'
       | 'allocate'
       | 'deallocate'
       | 'delegate'

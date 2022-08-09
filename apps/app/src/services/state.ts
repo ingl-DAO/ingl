@@ -1,5 +1,5 @@
 import { PublicKey } from '@solana/web3.js';
-import { deserializeUnchecked, } from 'borsh';
+import { deserializeUnchecked } from 'borsh';
 
 export enum NftClass {
   Ruby,
@@ -78,6 +78,9 @@ export const TREASURY_FEE_MULTIPLYER = 70;
 export const PRICE_TIME_INTERVAL = 20;
 export const PD_POOL_KEY = 'pd_pool';
 export const FEE_MULTIPLYER = 10;
+export const TREASURY_ACCOUNT_KEY = 'Treasury_account_key';
+export const STAKE_ACCOUNT_KEY = 'staking_account_key';
+export const VOTE_DATA_ACCOUNT_KEY = 'InglVoteData';
 
 class Assignable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -241,4 +244,3 @@ export async function decodeInglData<T>(
 ) {
   return deserializeUnchecked(INGL_SCHEMA, classType, buffer);
 }
-

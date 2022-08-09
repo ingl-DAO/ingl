@@ -15,6 +15,7 @@ import useNotification from '../../common/utils/notification';
 import {
   allocateSol,
   deallocatedSol,
+  delegateNft,
   loadInglGems,
   mintInglGem,
   redeemInglGem,
@@ -172,7 +173,7 @@ export default function NftDisplay() {
   const activateDialog = (
     action:
       | 'redeem'
-      | 'take loan'
+      | 'take_loan'
       | 'allocate'
       | 'deallocate'
       | 'delegate'
@@ -181,7 +182,7 @@ export default function NftDisplay() {
   ) => {
     const dialogContents: Record<
       | 'redeem'
-      | 'take loan'
+      | 'take_loan'
       | 'allocate'
       | 'deallocate'
       | 'delegate'
@@ -195,7 +196,7 @@ export default function NftDisplay() {
         agreeText: 'Redeem',
         agreeFunction: () => executeAction(action, nft_id),
       },
-      'take loan': {
+      take_loan: {
         title: 'Take Loan',
         content:
           'Are you sure you want to take a loan on this gem? this will prevent you from redeeming the nft should you want to. But also, you will have to pay 10% of the loan every month. Do you still want to continue?',
@@ -241,7 +242,7 @@ export default function NftDisplay() {
       notif: useNotification;
       action:
         | 'redeem'
-        | 'take loan'
+        | 'take_loan'
         | 'allocate'
         | 'deallocate'
         | 'delegate'
@@ -254,7 +255,7 @@ export default function NftDisplay() {
   const notif = new useNotification();
   const notificationContent: Record<
     | 'redeem'
-    | 'take loan'
+    | 'take_loan'
     | 'allocate'
     | 'deallocate'
     | 'delegate'
@@ -266,7 +267,7 @@ export default function NftDisplay() {
       success: 'Gem successfully redeemed',
       error: 'There was an error redeeming your gem. Please try again',
     },
-    'take loan': {
+    take_loan: {
       executing: 'Please wait while we compute and give you your loan',
       success: 'Loan sucessfully allocated',
       error: 'There was an allocating the loan. Please try again',
@@ -296,7 +297,7 @@ export default function NftDisplay() {
   const executeAction = (
     action:
       | 'redeem'
-      | 'take loan'
+      | 'take_loan'
       | 'allocate'
       | 'deallocate'
       | 'delegate'
@@ -323,7 +324,7 @@ export default function NftDisplay() {
     notif.notify({ render: notificationContent[action].executing });
     const actions: Record<
       | 'redeem'
-      | 'take loan'
+      | 'take_loan'
       | 'allocate'
       | 'deallocate'
       | 'delegate'
@@ -332,16 +333,15 @@ export default function NftDisplay() {
     > = {
       redeem: async () =>
         await redeemInglGem({ connection, wallet }, tokenMint),
-      'take loan': async () => {
+      take_loan: async () => {
         console.log('take a loan');
       },
       allocate: async () =>
         await allocateSol({ connection, wallet }, tokenMint),
       deallocate: async () =>
         await deallocatedSol({ connection, wallet }, tokenMint),
-      delegate: async () => {
-        console.log('delegate');
-      },
+      delegate: async () =>
+        await delegateNft({ connection, wallet }, tokenMint),
       undelegate: async () => {
         console.log('undelegate');
       },
