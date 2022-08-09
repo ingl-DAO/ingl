@@ -60,7 +60,7 @@ export const BNB_HISTORY_BUFFER_KEY = new PublicKey(
   'DR6PqK15tD21MEGSLmDpXwLA7Fw47kwtdZeUMdT7vd7L'
 );
 export const INGL_PROGRAM_ID = new PublicKey(
-  '6rdpYzThSFYtEa9bSJYGemkN2MSNU8JWh1SNT67YZJ1v'
+  'Gt22mK6p26CGDU6b545bvVgwqiyb1dTGkGQ7aeHwvaTQ'
 );
 export const INGL_TREASURY_ACCOUNT_KEY = 'ingl_treasury_account_key';
 export const AUTHORIZED_WITHDRAWER_KEY = 'InglAuthorizedWithdrawer';
@@ -96,12 +96,12 @@ class Assignable {
 
 export class VoteInit extends Assignable {}
 export class GlobalGems extends Assignable {}
-// export class VoteRewards extends Assignable {}
+export class VoteRewards extends Assignable {}
 export class ValidatorVote extends Assignable {}
 export class GemAccountV0_0_1 extends Assignable {}
+export class InglVoteAccountData extends Assignable {}
 // export class ValidatorProposal extends Assignable {}
 // export class ProgramVoteAccount extends Assignable {}
-// export class InglVoteAccountData extends Assignable {}
 
 class Enum {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -158,6 +158,17 @@ const INGL_SCHEMA = new Map([
     },
   ],
   [
+    VoteRewards,
+    {
+      kind: 'struct',
+      fields: [
+        ['epoch_number', 'u64'],
+        ['total_reward', 'u64'],
+        ['total_stake', 'u64'],
+      ],
+    },
+  ],
+  [
     GlobalGems,
     {
       kind: 'struct',
@@ -178,6 +189,19 @@ const INGL_SCHEMA = new Map([
       fields: [
         ['proposal_id', ['u8', 32]],
         ['validator_index', 'u32'],
+      ],
+    },
+  ],
+  [
+    InglVoteAccountData,
+    {
+      kind: 'struct',
+      fields: [
+        ['total_delegated', 'u64'],
+        ['last_withdraw_epoch', 'u64'],
+        ['dealloced', 'u64'],
+        ['validator_id', ['u8', 32]],
+        ['vote_rewards', [VoteRewards]],
       ],
     },
   ],

@@ -341,7 +341,7 @@ export default function NftDisplay() {
       deallocate: async () =>
         await deallocatedSol({ connection, wallet }, tokenMint),
       delegate: async () =>
-        await delegateNft({ connection, wallet }, tokenMint),
+        await delegateNft({ connection, wallet }, {tokenMint, voteMint: tokenMint}),
       undelegate: async () => {
         console.log('undelegate');
       },
