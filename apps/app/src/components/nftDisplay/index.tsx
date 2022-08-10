@@ -151,9 +151,9 @@ export default function NftDisplay() {
     setIsValidatorDialogOpen(true);
   };
 
-  const [selectedValidatorId, setSelectedValidaorId] = useState<string>();
-  const getValidatorId = (validatorId: string) => {
-    setSelectedValidaorId(validatorId);
+  const [selectedVoteAccount, setSelectedVoteAccount] = useState<string>();
+  const getValidatorId = (vote_account: string) => {
+    setSelectedVoteAccount(vote_account);
     if (toDelegateNft) activateDialog('delegate', toDelegateNft);
     else {
       const notif = new useNotification();
@@ -166,6 +166,10 @@ export default function NftDisplay() {
       });
     }
   };
+  useEffect(() => {
+    if (toDelegateNft) activateDialog('delegate', toDelegateNft);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedVoteAccount]);
 
   const [activeGemDialogContent, setActiveGemDialogContent] =
     useState<dialogContent>();
@@ -340,8 +344,13 @@ export default function NftDisplay() {
         await allocateSol({ connection, wallet }, tokenMint),
       deallocate: async () =>
         await deallocatedSol({ connection, wallet }, tokenMint),
-      delegate: async () =>
-        await delegateNft({ connection, wallet }, {tokenMint, voteMint: tokenMint}),
+      delegate: async () => {
+        console.log(selectedVoteAccount);
+        await delegateNft(
+          { connection, wallet },
+          { tokenMint, voteMint: new PublicKey(selectedVoteAccount as string) }
+        );
+      },
       undelegate: async () => {
         console.log('undelegate');
       },

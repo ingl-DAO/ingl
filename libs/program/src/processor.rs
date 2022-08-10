@@ -117,16 +117,12 @@ pub fn finalize_proposal(program_id: &Pubkey, accounts: &[AccountInfo]) -> Progr
         .position(|x| *x == proposal_data.winner.unwrap())
         .unwrap();
     global_gem_account_data.validator_list.remove(index);
+    global_gem_account_data.is_proposal_ongoing = false;
     global_gem_account_data.serialize(&mut &mut global_gem_account_info.data.borrow_mut()[..])?;
     Ok(())
 }
 
-pub fn vote_validator_proposal(
-    program_id: &Pubkey,
-    accounts: &[AccountInfo],
-    num_nfts: u8,
-    validator_index: u32,
-) -> ProgramResult {
+pub fn vote_validator_proposal(program_id: &Pubkey, accounts: &[AccountInfo], num_nfts: u8, validator_index: u32) -> ProgramResult {
     let account_info_iter = &mut accounts.iter();
     let payer_account_info = next_account_info(account_info_iter)?;
     let proposal_account_info = next_account_info(account_info_iter)?;
@@ -184,10 +180,7 @@ pub fn vote_validator_proposal(
     Ok(())
 }
 
-pub fn create_validator_selection_proposal(
-    program_id: &Pubkey,
-    accounts: &[AccountInfo],
-) -> ProgramResult {
+pub fn create_validator_selection_proposal(program_id: &Pubkey, accounts: &[AccountInfo] ) -> ProgramResult {
     let account_info_iter = &mut accounts.iter();
     let payer_account_info = next_account_info(account_info_iter)?;
     let global_gem_account_info = next_account_info(account_info_iter)?;
@@ -207,6 +200,10 @@ pub fn create_validator_selection_proposal(
         Err(InglError::TooEarly.utilize(Some("A Proposal Is Currently Ongoing")))?;
     }
     global_gem_data.is_proposal_ongoing = true;
+
+    if global_gem_data.validator_list.len() == 0 {
+        Err(ProgramError::InvalidAccountData)?
+    }
 
     let (expected_proposal_id, expected_proposal_bump) = Pubkey::find_program_address(
         &[
@@ -339,7 +336,7 @@ pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
     let (expected_proposal_id, _expected_proposal_bump) = Pubkey::find_program_address(
         &[
             PROPOSAL_KEY.as_ref(),
-            &(global_gem_data.proposal_numeration - 1).to_be_bytes(),
+            &(global_gem_data.proposal_numeration-1).to_be_bytes(),
         ],
         program_id,
     );
@@ -354,7 +351,7 @@ pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
     let (expected_vote_pubkey, expected_vote_pubkey_bump) = Pubkey::find_program_address(
         &[
             VOTE_ACCOUNT_KEY.as_ref(),
-            &(global_gem_data.proposal_numeration - 1).to_be_bytes(),
+            &(global_gem_data.proposal_numeration-1).to_be_bytes(),
         ],
         program_id,
     );
@@ -454,14 +451,14 @@ pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
         node_pubkey: *validator_info.key,
         authorized_voter: *validator_info.key,
         commission: 10,
-        authorized_withdrawer: authorized_withdrawer,
+        authorized_withdrawer,
     };
     invoke_signed(
         &vote_create_account(validator_info.key, vote_account_info.key),
         &[validator_info.clone(), vote_account_info.clone()],
         &[&[
             VOTE_ACCOUNT_KEY.as_ref(),
-            &(global_gem_data.proposal_numeration - 1).to_be_bytes(),
+            &(global_gem_data.proposal_numeration-1).to_be_bytes(),
             &[expected_vote_pubkey_bump],
         ]],
     )?;
@@ -1733,7 +1730,7 @@ pub fn redeem_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResul
         let spent_time =
         (now - gem_data.rarity_seed_time.unwrap()) as f32 / (60 * 60 * 24 * 365) as f32;
         if spent_time < 1.0 {
-            redeem_fees = redeem_fees.checked_add(((1.0 - spent_time.pow(2) as f32).sqrt() * FEE_MULTIPLYER as f32 / 100.0) as u64).ok_or(Err(InglError::BeyondBounds.utilize(Some("overflow or underflow")))?).unwrap();
+            redeem_fees = redeem_fees.checked_add(((1.0 - spent_time.pow(2) as f32).sqrt() * FEE_MULTIPLYER as f32 / 100.0) as u64).ok_or(InglError::BeyondBounds.utilize(Some("overflow or underflow"))).unwrap();
 
             let (program_treasury_id, _treasury_bump) =
                 Pubkey::find_program_address(&[INGL_TREASURY_ACCOUNT_KEY.as_ref()], program_id);
@@ -1741,7 +1738,7 @@ pub fn redeem_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResul
                 .expect("Error: @progra_treasury_account_info");
             
             let treasury_funds = (redeem_fees as f32 * TREASURY_FEE_MULTIPLYER as f32 / 100.0) as u64;
-            let mint_authority_funds = redeem_fees.checked_sub(treasury_funds).ok_or(Err(InglError::BeyondBounds.utilize(Some("overflow or underflow")))?).unwrap();
+            let mint_authority_funds = redeem_fees.checked_sub(treasury_funds).ok_or(InglError::BeyondBounds.utilize(Some("overflow or underflow"))).unwrap();
 
             invoke_signed(
                 &system_instruction::transfer(
@@ -1774,7 +1771,7 @@ pub fn redeem_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResul
         &system_instruction::transfer(
             &minting_pool_id,
             payer_account_info.key,
-            gem_data.class.get_class_lamports().checked_sub(redeem_fees).ok_or(Err(InglError::BeyondBounds.utilize(Some("overflow or underflow")))?).unwrap(),
+            gem_data.class.get_class_lamports().checked_sub(redeem_fees).ok_or(InglError::BeyondBounds.utilize(Some("overflow or underflow"))).unwrap(),
         ),
         &[
             minting_pool_account_info.clone(),
@@ -2127,7 +2124,7 @@ pub fn nft_withdraw(program_id: &Pubkey, accounts: &[AccountInfo], cnt: usize) -
         let mut total_reward: u64 = 0;
         for i in interested_index..ingl_vote_account_data.vote_rewards.len(){
             let epoch_reward = ingl_vote_account_data.vote_rewards[i];
-            total_reward = total_reward.checked_add((gem_account_data.class.get_class_lamports() as f64 * (NFTS_SHARE as f64 * (epoch_reward.total_reward as f64 / 100.0) / epoch_reward.total_stake as f64))as u64).unwrap();
+            total_reward = total_reward.checked_add((gem_account_data.class.get_class_lamports() as f64 * (NFTS_SHARE as f64 * (epoch_reward.total_reward as f64 / 100.0) / epoch_reward.total_stake as f64))as u64).unwrap();//unsafe Get back to this Cyrial
         }
         gem_account_data.last_withdrawal_epoch = Some(Clock::get()?.epoch);
         gem_account_data.all_withdraws.push(total_reward);

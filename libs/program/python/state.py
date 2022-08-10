@@ -7,7 +7,7 @@ class Constants:
     INGL_MINT_AUTHORITY_KEY = "mint_authority"
     INGL_MINTING_POOL_KEY = "minting_pool"
     COLLECTION_HOLDER_KEY = "collection_holder"
-    INGL_PROGRAM_ID = PublicKey("Gt22mK6p26CGDU6b545bvVgwqiyb1dTGkGQ7aeHwvaTQ")
+    INGL_PROGRAM_ID = PublicKey("2CWWa4jTcAgxjq8gADjrTMgRRYCMYMv61rjD9RMq6nFQ")
     STAKE_PROGRAM_ID = PublicKey("Stake11111111111111111111111111111111111111")
     GLOBAL_GEM_KEY = "global_gem_account"
     GEM_ACCOUNT_CONST = "gem_account"

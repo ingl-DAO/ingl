@@ -20,6 +20,9 @@ import {
   GlobalGems,
   AUTHORIZED_WITHDRAWER_KEY,
   InglVoteAccountData,
+  STAKE_PROGRAM_ID,
+  SYSVAR_STAKE_HISTORY_ID,
+  STAKE_ACCOUNT_KEY,
 } from './state';
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -28,6 +31,7 @@ import {
 } from '@solana/spl-token';
 import {
   AccountMeta,
+  ComputeBudgetProgram,
   Connection,
   Keypair,
   PublicKey,
@@ -43,6 +47,7 @@ import { PROGRAM_ID as METAPLEX_PROGRAM_ID } from '@metaplex-foundation/mpl-toke
 import { LazyNft, Metaplex, Nft } from '@metaplex-foundation/js';
 import { inglGem } from '../components/nftDisplay';
 import { WalletNotConnectedError } from '@solana/wallet-adapter-base';
+import * as uint32 from 'uint32';
 
 const [minting_pool_key] = PublicKey.findProgramAddressSync(
   [Buffer.from(INGL_MINTING_POOL_KEY)],
@@ -84,14 +89,23 @@ const [authorized_withdrawer_key] = PublicKey.findProgramAddressSync(
 const signAndConfirmTransaction = async (
   walletConnection: { connection: Connection; wallet: WalletContextState },
   instruction: TransactionInstruction,
-  signingKeypair?: Keypair
+  signingKeypair?: Keypair,
+  additionalUnits?: number
 ) => {
   const {
     connection,
-    wallet: { publicKey: payerKey, sendTransaction, signTransaction },
+    wallet: { publicKey: payerKey, signTransaction, sendTransaction },
   } = walletConnection;
 
   const transaction = new Transaction();
+  if (additionalUnits) {
+    const additionalComputeBudgetInstruction =
+      ComputeBudgetProgram.requestUnits({
+        units: additionalUnits,
+        additionalFee: 0,
+      });
+    transaction.add(additionalComputeBudgetInstruction);
+  }
   transaction.add(instruction).feePayer = payerKey as PublicKey;
 
   const blockhashObj = await connection.getLatestBlockhash();
@@ -294,12 +308,11 @@ export async function mintInglGem(
     await signAndConfirmTransaction(
       walletConnection,
       mintNftInstruction,
-      mintKeyPair
+      mintKeyPair,
+      240_000
     );
   } catch (error) {
-    throw new Error(
-      'Collection Minting transaction failed with error ' + error
-    );
+    throw new Error('NFT Minting transaction failed with error ' + error);
   }
 }
 
@@ -657,14 +670,14 @@ export async function loadInglGems(
     let lazyNfts = await metaplexNft.findAllByOwner(ownerPubkey).run();
     lazyNfts = lazyNfts.filter(
       ({ collection }) =>
-        collection &&
-        collection.key.toString() === ingl_nft_collection_mint_key.toString()
-    );
-    const myInglGems: inglGem[] = [];
-    for (let i = 0; i < lazyNfts.length; i++) {
-      const inglNft = await metaplexNft.loadNft(lazyNfts[i] as LazyNft).run();
-      myInglGems.push(await getInglGemFromNft(connection, inglNft));
-    }
+      collection?.key.toString() === ingl_nft_collection_mint_key.toString()
+      );
+      const myInglGems: inglGem[] = [];
+      for (let i = 0; i < lazyNfts.length; i++) {
+        const inglNft = await metaplexNft.loadNft(lazyNfts[i] as LazyNft).run();
+        const inglGem = await getInglGemFromNft(connection, inglNft)
+        myInglGems.push(inglGem);
+      }
     return myInglGems;
   } catch (error) {
     throw new Error('Failed to load metadata with error ' + error);
@@ -823,24 +836,24 @@ const getDelegateInstructionAccounts = async ({
     isWritable: false,
   };
 
-  const [ignl_vote_data_account_key] = PublicKey.findProgramAddressSync(
+  const [ignl_vote_account_data__key] = PublicKey.findProgramAddressSync(
     [Buffer.from(VOTE_DATA_ACCOUNT_KEY), voteMint.toBuffer()],
     INGL_PROGRAM_ID
   );
 
-  const ignlVoteDataAccount: AccountMeta = {
-    pubkey: ignl_vote_data_account_key,
+  const ignlVoteAccountData: AccountMeta = {
+    pubkey: ignl_vote_account_data__key,
     isSigner: false,
-    isWritable: false,
+    isWritable: true,
   };
   const [stake_account_key] = PublicKey.findProgramAddressSync(
-    [Buffer.from(VOTE_DATA_ACCOUNT_KEY), voteMint.toBuffer()],
+    [Buffer.from(STAKE_ACCOUNT_KEY), voteMint.toBuffer()],
     INGL_PROGRAM_ID
   );
   const stakeAccount: AccountMeta = {
     pubkey: stake_account_key,
     isSigner: false,
-    isWritable: false,
+    isWritable: true,
   };
 
   const mintAccount: AccountMeta = {
@@ -878,13 +891,24 @@ const getDelegateInstructionAccounts = async ({
     isSigner: false,
     isWritable: true,
   };
+  const sysvarStakeHistoryClockAccount: AccountMeta = {
+    pubkey: SYSVAR_STAKE_HISTORY_ID,
+    isSigner: false,
+    isWritable: true,
+  };
   const stakeConfigProgramAccount: AccountMeta = {
     pubkey: STAKE_CONFIG_ID,
     isSigner: false,
     isWritable: false,
   };
+  
   const systemProgramAccount: AccountMeta = {
     pubkey: SystemProgram.programId,
+    isSigner: false,
+    isWritable: false,
+  };
+  const stakeProgramAccount: AccountMeta = {
+    pubkey: STAKE_PROGRAM_ID,
     isSigner: false,
     isWritable: false,
   };
@@ -893,16 +917,18 @@ const getDelegateInstructionAccounts = async ({
     payerAccount,
     pDPoolAccount,
     voteAccount,
-    ignlVoteDataAccount,
+    ignlVoteAccountData,
     stakeAccount,
     mintAccount,
     gemAccount,
     associatedTokenAccount,
     globalGemAccount,
     sysvarClockAccount,
+    sysvarStakeHistoryClockAccount,
     stakeConfigProgramAccount,
 
     systemProgramAccount,
+    stakeProgramAccount
   ];
 };
 export async function delegateNft(
@@ -970,16 +996,7 @@ export async function undelegateNft(
   }
 }
 
-const getBytesFromU32 = (number: number) => {
-  const bytes = [];
-  while (number > 0) {
-    bytes.push(number % 255);
-    number = Math.floor(number / 255);
-    console.log(number);
-  }
-  return bytes;
-};
-export async function getVotesIds(connection: Connection) {
+export async function getVoteAccounts(connection: Connection) {
   try {
     const globalGemsAccount = await connection.getAccountInfo(
       global_gem_pubkey
@@ -988,15 +1005,34 @@ export async function getVotesIds(connection: Connection) {
       GlobalGems,
       globalGemsAccount?.data as Buffer
     );
-    const proposalNumeration = Number(globalGemData['proposal_numeration']);
-    const votesIds: PublicKey[] = [];
-    for (let i = 0; i < proposalNumeration; i++) {
+    let proposalNumeration = Number(globalGemData['proposal_numeration']);
+    const votesIds: { vote_account: PublicKey; validator_id: PublicKey }[] = [];
+    while (--proposalNumeration >= 0) {
       const [vote_account_key] = PublicKey.findProgramAddressSync(
-        [Buffer.from(VOTE_ACCOUNT_KEY), Buffer.from(getBytesFromU32(i))],
+        [
+          Buffer.from(VOTE_ACCOUNT_KEY),
+          Buffer.from(uint32.getBytesBigEndian(proposalNumeration)),
+        ],
         INGL_PROGRAM_ID
       );
-
-      votesIds.push(vote_account_key);
+      const [ingl_vote_data_account_key] = PublicKey.findProgramAddressSync(
+        [Buffer.from(VOTE_DATA_ACCOUNT_KEY), vote_account_key.toBuffer()],
+        INGL_PROGRAM_ID
+      );
+      const inglVoteAccount = await connection.getAccountInfo(
+        ingl_vote_data_account_key
+      );
+      if (inglVoteAccount) {
+        const inglVoteData = await decodeInglData(
+          InglVoteAccountData,
+          inglVoteAccount?.data as Buffer
+        );
+        console.log(new PublicKey(inglVoteData['validator_id']).toString());
+        votesIds.push({
+          vote_account: vote_account_key,
+          validator_id: new PublicKey(inglVoteData['validator_id']),
+        });
+      }
     }
     return votesIds;
   } catch (error) {

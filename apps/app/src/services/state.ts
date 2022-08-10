@@ -60,7 +60,16 @@ export const BNB_HISTORY_BUFFER_KEY = new PublicKey(
   'DR6PqK15tD21MEGSLmDpXwLA7Fw47kwtdZeUMdT7vd7L'
 );
 export const INGL_PROGRAM_ID = new PublicKey(
-  'Gt22mK6p26CGDU6b545bvVgwqiyb1dTGkGQ7aeHwvaTQ'
+  '2CWWa4jTcAgxjq8gADjrTMgRRYCMYMv61rjD9RMq6nFQ'
+);
+export const STAKE_PROGRAM_ID = new PublicKey(
+  'Stake11111111111111111111111111111111111111'
+);
+export const STAKE_CONFIG_PROGRAM_ID = new PublicKey(
+  'StakeConfig11111111111111111111111111111111'
+);
+export const SYSVAR_STAKE_HISTORY_ID = new PublicKey(
+  'SysvarStakeHistory1111111111111111111111111'
 );
 export const INGL_TREASURY_ACCOUNT_KEY = 'ingl_treasury_account_key';
 export const AUTHORIZED_WITHDRAWER_KEY = 'InglAuthorizedWithdrawer';
@@ -176,6 +185,8 @@ const INGL_SCHEMA = new Map([
         ['counter', 'u32'],
         ['total_raised', 'u64'],
         ['pd_pool_total', 'u64'],
+        ['delegated_total', 'u64'],
+        ['dealloced_total', 'u64'],
         ['is_proposal_ongoing', 'u8'],
         ['proposal_numeration', 'u32'],
         ['validator_list', [['u8', 32]]],
@@ -220,6 +231,7 @@ const INGL_SCHEMA = new Map([
         ['rarity_seed_time', { kind: 'option', type: 'u32' }],
         ['date_allocated', { kind: 'option', type: 'u32' }],
         ['last_voted_proposal', { kind: 'option', type: ['u8', 32] }],
+        ['all_withdraws', ['u64']],
         ['all_votes', [ValidatorVote]],
       ],
     },
