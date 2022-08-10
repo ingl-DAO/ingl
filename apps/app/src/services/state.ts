@@ -60,7 +60,7 @@ export const BNB_HISTORY_BUFFER_KEY = new PublicKey(
   'DR6PqK15tD21MEGSLmDpXwLA7Fw47kwtdZeUMdT7vd7L'
 );
 export const INGL_PROGRAM_ID = new PublicKey(
-  '6rdpYzThSFYtEa9bSJYGemkN2MSNU8JWh1SNT67YZJ1v'
+  'E6PkWBF2vdztwVJ3gMnhavUqYUadZtD4sM3QYi9T1kiK'
 );
 export const INGL_TREASURY_ACCOUNT_KEY = 'ingl_treasury_account_key';
 export const AUTHORIZED_WITHDRAWER_KEY = 'InglAuthorizedWithdrawer';
@@ -162,6 +162,8 @@ const INGL_SCHEMA = new Map([
         ['counter', 'u32'],
         ['total_raised', 'u64'],
         ['pd_pool_total', 'u64'],
+        ['delegated_total', 'u64'],
+        ['dealloced_total', 'u64'],
         ['is_proposal_ongoing', 'u8'],
         ['proposal_numeration', 'u32'],
         ['validator_list', [['u8', 32]]],
