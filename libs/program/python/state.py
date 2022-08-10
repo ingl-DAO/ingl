@@ -18,7 +18,7 @@ class Constants:
     AUTHORIZED_WITHDRAWER_KEY = "InglAuthorizedWithdrawer"
     VOTE_ACCOUNT_KEY = "InglVote"
     VOTE_DATA_ACCOUNT_KEY = "InglVoteData"
-    STAKE_ACCOUNT_KEY = "staking_account_key"
+    STAKE_ACCOUNT_KEY = "staking_account_key"   
     TREASURY_ACCOUNT_KEY = "Treasury_account_key"
     STAKE_CONFIG_PROGRAM_ID = PublicKey("StakeConfig11111111111111111111111111111111")
 
