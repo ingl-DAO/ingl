@@ -167,7 +167,7 @@ def allocate_sol(payer_keypair, mint_pubkey, client):
     ]
 
     # print(accounts)
-    instruction_data = build_instruction(InstructionEnum.enum.AllocateSol())
+    instruction_data = build_instruction(InstructionEnum.enum.AllocateNFT())
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, instruction_data))
     return client.send_transaction(transaction, payer_keypair)
@@ -205,7 +205,7 @@ def deallocate_sol(payer_keypair, mint_pubkey, client):
     ]
 
     # print(accounts)
-    instruction_data = build_instruction(InstructionEnum.enum.DeAllocateSol())
+    instruction_data = build_instruction(InstructionEnum.enum.DeAllocateNFT())
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, instruction_data))
     return client.send_transaction(transaction, payer_keypair)
