@@ -28,7 +28,7 @@ function LanguageContextProvider({
   children,
 }: LanguageContextProviderProps): JSX.Element {
   const initialState: Language = {
-    activeLanguage: localStorage.getItem("ingl_active_language") || "fr",
+    activeLanguage: localStorage.getItem("ingl_active_language") || "en",
     languageDispatch: () => null,
   };
 
