@@ -7,7 +7,7 @@ class Constants:
     INGL_MINT_AUTHORITY_KEY = "mint_authority"
     INGL_MINTING_POOL_KEY = "minting_pool"
     COLLECTION_HOLDER_KEY = "collection_holder"
-    INGL_PROGRAM_ID = PublicKey("E6PkWBF2vdztwVJ3gMnhavUqYUadZtD4sM3QYi9T1kiK")
+    INGL_PROGRAM_ID = PublicKey("7ddWcqSXa1n1HbVLUfBFgzQhkHEUsJD3CGTgg8DZZ5JJ")
     STAKE_PROGRAM_ID = PublicKey("Stake11111111111111111111111111111111111111")
     GLOBAL_GEM_KEY = "global_gem_account"
     GEM_ACCOUNT_CONST = "gem_account"
@@ -18,7 +18,7 @@ class Constants:
     AUTHORIZED_WITHDRAWER_KEY = "InglAuthorizedWithdrawer"
     VOTE_ACCOUNT_KEY = "InglVote"
     VOTE_DATA_ACCOUNT_KEY = "InglVoteData"
-    STAKE_ACCOUNT_KEY = "staking_account_key"
+    STAKE_ACCOUNT_KEY = "staking_account_key"   
     TREASURY_ACCOUNT_KEY = "Treasury_account_key"
     STAKE_CONFIG_PROGRAM_ID = PublicKey("StakeConfig11111111111111111111111111111111")
 

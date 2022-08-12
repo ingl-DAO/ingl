@@ -10,7 +10,7 @@ use solana_program::{
 };
 pub mod constants {
     use solana_program::{declare_id, native_token::LAMPORTS_PER_SOL};
-    declare_id!("E6PkWBF2vdztwVJ3gMnhavUqYUadZtD4sM3QYi9T1kiK");
+    declare_id!("7ddWcqSXa1n1HbVLUfBFgzQhkHEUsJD3CGTgg8DZZ5JJ");
 
     pub const INGL_TREASURY_ACCOUNT_KEY: &str = "ingl_treasury_account_key";
     pub const INGL_NFT_COLLECTION_KEY: &str = "ingl_nft_collection_newer";
@@ -22,7 +22,7 @@ pub mod constants {
     pub const FEE_MULTIPLYER: u8 = 10;
     pub const PRICE_TIME_INTERVAL: u8 = 20;
     pub const TREASURY_FEE_MULTIPLYER: u8 = 70;
-    pub const MAXIMUM_DELEGATABLE_STAKE: u64 = 10000 * LAMPORTS_PER_SOL;
+    pub const MAXIMUM_DELEGATABLE_STAKE: u64 = 5 * LAMPORTS_PER_SOL;
     pub const BTC_FEED_PUBLIC_KEY: &str = "9ATrvi6epR5hVYtwNs7BB7VCiYnd4WM7e8MfafWpfiXC";
     pub const SOL_FEED_PUBLIC_KEY: &str = "7LLvRhMs73FqcLkA8jvEE1AM2mYZXTmqfUv8GAEurymx";
     pub const ETH_FEED_PUBLIC_KEY: &str = "6fhxFvPocWapZ5Wa2miDnrX2jYRFKvFqYnX11GGkBo2f";
@@ -36,6 +36,7 @@ pub mod constants {
     pub const VOTE_DATA_ACCOUNT_KEY: &str = "InglVoteData";
     pub const STAKE_ACCOUNT_KEY: &str = "staking_account_key";
     pub const TREASURY_ACCOUNT_KEY: &str = "Treasury_account_key";
+    pub const T_STAKE_ACCOUNT_KEY: &str = "Temporary_stake_account_key";
 
     pub const VALIDATOR_ID_SHARE: u64 = 15;
     pub const TREASURY_SHARE: u64 = 13;
@@ -111,7 +112,9 @@ pub struct GlobalGems {
     pub dealloced_total: u64,
     pub is_proposal_ongoing: bool,
     pub proposal_numeration: u32,
-    pub validator_list: Vec<Pubkey>, //This is not the validator list to display for proposals
+    pub pending_delegation_total: u64,
+    pub validator_list: Vec<Pubkey>, //This is not the validator list to display for proposals check instead the ValidatorProposal Struct.
+                                     // pub winners_list: Vec<u32>, // To include next so as to
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
@@ -194,6 +197,7 @@ pub struct InglVoteAccountData {
     pub last_withdraw_epoch: u64,
     pub dealloced: u64,
     pub validator_id: Pubkey, //To Reconsider.
+    pub pending_delegation_total: u64,
     pub vote_rewards: Vec<VoteRewards>,
 }
 
