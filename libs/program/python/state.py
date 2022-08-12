@@ -7,7 +7,7 @@ class Constants:
     INGL_MINT_AUTHORITY_KEY = "mint_authority"
     INGL_MINTING_POOL_KEY = "minting_pool"
     COLLECTION_HOLDER_KEY = "collection_holder"
-    INGL_PROGRAM_ID = PublicKey("7ddWcqSXa1n1HbVLUfBFgzQhkHEUsJD3CGTgg8DZZ5JJ")
+    INGL_PROGRAM_ID = PublicKey("D7F68HKoDSMGY254ku5PPDnaN1qXFhFrcjDbvwMxm7sV")
     STAKE_PROGRAM_ID = PublicKey("Stake11111111111111111111111111111111111111")
     GLOBAL_GEM_KEY = "global_gem_account"
     GEM_ACCOUNT_CONST = "gem_account"
@@ -50,5 +50,6 @@ GlobalGems = CStruct(
     "dealloced_total" / U64,
     "is_proposal_ongoing" / Bool,
     "proposal_numeration" / U32,
+    "pending_delegation_total" / U64,
     "validator_list" / Vec(U8[32])
 )

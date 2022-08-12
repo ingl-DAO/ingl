@@ -94,9 +94,9 @@ pub fn finalize_proposal(program_id: &Pubkey, accounts: &[AccountInfo]) -> Progr
     let mut global_gem_account_data: GlobalGems =
         try_from_slice_unchecked(&global_gem_account_info.data.borrow())?;
 
-    if global_gem_account_data.pd_pool_total < MAXIMUM_DELEGATABLE_STAKE {
-        Err(InglError::TooEarly.utilize(Some("pd_pool_total")))?
-    }
+    // if global_gem_account_data.pd_pool_total < MAXIMUM_DELEGATABLE_STAKE {
+    //     Err(InglError::TooEarly.utilize(Some("pd_pool_total")))?
+    // }
     let (expected_proposal_id, _expected_proposal_bump) = Pubkey::find_program_address(
         &[
             PROPOSAL_KEY.as_ref(),
@@ -218,9 +218,9 @@ pub fn create_validator_selection_proposal(
     let mut global_gem_data: GlobalGems =
         try_from_slice_unchecked(&global_gem_account_info.data.borrow())?;
 
-    if global_gem_data.is_proposal_ongoing {
-        Err(InglError::TooEarly.utilize(Some("A Proposal Is Currently Ongoing")))?;
-    }
+    // if global_gem_data.is_proposal_ongoing {
+    //     Err(InglError::TooEarly.utilize(Some("A Proposal Is Currently Ongoing")))?;
+    // }
     global_gem_data.is_proposal_ongoing = true;
 
     let (expected_proposal_id, expected_proposal_bump) = Pubkey::find_program_address(
