@@ -29,12 +29,12 @@ export interface InglSummary {
 export interface Proposal {
   proposal_id: string;
   start_date: Date;
-  end_date?: Date;
+  end_date?: Date | undefined;
   is_ongoing: boolean;
   proposal_numeration: number;
-  winner: string;
+  winner: string | undefined;
   votes: number[];
-  validator_ids: number[][];
+  validator_ids: string[];
 }
 
 export interface Validator {
@@ -78,19 +78,27 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
     getProposalsData(connection)
       .then((proposals: any) => {
         const newProposals: Proposal[] = proposals.map(
-          (proposal: any, index: number) => ({
-            proposal_id: proposal?.proposal_pubkey.toString(),
-            start_date: proposal?.data?.date_created * 1000,
-            end_date: proposal?.data?.date_finalized * 1000,
-            votes: proposal?.data?.votes,
-            winner: new PublicKey(proposal?.data?.winner),
-            validator_ids: proposal?.data?.validator_ids,
-            is_ongoing:
-              index === proposals.length - 1 && !proposal?.data?.date_finalized
-                ? true
-                : false,
-            proposal_numeration: index + 1,
-          })
+          (proposal: any, index: number) => {
+            console.log('proposal', proposal);
+            return {
+              proposal_id: proposal?.proposal_pubkey.toString(),
+              start_date: proposal?.data?.date_created * 1000,
+              end_date: proposal?.data?.date_finalized
+                ? proposal?.data?.date_finalized * 1000
+                : undefined,
+              votes: proposal?.data?.votes,
+              winner: proposal?.data?.winner
+                ? new PublicKey(proposal?.data?.winner).toString()
+                : undefined,
+              validator_ids: proposal?.data?.validator_ids,
+              is_ongoing:
+                index === proposals.length - 1 &&
+                !proposal?.data?.date_finalized
+                  ? true
+                  : false,
+              proposal_numeration: index + 1,
+            };
+          }
         );
         setProposals(newProposals);
         const newSelectedProposal = proposals.find(
@@ -162,26 +170,42 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
   useEffect(() => {
     //TODO: FETCH DATA OF THE selected proposal here
     if (selectedProposal) {
+      const notif = new useNotification();
       setIsLoadingProposalData(true);
       const validatorStats: Validator[] = [];
-      console.log(getValidatorsDetail());
-      selectedProposal.validator_ids.forEach((validator) => {
-        const data = connection.getParsedAccountInfo(
-          new PublicKey('7LH3HCmvnJRvHvzinbDerTNQ2GvLvdnukdx1dQ26aCFt')
-        );
-        console.log(data);
-        validatorStats.push({
-          validator_pub_key: new PublicKey(validator).toString(),
-          asn: 'AS12424',
-          asn_concentration: 0.34,
-          av_distance: 15,
-          score: 60,
-          skip_rate: 23,
-          solana_cli: '2.3.33',
-        });
-      });
-      setValidators(validatorStats);
-      setIsLoadingProposalData(false);
+      getValidatorsDetail(selectedProposal.validator_ids)
+        .then((validators) => {
+          validators.forEach((validator) => {
+            validatorStats.push({
+              validator_pub_key: validator.pubkey,
+              asn: validator.details?.autonomous_system_number,
+              asn_concentration: 0.34,
+              av_distance: 15,
+              score: 60,
+              skip_rate: validator.details?.skipped_slot_percent,
+              solana_cli: validator.details?.software_version,
+            });
+          });
+          setValidators(validatorStats);
+        })
+        .catch((error) =>
+          notif.update({
+            type: 'ERROR',
+            render: (
+              <ErrorMessage
+                retryFunction={() => null}
+                notification={notif}
+                message={
+                  error?.message ||
+                  "There was a problem revealing your gem's rarity"
+                }
+              />
+            ),
+            autoClose: false,
+            icon: () => <ReportRounded fontSize="large" color="error" />,
+          })
+        )
+        .finally(() => setIsLoadingProposalData(false));
     }
   }, [selectedProposal]);
 

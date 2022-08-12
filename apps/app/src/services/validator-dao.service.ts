@@ -28,6 +28,7 @@ import {
   AccountMeta,
   Connection,
   Keypair,
+  LAMPORTS_PER_SOL,
   PublicKey,
   SystemProgram,
   SYSVAR_RENT_PUBKEY,
@@ -40,7 +41,6 @@ import { LazyNft, Metaplex, Nft } from '@metaplex-foundation/js';
 import { inglGem } from '../components/nftDisplay';
 import { WalletNotConnectedError } from '@solana/wallet-adapter-base';
 import { deserialize, deserializeUnchecked } from '@dao-xyz/borsh';
-import axios from 'axios';
 
 const [minting_pool_key] = PublicKey.findProgramAddressSync(
   [Buffer.from(INGL_MINTING_POOL_KEY)],
@@ -142,10 +142,10 @@ export const getGlobalGemData = async (connection: Connection) => {
 
   return {
     counter: decodedData['counter'],
-    total_raised: Number(decodedData['total_raised']),
-    pd_pool_total: Number(decodedData['pd_pool_total']),
-    delegated_total: Number(decodedData['delegated_total']),
-    dealloced_total: Number(decodedData['dealloced_total']),
+    total_raised: Number(decodedData['total_raised']) / LAMPORTS_PER_SOL,
+    pd_pool_total: Number(decodedData['pd_pool_total']) / LAMPORTS_PER_SOL,
+    delegated_total: Number(decodedData['delegated_total']) / LAMPORTS_PER_SOL,
+    dealloced_total: Number(decodedData['dealloced_total']) / LAMPORTS_PER_SOL,
     proposal_numeration: decodedData['proposal_numeration'],
     is_proposal_ongoing: decodedData['is_proposal_ongoing'],
     validator_list: decodedData['validator_list'],
@@ -158,7 +158,6 @@ export const getProposalsData = async (connection: Connection) => {
   ).proposal_numeration;
 
   let proposalsPDAPromise = [];
-
   for (let i = 0; i < proposalsCounter; i++) {
     const promise = new Promise((resolve, reject) => {
       try {
@@ -203,15 +202,28 @@ export const getProposalsData = async (connection: Connection) => {
     const value = element?.data;
     // deserialize buffer data into readable format
     const data = deserializeUnchecked(ValidatorProposal, value);
-    decodedData.push({ proposal_pubkey: element?.proposal_pubkey, data: data });
+    decodedData.push({
+      proposal_pubkey: element?.proposal_pubkey,
+      data: {
+        ...data,
+        validator_ids: data.validator_ids.map((validator_id) =>
+          new PublicKey(validator_id).toString()
+        ),
+      },
+    });
   }
+  console.log(decodedData);
 
   return decodedData;
 };
 
-export const getValidatorsDetail = async () => {
+export const getValidatorsDetail = async (validator_ids: string[]) => {
   const token = '2N5SY2eQVFZJWu6LiRbY1m9X';
-  const validatorsList = await fetch(
+  const validatorsWithDetails = validator_ids.map((value) => ({
+    pubkey: value,
+    details: {} as any,
+  }));
+  let allValidators: any = await fetch(
     'https://www.validators.app/api/v1/validators/testnet.json',
     {
       headers: {
@@ -219,6 +231,21 @@ export const getValidatorsDetail = async () => {
       },
     }
   );
-
-  return validatorsList;
+  allValidators = await allValidators.json();
+  if (allValidators.length > 0) {
+    for (let i = 0; i < allValidators.length; i++) {
+      const validatorDetail = allValidators[i];
+      const index = validator_ids.findIndex(
+        (value, i) => value === validatorDetail?.account
+      );
+      if (index > -1) {
+        console.log(index);
+        validatorsWithDetails[index] = {
+          ...validatorsWithDetails[index],
+          details: { ...validatorDetail },
+        };
+      }
+    }
+  }
+  return validatorsWithDetails;
 };

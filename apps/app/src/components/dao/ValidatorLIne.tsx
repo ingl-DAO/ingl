@@ -44,7 +44,7 @@ export default function ValidatorLIne({
         <Typography variant="caption">{validator_pub_key}</Typography>
         <Tooltip arrow title="view in explorer">
           <a
-            href={`https://explorer.solana.com/address/${validator_pub_key}?cluster=devnet`}
+            href={`https://explorer.solana.com/address/${validator_pub_key}?cluster=testnet`}
             target="_"
           >
             <OpenInNew

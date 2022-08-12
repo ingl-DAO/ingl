@@ -61,7 +61,7 @@ export const BNB_HISTORY_BUFFER_KEY = new PublicKey(
   'DR6PqK15tD21MEGSLmDpXwLA7Fw47kwtdZeUMdT7vd7L'
 );
 export const INGL_PROGRAM_ID = new PublicKey(
-  '7ddWcqSXa1n1HbVLUfBFgzQhkHEUsJD3CGTgg8DZZ5JJ'
+  'D7F68HKoDSMGY254ku5PPDnaN1qXFhFrcjDbvwMxm7sV'
 );
 export const INGL_TREASURY_ACCOUNT_KEY = 'ingl_treasury_account_key';
 export const AUTHORIZED_WITHDRAWER_KEY = 'InglAuthorizedWithdrawer';
