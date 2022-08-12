@@ -21,9 +21,6 @@ import FinanceLine from './FinanceLine';
 import NftRow from './NftRow';
 import WalletTableHead from './TableHead';
 
-import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { getProposals } from '../../services/validator-dao.service';
-
 interface Gem {
   nft_id: string;
   image_ref: string;
@@ -202,10 +199,6 @@ export default function Wallet() {
       setSelectedGems(sortedNfts.slice(0, maxClaimableNft));
     }
   };
-  const { connection } = useConnection();
-  useEffect(() => {
-    getProposals(connection);
-  }, [connection]);
 
   return (
     <Box sx={{ display: 'grid', gridTemplateRows: 'auto 1fr', height: '100%' }}>

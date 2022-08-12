@@ -1,3 +1,4 @@
+import { field, fixedArray, option, vec } from '@dao-xyz/borsh';
 import { PublicKey } from '@solana/web3.js';
 import { deserializeUnchecked } from 'borsh';
 
@@ -232,6 +233,19 @@ const INGL_SCHEMA = new Map([
       fields: [['id', ['u8', 32]]],
     },
   ],
+  // [
+  //   ValidatorProposal,
+  //   {
+  //     kind: 'struct',
+  //     fields: [
+  //       ['validator_ids', [['u8', 32]]],
+  //       ['date_created', 'u32'],
+  //       ['date_finalized', { kind: 'option', type: 'u32' }],
+  //       ['votes', ['u32']],
+  //       ['winner', { kind: 'option', type: ['u8', 32] }],
+  //     ],
+  //   },
+  // ],
 ]);
 
 export async function decodeInglData<T>(
@@ -242,4 +256,37 @@ export async function decodeInglData<T>(
   buffer: Buffer
 ) {
   return deserializeUnchecked(INGL_SCHEMA, classType, buffer);
+}
+
+export class ValidatorProposal {
+  @field({ type: vec(fixedArray('u8', 32)) })
+  public validator_ids!: PublicKey[];
+
+  @field({ type: 'u32' })
+  public date_created!: number;
+
+  @field({ type: option('u32') })
+  public date_finalized!: null | number;
+
+  @field({ type: vec('u32') })
+  public votes!: number[];
+
+  @field({ type: option(fixedArray('u8', 32)) })
+  public winner!: null | PublicKey;
+
+  constructor(properties?: {
+    validator_ids: PublicKey[];
+    date_created: number;
+    date_finalized: number;
+    votes: number[];
+    winner: PublicKey;
+  }) {
+    if (properties) {
+      this.validator_ids = properties.validator_ids;
+      this.date_created = properties.date_created;
+      this.date_finalized = properties.date_finalized;
+      this.winner = properties.winner;
+      this.votes = properties.votes;
+    }
+  }
 }
