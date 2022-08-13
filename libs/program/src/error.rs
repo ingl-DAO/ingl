@@ -23,7 +23,10 @@ pub enum InglError{
     AlreadyVoted,
 
     #[error("A certain operation yielded a value beyond bounds")]
-    BeyondBounds
+    BeyondBounds,
+
+    #[error("Account data validation failed")]
+    InvalidValPhrase,
 }
 
 
@@ -54,6 +57,9 @@ impl InglError{
             }
             Self::BeyondBounds => {
                 if let Some(keyword) = keyword{msg!("Error: keyword={:} Value yielded beyond the specified boundaries", keyword);}
+            }
+            Self::InvalidValPhrase => {
+                if let Some(keyword) = keyword{msg!("Error: keyword={:} Validation Phrase Found in the sent account is different from that expected", keyword);}
             }
         }
         ProgramError::from(self)

@@ -61,7 +61,7 @@ export const BNB_HISTORY_BUFFER_KEY = new PublicKey(
   'DR6PqK15tD21MEGSLmDpXwLA7Fw47kwtdZeUMdT7vd7L'
 );
 export const INGL_PROGRAM_ID = new PublicKey(
-  'D7F68HKoDSMGY254ku5PPDnaN1qXFhFrcjDbvwMxm7sV'
+  '8Tzkyx2vprriFPFF2RYmSykKZ51L3H5ayGmvequZQh2F'
 );
 export const INGL_TREASURY_ACCOUNT_KEY = 'ingl_treasury_account_key';
 export const AUTHORIZED_WITHDRAWER_KEY = 'InglAuthorizedWithdrawer';
@@ -160,6 +160,7 @@ const INGL_SCHEMA = new Map([
     {
       kind: 'struct',
       fields: [
+        ['validation_phrase', 'u32'],
         ['counter', 'u32'],
         ['total_raised', 'u64'],
         ['pd_pool_total', 'u64'],
@@ -177,6 +178,7 @@ const INGL_SCHEMA = new Map([
     {
       kind: 'struct',
       fields: [
+        ['validation_phrase', 'u32'],
         ['proposal_id', ['u8', 32]],
         ['validator_index', 'u32'],
       ],
@@ -188,6 +190,7 @@ const INGL_SCHEMA = new Map([
       kind: 'struct',
       fields: [
         ['struct_id', 'u8'],
+        ['validation_phrase', 'u32'],
         ['date_created', 'u32'],
         ['class', 'u8'],
         ['redeemable_date', 'u32'],
@@ -260,6 +263,9 @@ export async function decodeInglData<T>(
 }
 
 export class ValidatorProposal {
+  @field({ type: 'u32' })
+  public validation_phrase!: number;
+
   @field({ type: vec(fixedArray('u8', 32)) })
   public validator_ids!: PublicKey[];
 
@@ -276,13 +282,15 @@ export class ValidatorProposal {
   public winner!: null | PublicKey;
 
   constructor(properties?: {
+    validation_phrase: number;
     validator_ids: PublicKey[];
     date_created: number;
-    date_finalized: number;
+    date_finalized: null | number;
     votes: number[];
-    winner: PublicKey;
+    winner: null | PublicKey;
   }) {
     if (properties) {
+      this.validation_phrase = properties.validation_phrase;
       this.validator_ids = properties.validator_ids;
       this.date_created = properties.date_created;
       this.date_finalized = properties.date_finalized;

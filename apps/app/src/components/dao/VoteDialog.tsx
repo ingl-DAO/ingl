@@ -1,3 +1,4 @@
+import { ReportRounded } from '@mui/icons-material';
 import {
   Box,
   Button,
@@ -10,9 +11,13 @@ import {
   Typography,
 } from '@mui/material';
 import { TransitionProps } from '@mui/material/transitions';
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import Scrollbars from 'rc-scrollbars';
 import { forwardRef, useEffect, useState } from 'react';
 import { Proposal, Validator } from '.';
+import ErrorMessage from '../../common/components/ErrorMessage';
+import useNotification from '../../common/utils/notification';
+import { loadInglGems } from '../../services/nft.service';
 import theme from '../../theme/theme';
 import DaoGem from './DaoGems';
 
@@ -56,7 +61,7 @@ const gemPrice: Record<
 export default function VoteDialog({
   isDialogOpen,
   closeDialog,
-  validator: { validator_pub_key },
+  validator: { validator_pub_key, total_vote },
   proposal: { is_ongoing, proposal_id },
   submitVote,
 }: {
@@ -66,48 +71,52 @@ export default function VoteDialog({
   proposal: Proposal;
   submitVote: (selectedGems: inglGem[]) => void;
 }) {
-  const [validatorVotes, setValidatorVotes] = useState<number>(0);
-  const [isValidatorVotesLoading, setIsValidatorVotesLoading] =
-    useState<boolean>(false);
+  const wallet = useWallet();
+  const { connection } = useConnection();
 
   const [areGemsLoading, setAreGemsLoading] = useState<boolean>(false);
   const [userGems, setUserGems] = useState<inglGem[]>([]);
-
-  useEffect(() => {
-    if (isDialogOpen && !is_ongoing) {
-      //TODO: FETCH DATA HERE WITH RESPECT TO THE VOTES OF THE VALIDATOR
-      setIsValidatorVotesLoading(true);
-      setTimeout(() => {
-        const newValidatorVotes = 3000;
-        setValidatorVotes(newValidatorVotes);
-        setIsValidatorVotesLoading(false);
-      }, 3000);
+  const loadGems = () => {
+    setAreGemsLoading(true);
+    const notif = new useNotification();
+    if (wallet?.publicKey) {
+      loadInglGems(connection, wallet.publicKey)
+        .then((inglGems: any) => {
+          setAreGemsLoading(false);
+          setUserGems(inglGems);
+        })
+        .catch((error) => {
+          notif.update({
+            type: 'ERROR',
+            render: (
+              <ErrorMessage
+                retryFunction={loadGems}
+                notification={notif}
+                message={
+                  error?.message ||
+                  "There was a problem revealing your gem's rarity"
+                }
+              />
+            ),
+            autoClose: false,
+            icon: () => <ReportRounded fontSize="large" color="error" />,
+          });
+        });
     }
+  };
+  useEffect(() => {
+    // if (isDialogOpen && !is_ongoing) {
+    //   //TODO: FETCH DATA HERE WITH RESPECT TO THE VOTES OF THE VALIDATOR
+    //   setIsValidatorVotesLoading(true);
+    //   setTimeout(() => {
+    //     const newValidatorVotes = 3000;
+    //     setValidatorVotes(newValidatorVotes);
+    //     setIsValidatorVotesLoading(false);
+    //   }, 3000);
+    // }
     if (isDialogOpen && is_ongoing) {
       //TODO: FETCH DATA HERE WITH RESPECT TO THE users gems
-      setAreGemsLoading(true);
-      setTimeout(() => {
-        const newUserGems: inglGem[] = [
-          {
-            image_ref:
-              'https://i2.wp.com/static.highsnobiety.com/thumbor/fv3lCYCfr6qZwmnh0eDHGzy_Xf4=/1600x1067/static.highsnobiety.com/wp-content/uploads/2021/04/24104434/chadwick-boseman-nft-art-01.jpg',
-            nft_id: 'helloworld',
-            generation: 1,
-            gemClass: 'Sapphire',
-            last_voted_proposal_id: 'h',
-          },
-          {
-            image_ref:
-              'https://i2.wp.com/static.highsnobiety.com/thumbor/fv3lCYCfr6qZwmnh0eDHGzy_Xf4=/1600x1067/static.highsnobiety.com/wp-content/uploads/2021/04/24104434/chadwick-boseman-nft-art-01.jpg',
-            nft_id: 'helloworlds',
-            generation: 1,
-            gemClass: 'Sapphire',
-            last_voted_proposal_id: 'kskdkslsldieks',
-          },
-        ];
-        setUserGems(newUserGems);
-        setAreGemsLoading(false);
-      }, 3000);
+      loadGems();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDialogOpen]);
@@ -159,14 +168,7 @@ export default function VoteDialog({
             sx={{ color: theme.palette.secondary.main }}
           >
             {!is_ongoing ? (
-              isValidatorVotesLoading ? (
-                <Skeleton
-                  variant="text"
-                  sx={{ backgroundColor: 'rgba(177,177,177,0.17)' }}
-                />
-              ) : (
-                validatorVotes
-              )
+              total_vote
             ) : areGemsLoading ? (
               <Skeleton
                 variant="text"

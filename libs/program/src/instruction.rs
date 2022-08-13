@@ -1,7 +1,7 @@
 use borsh::{BorshSerialize, BorshDeserialize};
 use solana_program::{
     pubkey::Pubkey,
-    instruction::{AccountMeta, Instruction}, system_instruction, sysvar, borsh::try_from_slice_unchecked,
+    instruction::{AccountMeta, Instruction}, system_instruction, sysvar, borsh::try_from_slice_unchecked, stake::instruction::StakeInstruction,
 };
 use serde::{Deserialize, Serialize};
 
@@ -128,4 +128,19 @@ pub fn vote_withdraw(
         data: VoteInstruction::Withdraw(lamports).try_to_vec().unwrap(),
         accounts: account_metas
     }
+}
+
+pub fn split(
+    stake_key: &Pubkey,
+    pd_pool_key: &Pubkey,
+    lamports: u64,
+    t_withdraw_key: &Pubkey,
+) -> Instruction {
+    let account_metas = vec![
+        AccountMeta::new(*stake_key, false),
+        AccountMeta::new(*t_withdraw_key, false),
+        AccountMeta::new_readonly(*pd_pool_key, true),
+    ];
+    
+    Instruction::new_with_bincode(solana_program::stake::program::id(), &StakeInstruction::Split(lamports), account_metas)
 }

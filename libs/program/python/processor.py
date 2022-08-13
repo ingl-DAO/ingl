@@ -1,3 +1,4 @@
+import base64
 import solana
 from solana.publickey import PublicKey
 from solana import system_program
@@ -300,17 +301,18 @@ def finalize_proposal(payer_keypair, proposal_numeration, client):
     global_gem_meta = AccountMeta(global_gem_pubkey, False, True)
     payer_account_meta = AccountMeta(payer_keypair.public_key, True, True)
     proposal_meta = AccountMeta(proposal_pubkey, False, True)
+    test = ProposalValidator.parse(base64.urlsafe_b64decode(client.get_account_info(proposal_pubkey)['result']['value']['data'][0]))
+    print(test)
+    # accounts = [
+    #     payer_account_meta,
+    #     proposal_meta,
+    #     global_gem_meta,
+    # ]
 
-    accounts = [
-        payer_account_meta,
-        proposal_meta,
-        global_gem_meta,
-    ]
-
-    instruction_data = build_instruction(InstructionEnum.enum.FinalizeProposal())
-    transaction = Transaction()
-    transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, instruction_data))
-    return client.send_transaction(transaction, payer_keypair)
+    # instruction_data = build_instruction(InstructionEnum.enum.FinalizeProposal())
+    # transaction = Transaction()
+    # transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, instruction_data))
+    # return client.send_transaction(transaction, payer_keypair)
 
 def delegate_nft(payer_keypair, mint_pubkey, expected_vote_pubkey, client):
     minting_pool_pubkey, _minting_pool_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.INGL_MINTING_POOL_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)

@@ -7,7 +7,7 @@ class Constants:
     INGL_MINT_AUTHORITY_KEY = "mint_authority"
     INGL_MINTING_POOL_KEY = "minting_pool"
     COLLECTION_HOLDER_KEY = "collection_holder"
-    INGL_PROGRAM_ID = PublicKey("D7F68HKoDSMGY254ku5PPDnaN1qXFhFrcjDbvwMxm7sV")
+    INGL_PROGRAM_ID = PublicKey("4ATadzrRQHetgSeByytfJRuVwWtXFPwKUySdb3279AGe")
     STAKE_PROGRAM_ID = PublicKey("Stake11111111111111111111111111111111111111")
     GLOBAL_GEM_KEY = "global_gem_account"
     GEM_ACCOUNT_CONST = "gem_account"
@@ -43,6 +43,7 @@ def keypair_from_json(filepath):
     return keypair
 
 GlobalGems = CStruct(
+    "validation_phrase" / U32,
     "counter" / U32,
     "total_raised" / U64,
     "pd_pool_total" / U64,
@@ -52,4 +53,13 @@ GlobalGems = CStruct(
     "proposal_numeration" / U32,
     "pending_delegation_total" / U64,
     "validator_list" / Vec(U8[32])
+)
+
+ProposalValidator = CStruct(
+    "validation_phrase" / U32,
+    "validator_ids" / Vec(U8[32]),
+    "date_created" / U32,
+    "date_finalized" / Option(U32),
+    "votes" / Vec(U32),
+    "winner" / Option(U8[32]),
 )

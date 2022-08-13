@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
 import { injectIntl, IntlShape } from 'react-intl';
 import ErrorMessage from '../../common/components/ErrorMessage';
 import useNotification from '../../common/utils/notification';
-import random from '../../common/utils/random';
 import theme from '../../theme/theme';
 import InglNumber from './inglNumber';
 import ProposalNumber from './ProposalNumber';
@@ -18,6 +17,7 @@ import {
   getGlobalGemData,
   getProposalsData,
   getValidatorsDetail,
+  voteValidatorProposal,
 } from '../../services/validator-dao.service';
 import { PublicKey } from '@solana/web3.js';
 export interface InglSummary {
@@ -46,10 +46,16 @@ export interface Validator {
   asn_concentration: number;
   score: number;
   vote_account?: string;
+  total_vote?: number;
+  is_winner?: boolean;
+  validator_index?: number;
 }
 
 function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
   const { connection } = useConnection();
+  const notif = new useNotification();
+
+  const wallet = useWallet();
 
   const [inglNumbers, setInglNumbers] = useState<InglSummary[]>([
     { title: 'counter', amount: 0, displayTitle: 'Total Nfts Minted' },
@@ -79,7 +85,6 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
       .then((proposals: any) => {
         const newProposals: Proposal[] = proposals.map(
           (proposal: any, index: number) => {
-            console.log('proposal', proposal);
             return {
               proposal_id: proposal?.proposal_pubkey.toString(),
               start_date: proposal?.data?.date_created * 1000,
@@ -175,18 +180,27 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
       const validatorStats: Validator[] = [];
       getValidatorsDetail(selectedProposal.validator_ids)
         .then((validators) => {
-          validators.forEach((validator) => {
+          validators.forEach((validator, index) => {
             validatorStats.push({
+              validator_index: index,
               validator_pub_key: validator.pubkey,
               asn: validator.details?.autonomous_system_number,
-              asn_concentration: 0.34,
-              av_distance: 15,
+              asn_concentration: validator.details?.autonomous_system_number
+                ? validator.details?.asn_concentration.toFixed(3)
+                : null,
+              av_distance: Number(
+                (validator.details?.average_distance / 1000).toFixed(3)
+              ),
               score: 60,
-              skip_rate: validator.details?.skipped_slot_percent,
+              skip_rate:
+                Number(validator.details?.skipped_slot_percent ?? 0) * 100,
               solana_cli: validator.details?.software_version,
+              total_vote: selectedProposal.votes[index],
+              is_winner: selectedProposal.winner === validator.pubkey,
             });
           });
           setValidators(validatorStats);
+          setIsLoadingProposalData(false);
         })
         .catch((error) =>
           notif.update({
@@ -247,14 +261,19 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
     if (notifs) setNotifs([...notifs, notif]);
     else setNotifs([notif]);
     notif.notify({ render: `Submitting your vote` });
+
     setIsSubmittingVote(true);
-    setTimeout(() => {
-      if (random() > 5) {
-        // TODO CALL API HERE TO  MINT NFT with class mintClass
+    voteValidatorProposal(
+      { connection, wallet },
+      selectedGems.map((gem) => new PublicKey(gem.nft_id)),
+      selectedValidator?.validator_index as number
+    )
+      .then((data) => {
         notif.update({
           render: 'Vote submitted successfully',
         });
-      } else {
+      })
+      .catch((error) => {
         notif.update({
           type: 'ERROR',
           render: (
@@ -262,15 +281,18 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
               retryFunction={() => voteValidator(selectedGems)}
               notification={notif}
               //TODO: this message is that coming from the backend
-              message="There was a problem submitting your vote"
+              message={
+                error?.message || 'There was a problem submitting your vote'
+              }
             />
           ),
           autoClose: false,
           icon: () => <ReportRounded fontSize="large" color="error" />,
         });
-      }
-      setIsSubmittingVote(false);
-    }, 3000);
+      })
+      .finally(() => {
+        setIsSubmittingVote(false);
+      });
   };
 
   return (
@@ -493,7 +515,11 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
                 justifyItems: 'center',
               }}
             >
-              <Typography sx={{ fontWeight: 'bold' }}>{title}</Typography>
+              <Typography sx={{ fontWeight: 'bold' }}>
+                {title === 'Actions' && selectedProposal?.is_ongoing === false
+                  ? 'Total Votes'
+                  : title}
+              </Typography>
             </Grid>
           ))}
         </Grid>
@@ -525,8 +551,12 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
                   selectedProposal ? selectedProposal.is_ongoing : false
                 }
                 onVote={(validator: Validator) => {
-                  setSelectedValidator(validator);
-                  setIsValidatorVoteDialogOpen(true);
+                  if (selectedProposal?.is_ongoing && !wallet.connected) {
+                    alert('Connect your wallet to vote');
+                  } else {
+                    setSelectedValidator(validator);
+                    setIsValidatorVoteDialogOpen(true);
+                  }
                 }}
               />
             ))

@@ -212,14 +212,15 @@ export const getProposalsData = async (connection: Connection) => {
       },
     });
   }
-  console.log(decodedData);
 
   return decodedData;
 };
 
 export const getValidatorsDetail = async (validator_ids: string[]) => {
-  const token = '2N5SY2eQVFZJWu6LiRbY1m9X';
-  const validatorsWithDetails = validator_ids.map((value) => ({
+  const token = process.env['NX_VALIDATOR_APP_TOKEN'];
+  const ASNFrequency: { [key: string]: any } = {};
+
+  let validatorsWithDetails = validator_ids.map((value) => ({
     pubkey: value,
     details: {} as any,
   }));
@@ -227,19 +228,24 @@ export const getValidatorsDetail = async (validator_ids: string[]) => {
     'https://www.validators.app/api/v1/validators/testnet.json',
     {
       headers: {
-        token,
+        token: token as string,
       },
     }
   );
+
   allValidators = await allValidators.json();
   if (allValidators.length > 0) {
     for (let i = 0; i < allValidators.length; i++) {
       const validatorDetail = allValidators[i];
+
+      ASNFrequency[validatorDetail.autonomous_system_number] =
+        Number(ASNFrequency[validatorDetail.autonomous_system_number] ?? 0) + 1;
+
       const index = validator_ids.findIndex(
         (value, i) => value === validatorDetail?.account
       );
+
       if (index > -1) {
-        console.log(index);
         validatorsWithDetails[index] = {
           ...validatorsWithDetails[index],
           details: { ...validatorDetail },
@@ -247,5 +253,138 @@ export const getValidatorsDetail = async (validator_ids: string[]) => {
       }
     }
   }
+
+  const totalASNConcentration = Object.values(ASNFrequency).reduce(
+    (acc, value) => acc + value
+  );
+  validatorsWithDetails = validatorsWithDetails.map((validatorDetail) => ({
+    ...validatorDetail,
+    details: {
+      ...validatorDetail.details,
+      asn_concentration:
+        (ASNFrequency[validatorDetail.details?.autonomous_system_number] /
+          totalASNConcentration) *
+        100,
+    },
+  }));
+  console.log(ASNFrequency, validatorsWithDetails);
+
+  const getDistanceFromLatLonInKm = (
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number
+  ) => {
+    const deg2rad = (deg: number) => {
+      return deg * (Math.PI / 180);
+    };
+    const R = 6371; // Radius of the earth in km
+    const dLat = deg2rad(lat2 - lat1); // deg2rad below
+    const dLon = deg2rad(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(deg2rad(lat1)) *
+        Math.cos(deg2rad(lat2)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const d = R * c; // Distance in km
+    return d;
+  };
+  for (let i = 0; i < validatorsWithDetails.length; i++) {
+    const validator: any = validatorsWithDetails[i];
+    let copyAllValidators = allValidators.map((validatorDetail: any) => ({
+      ...validatorDetail,
+      distance: getDistanceFromLatLonInKm(
+        validator.details?.latitude,
+        validator.details?.longitude,
+        validatorDetail?.latitude,
+        validatorDetail?.longitude
+      ),
+    }));
+    copyAllValidators = copyAllValidators.sort((valA: any, valB: any) => {
+      return new Date(valA?.distance) > new Date(valB?.distance) ? -1 : 1;
+    });
+    validator.details.average_distance =
+      copyAllValidators
+        .slice(0, 5)
+        .reduce((acc: number, value: any) => acc + value?.distance, 0) / 5;
+  }
   return validatorsWithDetails;
+};
+
+export const voteValidatorProposal = async (
+  walletConnection: { connection: Connection; wallet: WalletContextState },
+  nftPubkeys: PublicKey[],
+  validatorIndex: number
+) => {
+  const {
+    wallet: { publicKey: payerKey },
+    connection,
+  } = walletConnection;
+  if (!payerKey) throw new Error('Please connect your wallet');
+
+  const proposalsCounter = await (
+    await getGlobalGemData(connection)
+  ).proposal_numeration;
+
+  let accounts: AccountMeta[] = [];
+  const payerAccount: AccountMeta = {
+    pubkey: payerKey as PublicKey,
+    isSigner: true,
+    isWritable: true,
+  };
+
+  const [proposal_pubkey] = await PublicKey.findProgramAddressSync(
+    [Buffer.from(PROPOSAL_KEY), toBytesInt32(proposalsCounter - 1)],
+    INGL_PROGRAM_ID
+  );
+
+  const proposalAccount: AccountMeta = {
+    pubkey: proposal_pubkey,
+    isSigner: false,
+    isWritable: true,
+  };
+
+  accounts = [payerAccount, proposalAccount];
+
+  for (let i = 0; i < nftPubkeys.length; i++) {
+    const mint = nftPubkeys[i];
+    const [gem_pubkey] = PublicKey.findProgramAddressSync(
+      [Buffer.from(GEM_ACCOUNT_CONST), mint.toBuffer()],
+      INGL_PROGRAM_ID
+    );
+    const gemAccount: AccountMeta = {
+      pubkey: gem_pubkey,
+      isSigner: false,
+      isWritable: true,
+    };
+
+    const associatedTokenAccount: AccountMeta = {
+      pubkey: await getAssociatedTokenAddress(mint, payerAccount.pubkey),
+      isSigner: false,
+      isWritable: true,
+    };
+    const mintAccount: AccountMeta = {
+      pubkey: mint,
+      isSigner: false,
+      isWritable: false,
+    };
+    accounts.push(mintAccount);
+    accounts.push(associatedTokenAccount);
+    accounts.push(gemAccount);
+  }
+
+  const voteValidatorInstruction = new TransactionInstruction({
+    programId: INGL_PROGRAM_ID,
+    data: Buffer.from([nftPubkeys.length, validatorIndex]),
+    keys: [payerAccount, proposalAccount],
+  });
+  try {
+    await signAndConfirmTransaction(walletConnection, voteValidatorInstruction);
+  } catch (error) {
+    throw new Error(
+      'Vote validator proposal transaction failed with error ' + error
+    );
+  }
 };
