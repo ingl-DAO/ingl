@@ -1,12 +1,14 @@
-import { Box, Grid, Typography } from '@mui/material';
-import React from 'react';
+import { Box, Typography } from '@mui/material';
 import theme from '../theme/theme';
 import UserCard from './UserCard';
+import cyrial from '../assets/cyrial.png';
+import marco from '../assets/marco.png';
+import angelo from '../assets/angelo.png';
+import lorrain from '../assets/lorrain.png';
 
 export interface Member {
   imageRef: string;
-  twitterRef: string;
-  gitRef: string;
+  linkedinRef: string;
   role: string;
   fullname: string;
 }
@@ -14,36 +16,28 @@ export interface Member {
 export default function Team() {
   const members: Member[] = [
     {
-      fullname: 'John Doe',
-      role: 'CEO',
-      gitRef: 'https://gitlab.com/inglproject/ingl',
-      twitterRef: 'https://twitter.com',
-      imageRef:
-        'https://th.bing.com/th/id/R.304026e0e6ec56cf5be113f97e40ddbf?rik=nE6Kvw6%2biZQRKw&pid=ImgRaw&r=0',
+      fullname: 'Kamda Cyrial',
+      role: 'dev',
+      linkedinRef: 'https://www.linkedin.com/in/kamda-cyrial/',
+      imageRef: cyrial,
     },
     {
-      fullname: 'John Doe',
-      role: 'CEO',
-      gitRef: 'https://gitlab.com/inglproject/ingl',
-      twitterRef: 'https://twitter.com',
-      imageRef:
-        'https://th.bing.com/th/id/R.304026e0e6ec56cf5be113f97e40ddbf?rik=nE6Kvw6%2biZQRKw&pid=ImgRaw&r=0',
+      fullname: 'Kuidja Marco',
+      role: 'dev',
+      linkedinRef: 'https://www.linkedin.com/in/marco-kuidja',
+      imageRef: marco,
     },
     {
-      fullname: 'John Doe',
-      role: 'CEO',
-      gitRef: 'https://gitlab.com/inglproject/ingl',
-      twitterRef: 'https://twitter.com',
-      imageRef:
-        'https://th.bing.com/th/id/R.304026e0e6ec56cf5be113f97e40ddbf?rik=nE6Kvw6%2biZQRKw&pid=ImgRaw&r=0',
+      fullname: 'Ange Diepe',
+      role: 'dev',
+      linkedinRef: 'https://www.linkedin.com/in/diepe-angelo/',
+      imageRef: angelo,
     },
     {
-      fullname: 'John Doe',
-      role: 'CEO',
-      gitRef: 'https://gitlab.com/inglproject/ingl',
-      twitterRef: 'https://twitter.com',
-      imageRef:
-        'https://th.bing.com/th/id/R.304026e0e6ec56cf5be113f97e40ddbf?rik=nE6Kvw6%2biZQRKw&pid=ImgRaw&r=0',
+      fullname: 'Tchakoumi Lorrain',
+      role: 'dev',
+      linkedinRef: 'https://www.linkedin.com/in/ltchakoumi',
+      imageRef: lorrain,
     },
   ];
   return (
@@ -67,13 +61,14 @@ export default function Team() {
       <Box
         sx={{
           display: 'grid',
-          marginTop:{laptop:theme.spacing(17), mobile: theme.spacing(5)},
+          marginTop: { laptop: theme.spacing(17), mobile: theme.spacing(5) },
           gridTemplateColumns: {
-            mobile: 'auto',
+            mobile: '192px',
             laptop: 'auto auto auto auto',
           },
           rowGap: theme.spacing(3.75),
           columnGap: theme.spacing(5.75),
+          justifyContent:'center'
         }}
       >
         {members.map((member, index) => (
