@@ -335,7 +335,6 @@ def delegate_nft(payer_keypair, mint_pubkey, expected_vote_pubkey, client):
     
     vote_account_meta = AccountMeta(expected_vote_pubkey, False, True)
     sysvar_clock_meta = AccountMeta(solana.sysvar.SYSVAR_CLOCK_PUBKEY, False, False)
-    print(solana.sysvar.SYSVAR_STAKE_HISTORY_PUBKEY)
     sysvar_stake_history_meta = AccountMeta(solana.sysvar.SYSVAR_STAKE_HISTORY_PUBKEY, False, False)
     system_program_meta = AccountMeta(system_program.SYS_PROGRAM_ID, False, False)
     stake_config_program_meta = AccountMeta(ingl_constants.STAKE_CONFIG_PROGRAM_ID, False, False)
@@ -343,20 +342,14 @@ def delegate_nft(payer_keypair, mint_pubkey, expected_vote_pubkey, client):
 
     accounts = [
         payer_account_meta,
-        pd_pool_meta,
         vote_account_meta,
         ingl_vote_data_account_meta,
-        stake_account_meta,
         mint_account_meta,
         gem_account_meta,
         mint_associated_meta,
         global_gem_meta,
         sysvar_clock_meta,
-        sysvar_stake_history_meta,
         stake_config_program_meta,
-
-        system_program_meta,
-        stake_program_meta,
     ]
 
     # print(accounts)
@@ -388,7 +381,6 @@ def undelegate_nft(payer_keypair, mint_pubkey, expected_vote_pubkey, client):
     
     vote_account_meta = AccountMeta(expected_vote_pubkey, False, True)
     sysvar_clock_meta = AccountMeta(solana.sysvar.SYSVAR_CLOCK_PUBKEY, False, False)
-    print(solana.sysvar.SYSVAR_STAKE_HISTORY_PUBKEY)
     sysvar_stake_history_meta = AccountMeta(solana.sysvar.SYSVAR_STAKE_HISTORY_PUBKEY, False, False)
     system_program_meta = AccountMeta(system_program.SYS_PROGRAM_ID, False, False)
     stake_config_program_meta = AccountMeta(ingl_constants.STAKE_CONFIG_PROGRAM_ID, False, False)
@@ -426,7 +418,7 @@ def create_vote_account(validator_keypair, proposal_numeration, client):
     expected_stake_key, _expected_stake_bump = PublicKey.find_program_address([bytes(ingl_constants.STAKE_ACCOUNT_KEY, 'UTF-8'), bytes(expected_vote_pubkey)], ingl_constants.INGL_PROGRAM_ID)
     pd_pool_pubkey, _pd_pool_bump = PublicKey.find_program_address([bytes(ingl_constants.PD_POOL_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     
-
+    print(f"Vote_Account: {expected_vote_pubkey}")
 
     rent_account_meta = AccountMeta(solana.sysvar.SYSVAR_RENT_PUBKEY, False, False)
     sysvar_clock_meta = AccountMeta(solana.sysvar.SYSVAR_CLOCK_PUBKEY, False, False)
@@ -475,3 +467,23 @@ def create_vote_account(validator_keypair, proposal_numeration, client):
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, data))
     return client.send_transaction(transaction, validator_keypair)
+
+def close_proposal(payer_keypair, proposal_numeration, client):
+    global_gem_pubkey, _global_gem_bump = PublicKey.find_program_address([bytes(ingl_constants.GLOBAL_GEM_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
+    expected_vote_pubkey, _expected_vote_pubkey_nonce = PublicKey.find_program_address([bytes(ingl_constants.VOTE_ACCOUNT_KEY, "UTF-8"), (proposal_numeration).to_bytes(4,"big")], ingl_constants.INGL_PROGRAM_ID)
+    expected_vote_data_pubkey, _expected_vote_data_bump = PublicKey.find_program_address([bytes(ingl_constants.VOTE_DATA_ACCOUNT_KEY, 'UTF-8'), bytes(expected_vote_pubkey)], ingl_constants.INGL_PROGRAM_ID)
+    
+    payer_account_meta = AccountMeta(payer_keypair.public_key, True, True)
+    global_gem_meta = AccountMeta(global_gem_pubkey, False, True)
+    ingl_vote_data_account_meta = AccountMeta(expected_vote_data_pubkey, False, True)
+
+    accounts = [
+        payer_account_meta,
+        global_gem_meta,
+        ingl_vote_data_account_meta,
+    ]
+
+    data = InstructionEnum.build(InstructionEnum.enum.CloseProposal())
+    transaction = Transaction()
+    transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, data))
+    return client.send_transaction(transaction, payer_keypair)

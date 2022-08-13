@@ -59,6 +59,7 @@ pub fn process_instruction(
         InstructionEnum::NFTWithdraw{cnt} => nft_withdraw(program_id, accounts, cnt as usize)?,
         InstructionEnum::CloseProposal => close_proposal(program_id, accounts)?,
         InstructionEnum::InitRebalance => init_rebalance(program_id, accounts)?,
+        InstructionEnum::FinalizeRebalance => finalize_rebalance(program_id, accounts)?,
         _ => Err(ProgramError::InvalidInstructionData)?,
     })
 }
@@ -193,12 +194,13 @@ pub fn create_validator_selection_proposal(program_id: &Pubkey, accounts: &[Acco
         &[&[PROPOSAL_KEY.as_ref(), &global_gem_data.proposal_numeration.to_be_bytes(), &[expected_proposal_bump]]]
     )?;
 
+
     let proposal_data = ValidatorProposal{
         validation_phrase: VALIDATOR_PROPOSAL_VAL_PHRASE,
         validator_ids : global_gem_data.clone().validator_list, // Vec([id1, id2, id3, id4, id5])
         date_created : Clock::get()?.unix_timestamp as u32,
         date_finalized : None,
-        votes: [0, global_gem_data.clone().validator_list.len() as u32].to_vec(), //Vec([2, 3, 5, 2, 1]) The total Sol backing the NFTs used to vote.
+        votes: vec![0; global_gem_data.clone().validator_list.len() as usize], //Vec([2, 3, 5, 2, 1]) The total Sol backing the NFTs used to vote.
         winner: None
     };
 
@@ -1714,12 +1716,10 @@ pub fn delegate_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramRes
     let associated_token_account_info = next_account_info(account_info_iter)?;
     let global_gem_account_info = next_account_info(account_info_iter)?;
     let sysvar_clock_info = next_account_info(account_info_iter)?;
-    let sysvar_stake_history_info = next_account_info(account_info_iter)?;
     let stake_config_program_info = next_account_info(account_info_iter)?;
 
-    assert_pubkeys_exactitude(sysvar_clock_info.key, &sysvar::clock::id())?;
-    assert_pubkeys_exactitude(sysvar_stake_history_info.key, &sysvar::stake_history::id())?;
-    assert_pubkeys_exactitude(stake_config_program_info.key, &solana_program::stake::config::id())?;
+    assert_pubkeys_exactitude(sysvar_clock_info.key, &sysvar::clock::id()).expect("sysvar clock info");
+    assert_pubkeys_exactitude(stake_config_program_info.key, &solana_program::stake::config::id()).expect("stake config info");
 
     assert_is_signer(payer_account_info).unwrap();
 
@@ -1748,7 +1748,7 @@ pub fn delegate_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramRes
 
     let (expected_vote_data_pubkey, _expected_vote_data_bump) = Pubkey::find_program_address(&[VOTE_DATA_ACCOUNT_KEY.as_ref(), vote_account_info.key.as_ref()], program_id);
     assert_pubkeys_exactitude(&expected_vote_data_pubkey, ingl_vote_data_account_info.key).expect("Error: @vote_data_account_info");
-    assert_program_owned(ingl_vote_data_account_info)?;
+    assert_program_owned(ingl_vote_data_account_info).expect("ingl vote data account info");
     let mut ingl_vote_account_data = InglVoteAccountData::decode(ingl_vote_data_account_info)?;
 
     let (global_gem_pubkey, _global_gem_bump) =
@@ -2119,7 +2119,7 @@ pub fn init_rebalance(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
         &[&[T_WITHDRAW_KEY.as_ref(), vote_account_info.key.as_ref(), &[t_withdraw_bump]]]
     )?;
     invoke_signed(
-        &system_instruction::assign(t_withdraw_info.key, &solana_program::stake::program::id()),
+        &system_instruction::assign(t_withdraw_info.key, &stake::config::id()),
         &[t_withdraw_info.clone()],
         &[&[T_WITHDRAW_KEY.as_ref(), vote_account_info.key.as_ref(), &[t_withdraw_bump]]]
     )?;
@@ -2150,5 +2150,69 @@ pub fn init_rebalance(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
     global_gem_data.dealloced_total = global_gem_data.dealloced_total.checked_sub(ingl_vote_account_data.dealloced).unwrap();
     ingl_vote_account_data.dealloced = 0;
     ingl_vote_account_data.pending_validator_rewards = val_owners_lamports;
+
+    ingl_vote_account_data.serialize(&mut &mut ingl_vote_data_account_info.data.borrow_mut()[..])?;
+    global_gem_data.serialize(&mut &mut global_gem_account_info.data.borrow_mut()[..])?;
+    Ok(())
+}
+
+pub fn finalize_rebalance(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+    let account_info_iter = &mut accounts.iter();
+    let _payer_account_info = next_account_info(account_info_iter)?;
+    let vote_account_info = next_account_info(account_info_iter)?;
+    let validator_account_info = next_account_info(account_info_iter)?;
+    let t_stake_account_info = next_account_info(account_info_iter)?;
+    let pd_pool_account_info = next_account_info(account_info_iter)?;
+    let ingl_vote_data_account_info = next_account_info(account_info_iter)?;
+    let sysvar_clock_info = next_account_info(account_info_iter)?;
+    let sysvar_rent_info = next_account_info(account_info_iter)?;
+    let stake_account_info = next_account_info(account_info_iter)?;
+    let t_withdraw_info = next_account_info(account_info_iter)?;
+    let sysvar_stake_history_info = next_account_info(account_info_iter)?;
+
+
+    let (pd_pool_pubkey, pd_pool_bump) =
+        Pubkey::find_program_address(&[PD_POOL_KEY.as_ref()], program_id);
+    assert_pubkeys_exactitude(&pd_pool_pubkey, pd_pool_account_info.key)
+        .expect("Error: @pd_pool_account_info");
+    
+    let (expected_t_stake_key, _expected_t_stake_bump) = Pubkey::find_program_address(&[T_STAKE_ACCOUNT_KEY.as_ref()], program_id);
+    assert_pubkeys_exactitude(&expected_t_stake_key, t_stake_account_info.key)?;
+
+    let (expected_vote_data_pubkey, _expected_vote_data_bump) = Pubkey::find_program_address(&[VOTE_DATA_ACCOUNT_KEY.as_ref(), vote_account_info.key.as_ref()], program_id);
+    assert_pubkeys_exactitude(&expected_vote_data_pubkey, ingl_vote_data_account_info.key).expect("Error: @vote_data_account_info");
+    assert_program_owned(ingl_vote_data_account_info)?;
+    let mut ingl_vote_account_data = InglVoteAccountData::decode(ingl_vote_data_account_info)?;
+    
+    assert_pubkeys_exactitude(sysvar_stake_history_info.key, &sysvar::stake_history::id())?;
+    assert_pubkeys_exactitude(&ingl_vote_account_data.validator_id, validator_account_info.key )?;
+
+    let (expected_stake_key, _expected_stake_bump) = Pubkey::find_program_address(&[STAKE_ACCOUNT_KEY.as_ref(), vote_account_info.key.as_ref()], program_id);
+    assert_pubkeys_exactitude(&expected_stake_key, stake_account_info.key).expect("stake account info");
+
+    let(expected_t_withdraw_key, _t_withdraw_bump) = Pubkey::find_program_address(&[T_WITHDRAW_KEY.as_ref(), vote_account_info.key.as_ref()], program_id);
+    assert_pubkeys_exactitude(&expected_t_withdraw_key, t_withdraw_info.key).expect("Error: @t_withdraw info");
+
+    invoke_signed(
+        &solana_program::stake::instruction::merge(stake_account_info.key, t_stake_account_info.key, pd_pool_account_info.key)[0],
+        &[stake_account_info.clone(), t_stake_account_info.clone(), sysvar_clock_info.clone(), sysvar_rent_info.clone(), pd_pool_account_info.clone()],
+        &[&[PD_POOL_KEY.as_ref(), &[pd_pool_bump]]]
+    )?;
+    // let lamports = if let Some(dlamports) = ingl_vote_account_data.pending_validator_rewards{dlamports} else {Err(InglError::TooEarly.utilize(Some("init rebalance not active"))).unwrap()};
+    invoke_signed(
+        &solana_program::stake::instruction::withdraw(t_withdraw_info.key, pd_pool_account_info.key, validator_account_info.key, if let Some(dlamports) = ingl_vote_account_data.pending_validator_rewards{dlamports} else {Err(InglError::TooEarly.utilize(Some("init rebalance not active")))?}, None),
+        &[t_withdraw_info.clone(), validator_account_info.clone(), sysvar_clock_info.clone(), sysvar_stake_history_info.clone(), pd_pool_account_info.clone()],
+        &[&[PD_POOL_KEY.as_ref(), &[pd_pool_bump]]]
+    )?;
+
+    invoke_signed(
+        &solana_program::stake::instruction::withdraw(t_withdraw_info.key, pd_pool_account_info.key, validator_account_info.key, t_withdraw_info.lamports(), None),
+        &[t_withdraw_info.clone(), validator_account_info.clone(), sysvar_clock_info.clone(), sysvar_stake_history_info.clone(), pd_pool_account_info.clone()],
+        &[&[PD_POOL_KEY.as_ref(), &[pd_pool_bump]]]
+    )?;
+
+    ingl_vote_account_data.pending_validator_rewards = None;
+
+    ingl_vote_account_data.serialize(&mut &mut ingl_vote_data_account_info.data.borrow_mut()[..])?;
     Ok(())
 }

@@ -20,6 +20,9 @@ InstructionEnum = Enum(
     "ValidatorWithdraw",
     "NFTWithdraw" / CStruct("cnt" / U32),
     "ProcessRewards",
+    "CloseProposal",
+    "InitRebalance",
+    "FinalizeRebalance",
     
     enum_name = "InstructionEnum",
 )

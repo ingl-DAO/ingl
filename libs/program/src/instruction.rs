@@ -29,6 +29,7 @@ pub enum InstructionEnum {
     ProcessRewards,
     CloseProposal,
     InitRebalance,
+    FinalizeRebalance,
 }
 
 
