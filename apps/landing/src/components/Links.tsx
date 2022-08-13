@@ -7,7 +7,7 @@ export default function Links() {
   const LINKS: { tooltip: string; link: string; icon: JSX.Element }[] = [
     {
       tooltip: 'github',
-      link: 'https://gitlab.com/inglproject/ingl',
+      link: 'https://github.com/ingl-DAO/ingl',
       icon: <GitHub color="secondary" />,
     },
     {
