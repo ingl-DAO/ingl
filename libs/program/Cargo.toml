@@ -27,7 +27,7 @@ crate-type = ["cdylib", "lib"]
 
 [package.metadata.x]
 deploy-pubkey = "solana-keygen pubkey ./deploy/keypair.json"
-new-deploy-address = "solana-keygen new -o ./deploy/keypair.json --force"
+new-deploy-address = "solana-keygen new -o ./deploy/keypair.json --no-bip39-passphrase --force"
 build-deploy-address = "solana config set --url https://api.devnet.solana.com && cargo build-bpf && solana program deploy --program-id ./deploy/keypair.json ../../target/deploy/ingl.so"
 build-deploy = "solana config set --url https://api.devnet.solana.com && cargo build-bpf && solana program deploy ../../target/deploy/ingl.so"
 build-deploy-address-testnet = "solana config set --url https://api.testnet.solana.com && cargo build-bpf && solana program deploy --program-id ./deploy/keypair.json ../../target/deploy/ingl.so"
