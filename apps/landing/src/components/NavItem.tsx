@@ -47,7 +47,6 @@ const ExternalNavItem = ({
       component="a"
       href={link}
       rel="noreferrer"
-      target="_blank"
       sx={{
         ...theme.typography.h1,
         fontSize: {mobile:'0.8rem', laptop:'1.25rem'},

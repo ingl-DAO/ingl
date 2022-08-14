@@ -7,23 +7,85 @@ import SectionTitle from './SectionTitle';
 export default function SectionCard() {
   const sections: {
     title: string;
-    description: string;
+    paragraphs: { text: { value: string; ref?: string }[] }[];
     image: string;
     buttonText: string;
     buttonLink: string;
   }[] = [
     {
-      title: 'nft Collections',
-      description:
-        "Lorem ipsum s simply dummy text of the printing and typesetting industry.Lo Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      title: 'ingl Gems',
+      paragraphs: [
+        {
+          text: [
+            {
+              value:
+                'Sol backed and redeemable nfts. They are backed by an equivalent amount of sol used to mint.',
+            },
+          ],
+        },
+        {
+          text: [
+            {
+              value: 'There are different classes, each representing the ',
+            },
+            {
+              value: 'amount of Sol',
+              ref: 'https://whitepaper.ingl.io',
+            },
+            {
+              value:
+                ' backing it. Each gem has one of six rarities and mints under a specific generation.',
+            },
+          ],
+        },
+        {
+          text: [
+            {
+              value:
+                'Ingl gems are our governance unit and are necessary to create and vote proposals and also to vote for the next onboarding validator.',
+            },
+          ],
+        },
+      ],
       image: DSOLER_CARD,
       buttonText: 'Start Minting Now',
-      buttonLink: 'https://app.ingl.io/mint',
+      buttonLink: 'https://app.ingl.io/',
     },
     {
       title: 'VALIDATORS',
-      description:
-        "Lorem ipsum s simply dummy text of the printing and typesetting industry.Lo Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      paragraphs: [
+        {
+          text: [
+            {
+              value:
+                "ingl DAO's mission is to profitably onboard as much validators as possible to the Solana blockchain. This is done by providing the equivalent daily voting fees to validator owners and sharing their voting rewards to the gem owners.",
+            },
+          ],
+        },
+        {
+          text: [
+            {
+              value: 'With minimum ',
+            },
+            {
+              value: 'solona validator requirements',
+              ref: 'https://whitepaper.ingl.io',
+            },
+            {
+              value:
+                ' met, device owners can onboard their computing unit to the solana network without worries of the necessary voting.',
+            },
+          ],
+        },
+        {
+          text: [
+            {
+              value:
+                'Onboarded computing units keep part of voting rewards and share the rest with  other participants.',
+            },
+          ],
+        },
+      ],
       image: Validator,
       buttonText: 'Onboard PC Now',
       buttonLink: 'https://app.ingl.io/onboard',
@@ -32,7 +94,7 @@ export default function SectionCard() {
   return (
     <>
       {sections.map(
-        ({ title, description, image, buttonText, buttonLink }, index) => (
+        ({ title, paragraphs, image, buttonText, buttonLink }, index) => (
           <Grid
             container
             direction={index % 2 === 1 ? 'row-reverse' : 'row'}
@@ -53,7 +115,34 @@ export default function SectionCard() {
             </Grid>
             <Grid item mobile={12} laptop={8.2}>
               <SectionTitle title={title} />
-              <Typography>{description}</Typography>
+              {paragraphs.map(({ text }, index) => (
+                <Typography
+                  key={index}
+                  sx={{
+                    marginBottom:
+                      index + 1 === paragraphs.length ? 0 : theme.spacing(2.5),
+                  }}
+                >
+                  {text.map(({ value, ref }, pIndex) =>
+                    ref !== undefined ? (
+                      <Typography
+                        component="a"
+                        href={ref}
+                        rel="noreferrer"
+                        sx={{
+                          color: theme.palette.secondary.main,
+                        }}
+                      >
+                        {value}
+                      </Typography>
+                    ) : (
+                      <Typography component="span" key={pIndex}>
+                        {value}
+                      </Typography>
+                    )
+                  )}
+                </Typography>
+              ))}
               <Button
                 color="primary"
                 variant="contained"
@@ -61,7 +150,6 @@ export default function SectionCard() {
                 component="a"
                 href={buttonLink}
                 rel="noreferrer"
-                target="_blank"
                 sx={{ borderRadius: '90px', marginTop: theme.spacing(7.125) }}
               >
                 {buttonText}

@@ -27,10 +27,10 @@ function ElevationScroll(props: Props) {
 const NAV_LINKS: { name: string; link: string; isExternal: boolean }[] = [
   {
     name: 'Whitepaper',
-    link: 'https://whitepaper.dsoldao.io',
+    link: 'https://whitepaper.ingl.io',
     isExternal: true,
   },
-  { name: 'Join our discord', link: 'https://discord.com', isExternal: true },
+  { name: 'Join our discord', link: 'https://discord.gg/9KWvjKV3Ed', isExternal: true },
   { name: 'Explore', link: '/', isExternal: false },
 ];
 
@@ -126,7 +126,7 @@ export default function Navbar() {
             color="primary"
             variant="contained"
             component="a"
-            href="https://app.ingl.io/mint"
+            href="https://app.ingl.io/"
             rel="noreferrer"
             target="_blank"
             sx={{
@@ -135,7 +135,7 @@ export default function Navbar() {
               display: { laptop: 'initial', mobile: 'none' },
             }}
           >
-            Get Started
+            Visit App
           </Button>
           <IconButton
             onClick={toggleDrawer}

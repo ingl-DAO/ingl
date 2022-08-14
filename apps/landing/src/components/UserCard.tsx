@@ -1,15 +1,21 @@
-import { GitHub, Twitter } from '@mui/icons-material';
+import { LinkedIn } from '@mui/icons-material';
 import { Box, Tooltip, Typography } from '@mui/material';
 import theme from '../theme/theme';
 import { Member } from './Team';
 
 export default function UserCard({
-  member: { imageRef, twitterRef, gitRef, role, fullname },
+  member: { imageRef, linkedinRef, role, fullname },
 }: {
   member: Member;
 }) {
   return (
-    <Box sx={{ borderRadius: '10px', position: 'relative' }}>
+    <Box
+      sx={{
+        borderRadius: '30px',
+        position: 'relative',
+        backgroundColor: `rgba(0,0,0,0.2)`,
+      }}
+    >
       <Box sx={{ height: { laptop: '300px', mobile: '192px' } }}>
         <img
           src={imageRef}
@@ -73,22 +79,12 @@ export default function UserCard({
           <Box>
             <Typography
               component="a"
-              href={twitterRef}
+              href={linkedinRef}
               rel="noreferrer"
               target="_blank"
             >
-              <Tooltip arrow title={`${fullname}'s twitter`}>
-                <Twitter color="secondary" fontSize="small" />
-              </Tooltip>
-            </Typography>
-            <Typography
-              component="a"
-              href={gitRef}
-              rel="noreferrer"
-              target="_blank"
-            >
-              <Tooltip arrow title={`${fullname}'s git`}>
-                <GitHub color="secondary" fontSize="small" />
+              <Tooltip arrow title={`${fullname}'s linkedin`}>
+                <LinkedIn color="secondary" />
               </Tooltip>
             </Typography>
           </Box>

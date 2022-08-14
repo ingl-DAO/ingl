@@ -6,18 +6,7 @@ export default function HeroSection() {
   return (
     <Grid container spacing={4.5} sx={{ marginTop: 12.3 }}>
       <Grid item container mobile={12} laptop={6.5} alignContent="center">
-        <Grid item mobile={12} sx={{textAlign:'justify'}}>
-          <Typography
-            variant="h1"
-            sx={{
-              color: 'white',
-              textAlign: 'justify',
-              fontSize: { mobile: '2rem', laptop: '3.125rem' },
-            }}
-            component="span"
-          >
-            Bring Solana
-          </Typography>
+        <Grid item mobile={12} sx={{ textAlign: 'justify' }}>
           <Typography
             variant="h1"
             component="span"
@@ -29,8 +18,7 @@ export default function HeroSection() {
               fontSize: { mobile: '2rem', laptop: '3.125rem' },
             }}
           >
-            {' '}
-            Validators
+            Earn SOL
           </Typography>
           <Typography
             variant="h1"
@@ -42,7 +30,7 @@ export default function HeroSection() {
             }}
           >
             {' '}
-            to live by buying redeemable
+            by purchasing equivalently backed and {' '}
           </Typography>
           <Typography
             color="secondary"
@@ -50,8 +38,7 @@ export default function HeroSection() {
             component="span"
             sx={{ fontSize: { mobile: '2rem', laptop: '3.125rem' } }}
           >
-            {' '}
-            Nfts
+            redeemable ingl gems
           </Typography>
           <Typography
             variant="h1"
@@ -61,18 +48,16 @@ export default function HeroSection() {
               textAlign: 'justify',
               fontSize: { mobile: '2rem', laptop: '3.125rem' },
             }}
-          >
-            {' '}
-            and staking to a
+          >{' '}
+            and delegating to
           </Typography>
           <Typography
             color="secondary"
             variant="h1"
             component="span"
             sx={{ fontSize: { mobile: '2rem', laptop: '3.125rem' } }}
-          >
-            {' '}
-            DAO Voted Validator
+          >{' '}
+            DAO voted validators
           </Typography>
         </Grid>
         <Box
@@ -91,13 +76,12 @@ export default function HeroSection() {
             }}
             variant="contained"
             color="primary"
-            size='large'
+            size="large"
             component="a"
-            href='https://app.ingl.io/mint'
+            href="https://app.ingl.io/"
             rel="noreferrer"
-            target="_blank"      
           >
-            Get Started
+            Visit App
           </Button>
           <Button
             sx={{
@@ -105,11 +89,10 @@ export default function HeroSection() {
             }}
             variant="contained"
             color="secondary"
-            size='large'
+            size="large"
             component="a"
-            href='https://whitepaper.ingl.io'
+            href="https://whitepaper.ingl.io"
             rel="noreferrer"
-            target="_blank"      
           >
             Whitepaper
           </Button>
