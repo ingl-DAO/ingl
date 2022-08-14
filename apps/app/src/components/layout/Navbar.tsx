@@ -2,9 +2,10 @@ import { useState } from 'react';
 import Box from '@mui/material/Box';
 import Logo from '../../assets/logo.png';
 import theme from '../../theme/theme';
-import { Button, IconButton, SwipeableDrawer, Tooltip } from '@mui/material';
+import { IconButton, SwipeableDrawer, Tooltip } from '@mui/material';
 import NavItem, { ExternalNavItem } from './NavItem';
 import { MenuRounded } from '@mui/icons-material';
+import ConnectButton from './ConnectButton';
 
 const NAV_LINKS: { name: string; link: string; isExternal: boolean }[] = [
   {
@@ -14,7 +15,11 @@ const NAV_LINKS: { name: string; link: string; isExternal: boolean }[] = [
   },
   { name: 'DAO', link: '/dao', isExternal: false },
   { name: 'Wallet', link: '/wallet', isExternal: false },
-  { name: 'Onboard Validator', link: 'https://onboarding.ingl.io', isExternal: true },
+  {
+    name: 'Onboard Validator',
+    link: 'https://onboarding.ingl.io',
+    isExternal: true,
+  },
 ];
 
 export default function Navbar() {
@@ -41,7 +46,7 @@ export default function Navbar() {
         paddingTop: theme.spacing(5),
         display: 'grid',
         rowGap: theme.spacing(5),
-        gridTemplateRows: 'auto auto auto auto 1fr',
+        gridTemplateRows: 'auto auto auto auto auto 1fr',
       }}
       role="presentation"
       onClick={toggleDrawer}
@@ -60,6 +65,7 @@ export default function Navbar() {
           <ExternalNavItem link={{ link, name }} />
         )
       )}
+      <ConnectButton isSideNavElement={true}/>
     </Box>
   );
 
@@ -99,22 +105,11 @@ export default function Navbar() {
                 {name}
               </NavItem>
             ) : (
-              <ExternalNavItem link={{ link, name }} />
+              <ExternalNavItem key={index} link={{ link, name }} />
             )
           )}
         </Box>
-        <Button
-          color="primary"
-          variant="outlined"
-          sx={{
-            borderRadius: '90px',
-            justifySelf: 'end',
-            color:'white',
-            display: { laptop: 'initial', mobile: 'none' },
-          }}
-        >
-          Connect Wallet
-        </Button>
+        <ConnectButton />
         <IconButton
           onClick={toggleDrawer}
           sx={{ display: { laptop: 'none', mobile: 'initial' } }}

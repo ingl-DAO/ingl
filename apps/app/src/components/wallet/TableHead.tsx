@@ -9,7 +9,7 @@ const WalletTableHead = ({
   isDisabled: boolean;
   onSelectAllClick: () => void;
 }) => {
-  const tableColumns = ['Ingl Gem', 'Validator Pub Key', 'Rewards (SOL)'];
+  const tableColumns = ['Ingl Gem', 'Vote Account Pub Key', 'Rewards (SOL)'];
   return (
     <TableHead>
       <TableRow>

@@ -6,16 +6,16 @@ export default function NftRow({
   selectNft,
   isClaimingDialog,
   isNftsLoading,
-  rowData: { image_ref, validator_pub_key, rewards },
+  rowData: { image_ref, vote_account_id, rewards },
 }: {
   isChecked: boolean;
   selectNft: () => void;
   isClaimingDialog: boolean;
   isNftsLoading: boolean;
-  rowData: { image_ref: string; validator_pub_key: string; rewards: number };
+  rowData: { image_ref: string; vote_account_id: string; rewards: number };
 }) {
   return (
-    <TableRow sx={{'&:last-child td, &:last-child th': { border: 0 } }}>
+    <TableRow sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
       <TableCell component="th" scope="row">
         <Checkbox
           checked={isChecked}
@@ -31,10 +31,10 @@ export default function NftRow({
           sx={{ height: '75px', width: '75px' }}
         />
       </TableCell>
-      <TableCell width='100%' align="left" sx={{ color: theme.common.line }}>
-        {validator_pub_key}
+      <TableCell width="100%" align="left" sx={{ color: theme.common.line }}>
+        {vote_account_id}
       </TableCell>
-      <TableCell 
+      <TableCell
         align="right"
         sx={{ color: theme.palette.secondary.main }}
       >{`${rewards}`}</TableCell>

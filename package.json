@@ -11,6 +11,7 @@
   "dependencies": {
     "@emotion/react": "^11.9.3",
     "@emotion/styled": "^11.9.3",
+    "@metaplex-foundation/js": "^0.13.3",
     "@metaplex-foundation/mpl-token-metadata": "^2.2.2",
     "@mui/icons-material": "^5.8.4",
     "@mui/material": "^5.9.0",
@@ -23,18 +24,30 @@
     "@solana/wallet-adapter-wallets": "^0.17.0",
     "@solana/web3.js": "^1.50.1",
     "@types/uuid": "^8.3.4",
+    "assert": "^2.0.0",
+    "borsh": "^0.7.0",
+    "browserify-zlib": "^0.2.0",
+    "buffer": "^6.0.3",
+    "buffer-browserify": "^0.2.5",
     "core-js": "^3.6.5",
+    "crypto-browserify": "^3.12.0",
     "formik": "^2.2.9",
     "moment": "^2.29.4",
+    "path-browserify": "^1.0.1",
     "rc-scrollbars": "^1.1.5",
     "react": "18.2.0",
+    "react-app-rewired": "^2.2.1",
     "react-dom": "18.2.0",
     "react-intl": "^6.0.5",
     "react-router": "^6.4.0-pre.2",
     "react-router-dom": "^6.4.0-pre.2",
+    "react-scripts": "^5.0.1",
     "react-toastify": "^9.0.5",
     "regenerator-runtime": "0.13.7",
+    "stream-browserify": "^3.0.0",
     "tslib": "^2.3.0",
+    "uint32": "^0.2.1",
+    "util": "^0.12.4",
     "uuid": "^8.3.2",
     "yup": "^0.32.11"
   },
@@ -52,6 +65,7 @@
     "@types/node": "16.11.7",
     "@types/react": "18.0.14",
     "@types/react-dom": "18.0.5",
+    "@types/uint32": "^0.2.0",
     "@typescript-eslint/eslint-plugin": "^5.29.0",
     "@typescript-eslint/parser": "^5.29.0",
     "babel-jest": "27.5.1",
@@ -70,5 +84,19 @@
     "ts-jest": "27.1.4",
     "ts-node": "~10.8.0",
     "typescript": "~4.7.2"
+  },
+  "browserslist": {
+    "production": [
+      "chrome >= 67",
+      "edge >= 79",
+      "firefox >= 68",
+      "opera >= 54",
+      "safari >= 14"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   }
 }

@@ -5,11 +5,22 @@ import {
   ReportRounded,
 } from '@mui/icons-material';
 import { Box, Button, Menu, MenuItem, Typography } from '@mui/material';
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { PublicKey } from '@solana/web3.js';
 import moment from 'moment';
+import { useEffect } from 'react';
 import { useState } from 'react';
 import ErrorMessage from '../../common/components/ErrorMessage';
 import useNotification from '../../common/utils/notification';
-import random from '../../common/utils/random';
+import {
+  allocateSol,
+  deallocatedSol,
+  delegateNft,
+  loadInglGems,
+  mintInglGem,
+  redeemInglGem,
+} from '../../services/nft.service';
+import { NftClass, Rarity } from '../../services/state';
 import theme from '../../theme/theme';
 import SectionTitle from '../layout/SectionTitle';
 import ActionDialog from './ActionDialog';
@@ -19,11 +30,11 @@ import SelectValidatorDialog from './SelectValidatorDialog';
 
 export interface inglGem {
   nft_id: string;
-  image_ref: string;
-  video_ref:string;
-  generation: number;
-  rarity?: string;
-  gemClass: string;
+  image_ref?: string;
+  video_ref?: string;
+  generation?: number;
+  rarity?: Rarity;
+  gemClass?: string;
   allocation_date?: string | Date;
   is_allocated: boolean;
   is_delegated: boolean;
@@ -38,16 +49,20 @@ export interface dialogContent {
   agreeFunction: () => void;
 }
 
-export enum NftClass {
-  Ruby,
-  Diamond,
-  Sapphire,
-  Emerald,
-  Serendibite,
-  Benitoite,
-}
+export type NftAction =
+  | 'redeem'
+  | 'take_loan'
+  | 'allocate'
+  | 'deallocate'
+  | 'delegate'
+  | 'undelegate';
+
+export type AttName = 'is_redeemable' | 'is_allocated' | 'is_delegated';
 
 export default function NftDisplay() {
+  const wallet = useWallet();
+  const { connection } = useConnection();
+
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const handleClose = () => {
@@ -55,7 +70,7 @@ export default function NftDisplay() {
     setAnchorEl(null);
   };
   interface nftOption {
-    attName?: 'is_redeemable' | 'is_allocated' | 'is_delegated';
+    attName?: AttName;
     dispName: string;
   }
 
@@ -74,10 +89,7 @@ export default function NftDisplay() {
     handleClose();
   };
 
-  const sortNft = (
-    nfts: inglGem[],
-    selectionAttribute?: 'is_delegated' | 'is_allocated' | 'is_redeemable'
-  ) => {
+  const sortNft = (nfts: inglGem[], selectionAttribute?: AttName) => {
     if (selectionAttribute === undefined) return nfts;
     if (
       selectionAttribute !== 'is_redeemable' &&
@@ -94,32 +106,39 @@ export default function NftDisplay() {
       );
     }
   };
+  const [gems, setGems] = useState<inglGem[]>([]);
 
-  const gems: inglGem[] = [
-    {
-      image_ref:
-        'https://i2.wp.com/static.highsnobiety.com/thumbor/fv3lCYCfr6qZwmnh0eDHGzy_Xf4=/1600x1067/static.highsnobiety.com/wp-content/uploads/2021/04/24104434/chadwick-boseman-nft-art-01.jpg',
-        video_ref: 'https://arweave.net/l94pcNrsykFM27koaEAfdL3NkBhD6pJIrsdZWCfqcNY',
-        nft_id: 'helloworld',
-        generation: 1,
-        gemClass: 'Sapphire',
-        is_allocated: true,
-        is_delegated: false,
-        has_loan: false,
-        allocation_date: new Date(),
-      },
-      {
-        image_ref:
-        'https://i2.wp.com/static.highsnobiety.com/thumbor/fv3lCYCfr6qZwmnh0eDHGzy_Xf4=/1600x1067/static.highsnobiety.com/wp-content/uploads/2021/04/24104434/chadwick-boseman-nft-art-01.jpg',
-        video_ref: 'https://arweave.net/l94pcNrsykFM27koaEAfdL3NkBhD6pJIrsdZWCfqcNY',
-      nft_id: 'helloworlds',
-      generation: 1,
-      gemClass: 'Sapphire',
-      is_allocated: false,
-      is_delegated: true,
-      has_loan: true,
-    },
-  ];
+  const loadGems = () => {
+    const notif = new useNotification();
+    if (wallet?.publicKey) {
+      loadInglGems(connection, wallet.publicKey)
+        .then((inglGems) => {
+          setGems(inglGems);
+        })
+        .catch((error) => {
+          notif.update({
+            type: 'ERROR',
+            render: (
+              <ErrorMessage
+                retryFunction={loadGems}
+                notification={notif}
+                message={
+                  error?.message ||
+                  "There was a problem revealing your gem's rarity"
+                }
+              />
+            ),
+            autoClose: false,
+            icon: () => <ReportRounded fontSize="large" color="error" />,
+          });
+        });
+    }
+  };
+
+  useEffect(() => {
+    loadGems();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wallet?.publicKey]);
 
   const [isValidatorDialogOpen, setIsValidatorDialogOpen] =
     useState<boolean>(false);
@@ -130,9 +149,9 @@ export default function NftDisplay() {
     setIsValidatorDialogOpen(true);
   };
 
-  const [selectedValidatorId, setSelectedValidaorId] = useState<string>();
-  const getValidatorId = (validatorId: string) => {
-    setSelectedValidaorId(validatorId);
+  const [selectedVoteAccount, setSelectedVoteAccount] = useState<string>();
+  const getValidatorId = (vote_account: string) => {
+    setSelectedVoteAccount(vote_account);
     if (toDelegateNft) activateDialog('delegate', toDelegateNft);
     else {
       const notif = new useNotification();
@@ -145,29 +164,16 @@ export default function NftDisplay() {
       });
     }
   };
+  useEffect(() => {
+    if (toDelegateNft) activateDialog('delegate', toDelegateNft);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedVoteAccount]);
 
   const [activeGemDialogContent, setActiveGemDialogContent] =
     useState<dialogContent>();
   const [isGemDialogOpen, setIsGemDialogOpen] = useState<boolean>(false);
-  const activateDialog = (
-    action:
-      | 'redeem'
-      | 'take loan'
-      | 'allocate'
-      | 'deallocate'
-      | 'delegate'
-      | 'undelegate',
-    nft_id: string
-  ) => {
-    const dialogContents: Record<
-      | 'redeem'
-      | 'take loan'
-      | 'allocate'
-      | 'deallocate'
-      | 'delegate'
-      | 'undelegate',
-      dialogContent
-    > = {
+  const activateDialog = (action: NftAction, nft_id: string) => {
+    const dialogContents: Record<NftAction, dialogContent> = {
       redeem: {
         title: 'Redeem Gem',
         content:
@@ -175,7 +181,7 @@ export default function NftDisplay() {
         agreeText: 'Redeem',
         agreeFunction: () => executeAction(action, nft_id),
       },
-      'take loan': {
+      take_loan: {
         title: 'Take Loan',
         content:
           'Are you sure you want to take a loan on this gem? this will prevent you from redeeming the nft should you want to. But also, you will have to pay 10% of the loan every month. Do you still want to continue?',
@@ -219,28 +225,50 @@ export default function NftDisplay() {
   const [actionNotifs, setActionNotifs] = useState<
     {
       notif: useNotification;
-      action:
-        | 'redeem'
-        | 'take loan'
-        | 'allocate'
-        | 'deallocate'
-        | 'delegate'
-        | 'undelegate';
+      action: NftAction;
       isExecuting: boolean;
       nft_id: string;
     }[]
   >();
 
-  const executeAction = (
-    action:
-      | 'redeem'
-      | 'take loan'
-      | 'allocate'
-      | 'deallocate'
-      | 'delegate'
-      | 'undelegate',
-    nft_id: string
-  ) => {
+  const notif = new useNotification();
+  const notificationContent: Record<
+    NftAction,
+    { executing: string; success: string; error: string }
+  > = {
+    redeem: {
+      executing: 'Please wait while we redeem your gem for you',
+      success: 'Gem successfully redeemed',
+      error: 'There was an error redeeming your gem. Please try again',
+    },
+    take_loan: {
+      executing: 'Please wait while we compute and give you your loan',
+      success: 'Loan sucessfully allocated',
+      error: 'There was an allocating the loan. Please try again',
+    },
+    allocate: {
+      executing: 'Please wait while we allocate your gem',
+      success: 'Gem sucessfully allocated',
+      error: 'There was an allocating the Gem. Please try again',
+    },
+    deallocate: {
+      executing: 'Please wait while we deallocate your gem',
+      success: 'Gem sucessfully deallocated',
+      error: 'There was an deallocating the Gem. Please try again',
+    },
+    delegate: {
+      executing: 'Please wait while we delegate your gem',
+      success: 'Gem sucessfully delegated',
+      error: 'There was an delegating the Gem. Please try again',
+    },
+    undelegate: {
+      executing: 'Please wait while we undelegate your gem',
+      success: 'Gem sucessfully undelegated',
+      error: 'There was an undelegating the Gem. Please try again',
+    },
+  };
+
+  const executeAction = (action: NftAction, nft_id: string) => {
     if (actionNotifs)
       setActionNotifs(
         actionNotifs?.filter((publishedNotif) => {
@@ -251,61 +279,42 @@ export default function NftDisplay() {
           return notifAction !== action || nft_id !== notifNft_id;
         })
       );
-    const notif = new useNotification();
     if (actionNotifs)
       setActionNotifs([
         ...actionNotifs,
         { action, nft_id, isExecuting: true, notif },
       ]);
     else setActionNotifs([{ action, nft_id, isExecuting: true, notif }]);
-
-    const notificationContent: Record<
-      | 'redeem'
-      | 'take loan'
-      | 'allocate'
-      | 'deallocate'
-      | 'delegate'
-      | 'undelegate',
-      { executing: string; success: string; error: string }
-    > = {
-      redeem: {
-        executing: 'Please wait while we redeem your gem for you',
-        success: 'Gem successfully redeemed',
-        error: 'There was an error redeeming your gem. Please try again',
+    const tokenMint = new PublicKey(nft_id);
+    notif.notify({ render: notificationContent[action].executing });
+    const actions: Record<NftAction, () => Promise<void>> = {
+      redeem: async () =>
+        await redeemInglGem({ connection, wallet }, tokenMint),
+      take_loan: async () => {
+        console.log('take a loan');
       },
-      'take loan': {
-        executing: 'Please wait while we compute and give you your loan',
-        success: 'Loan sucessfully allocated',
-        error: 'There was an allocating the loan. Please try again',
+      allocate: async () =>
+        await allocateSol({ connection, wallet }, tokenMint),
+      deallocate: async () =>
+        await deallocatedSol({ connection, wallet }, tokenMint),
+      delegate: async () => {
+        console.log(selectedVoteAccount);
+        await delegateNft(
+          { connection, wallet },
+          { tokenMint, voteMint: new PublicKey(selectedVoteAccount as string) }
+        );
       },
-      allocate: {
-        executing: 'Please wait while we allocate your gem',
-        success: 'Gem sucessfully allocated',
-        error: 'There was an allocating the Gem. Please try again',
-      },
-      deallocate: {
-        executing: 'Please wait while we deallocate your gem',
-        success: 'Gem sucessfully deallocated',
-        error: 'There was an deallocating the Gem. Please try again',
-      },
-      delegate: {
-        executing: 'Please wait while we delegate your gem',
-        success: 'Gem sucessfully delegated',
-        error: 'There was an delegating the Gem. Please try again',
-      },
-      undelegate: {
-        executing: 'Please wait while we undelegate your gem',
-        success: 'Gem sucessfully undelegated',
-        error: 'There was an undelegating the Gem. Please try again',
+      undelegate: async () => {
+        console.log('undelegate');
       },
     };
-    notif.notify({ render: notificationContent[action].executing });
-    setTimeout(() => {
-      if (random() > 5) {
-        // TODO CALL API HERE TO  REDEEM, TAKE LOAN, ALLOCATE, DEALLOCATE, DELEGATE, UNDELEGATE with data nft_id if the action is delegate then use the selectedValidatorId
+
+    actions[action]()
+      .then(() => {
         notif.update({
           render: notificationContent[action].success,
         });
+        loadGems();
         setActionNotifs(
           actionNotifs?.filter((publishedNotif) => {
             const { action: notifAction, nft_id: notifNft_id } = publishedNotif;
@@ -315,7 +324,9 @@ export default function NftDisplay() {
             return notifAction !== action || nft_id !== notifNft_id;
           })
         );
-      } else {
+        setIsMintingGem(false);
+      })
+      .catch((error) => {
         notif.update({
           type: 'ERROR',
           render: (
@@ -335,21 +346,19 @@ export default function NftDisplay() {
                 );
                 notif.dismiss();
               }}
-              //TODO: this message is that coming from the backend
-              message={notificationContent[action].error}
+              message={error?.message || notificationContent[action].error}
             />
           ),
           autoClose: false,
           icon: () => <ReportRounded fontSize="large" color="error" />,
         });
-      }
-      setIsMintingGem(false);
-    }, 3000);
+        setIsMintingGem(false);
+      });
   };
 
   const [notifs, setNotifs] = useState<useNotification[]>();
   const [isMintingGem, setIsMintingGem] = useState<boolean>(false);
-  const mintGem = (mintClass: NftClass) => {
+  const mintGem = (nftClass: NftClass) => {
     if (notifs) notifs.forEach((publishedNotif) => publishedNotif.dismiss());
     const notif = new useNotification();
     if (notifs) setNotifs([...notifs, notif]);
@@ -357,29 +366,37 @@ export default function NftDisplay() {
     notif.notify({ render: `Minting your awesome nft` });
     setIsMintingGem(true);
 
-    setTimeout(() => {
-      if (random() > 5) {
-        // TODO CALL API HERE TO  MINT NFT with class mintClass
+    mintInglGem(
+      {
+        connection,
+        wallet,
+      },
+      nftClass
+    )
+      .then(() => {
         notif.update({
           render: 'ingl Gem minted successfully',
         });
-      } else {
+        loadGems();
+        setIsMintingGem(false);
+      })
+      .catch((error) => {
         notif.update({
           type: 'ERROR',
           render: (
             <ErrorMessage
-              retryFunction={() => mintGem(mintClass)}
+              retryFunction={() => mintGem(nftClass)}
               notification={notif}
-              //TODO: this message is that coming from the backend
-              message="There was a problem minting your ingl Gem."
+              message={
+                error?.message || 'There was a problem minting your ingl Gem.'
+              }
             />
           ),
           autoClose: false,
           icon: () => <ReportRounded fontSize="large" color="error" />,
         });
-      }
-      setIsMintingGem(false);
-    }, 3000);
+        setIsMintingGem(false);
+      });
   };
 
   const displayGems = sortNft(gems, selectedAttribute.attName);
@@ -390,8 +407,8 @@ export default function NftDisplay() {
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: {laptop:'auto 1fr', mobile:'auto'},
-          justifyItems: {laptop:'initial', mobile:'center'},
+          gridTemplateColumns: { laptop: 'auto 1fr', mobile: 'auto' },
+          justifyItems: { laptop: 'initial', mobile: 'center' },
           alignItems: 'center',
           padding: theme.spacing(5.875),
           borderBottom: `1px solid ${theme.common.line}`,
@@ -402,9 +419,13 @@ export default function NftDisplay() {
           color="secondary"
           variant="contained"
           size="large"
-          sx={{ borderRadius: '90px', width: 'fit-content', justifySelf:{laptop:'end', mobile:'center'} }}
+          sx={{
+            borderRadius: '90px',
+            width: 'fit-content',
+            justifySelf: { laptop: 'end', mobile: 'center' },
+          }}
           onClick={() => setIsMintDialogOpen(true)}
-          disabled={isMintingGem || isMintDialogOpen}
+          disabled={!wallet.connected || isMintingGem || isMintDialogOpen}
         >
           Mint now
         </Button>
@@ -464,13 +485,13 @@ export default function NftDisplay() {
           color: 'white',
           display: 'grid',
           justifyItems: 'start',
-          justifyContent:'center',
+          justifyContent: 'center',
           gridTemplateColumns:
             displayGems.length === 0
               ? 'auto'
               : {
                   laptop: 'repeat(auto-fit, minmax(300px, 300px))',
-                  mobile: 'repeat(auto-fit, minmax(150px, 150px))',
+                  // mobile: 'repeat(auto-fit, minmax(150px, 150px))',
                 },
           columnGap: '53px',
           rowGap: '20px',
@@ -512,6 +533,7 @@ export default function NftDisplay() {
             <Gem
               gem={gem}
               key={index}
+              setGems={setGems}
               activateDialog={activateDialog}
               openDelegationDialog={openDelegationDialog}
               isDialogOpen={

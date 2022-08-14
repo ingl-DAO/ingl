@@ -13,9 +13,12 @@ import { inglGem } from '.';
 import theme from '../../theme/theme';
 import moment from 'moment';
 import useNotification from '../../common/utils/notification';
-import random from '../../common/utils/random';
 import ErrorMessage from '../../common/components/ErrorMessage';
 import ActionDialog from './ActionDialog';
+import { imprintRarity, loadGem } from '../../services/nft.service';
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { PublicKey } from '@solana/web3.js';
+import { Rarity } from '../../services/state';
 
 export default function Gem({
   gem: {
@@ -31,15 +34,17 @@ export default function Gem({
     has_loan,
     allocation_date,
   },
+  setGems,
   isDialogOpen,
   activateDialog,
   openDelegationDialog,
 }: {
   gem: inglGem;
+  setGems: React.Dispatch<React.SetStateAction<inglGem[]>>;
   activateDialog: (
     action:
       | 'redeem'
-      | 'take loan'
+      | 'take_loan'
       | 'allocate'
       | 'deallocate'
       | 'delegate'
@@ -73,14 +78,14 @@ export default function Gem({
         closeMenu();
       },
     },
-    {
-      title: 'take loan',
-      condition: !has_loan,
-      onClick: () => {
-        activateDialog('take loan', nft_id);
-        closeMenu();
-      },
-    },
+    // {
+    //   title: 'take loan',
+    //   condition: !has_loan,
+    //   onClick: () => {
+    //     activateDialog('take loan', nft_id);
+    //     closeMenu();
+    //   },
+    // },
     {
       title: 'allocate',
       condition: !is_delegated && !is_allocated,
@@ -127,8 +132,12 @@ export default function Gem({
     setMenuAnchor(null);
   };
 
+  const wallet = useWallet();
+  const { connection } = useConnection();
+
   const [isRevealingRarity, setIsRevealingRarity] = useState<boolean>(false);
   const [notifs, setNotifs] = useState<useNotification[]>();
+
   const revealRarity = () => {
     if (notifs) notifs.map((publishedNotif) => publishedNotif.dismiss());
     const notif = new useNotification();
@@ -137,34 +146,47 @@ export default function Gem({
     notif.notify({ render: "Revealing gem's rarity" });
     setIsRevealingRarity(true);
 
-    setTimeout(() => {
-      if (random() > 5) {
-        // TODO CALL API HERE TO  REVEAL NFT ID
+    imprintRarity({ connection, wallet }, new PublicKey(nft_id))
+      .then(async () => {
         notif.update({
           render: 'successfully revealed ingl gem rarity',
         });
-      } else {
+        const newGem = await loadGem(connection, new PublicKey(nft_id));
+        setGems((gems) =>
+          gems.map((gem) => {
+            return nft_id === gem.nft_id ? newGem : gem;
+          })
+        );
+      })
+      .catch((error) => {
         notif.update({
           type: 'ERROR',
           render: (
             <ErrorMessage
               retryFunction={revealRarity}
               notification={notif}
-              //TODO: this message is that coming from the backend
-              message="There was a problem revealing your gem's rarity"
+              message={
+                error?.message ||
+                "There was a problem revealing your gem's rarity"
+              }
             />
           ),
           autoClose: false,
           icon: () => <ReportRounded fontSize="large" color="error" />,
         });
-      }
-      setIsRevealingRarity(false);
-    }, 3000);
+      });
   };
 
   const [isRevealRarityDialogOpen, setIsRevealRarityDialogOpen] =
     useState<boolean>(false);
 
+  const rarityDisplayName = {
+    [Rarity.Common]: 'Common',
+    [Rarity.Uncommon]: 'Uncommon',
+    [Rarity.Rare]: 'Rare',
+    [Rarity.Exalted]: 'Exalted',
+    [Rarity.Mythic]: 'Mythic',
+  };
   return (
     <>
       <Box
@@ -196,13 +218,14 @@ export default function Gem({
               borderBottomLeftRadius: theme.spacing(2.5),
             }}
           >
-            {!rarity || !rarity_reveal_date ? (
+            {rarity === undefined || !rarity_reveal_date ? (
               <Button
                 variant="contained"
                 color="secondary"
                 disabled={isRevealingRarity}
                 onClick={() => setIsRevealRarityDialogOpen(true)}
                 sx={{
+                  zIndex: 1,
                   color: 'white',
                   borderRadius: '30px',
                   fontSize: { mobile: '0.55rem', laptop: 'initial' },
@@ -215,7 +238,7 @@ export default function Gem({
                 variant="h3"
                 sx={{ fontSize: { laptop: 'initial', mobile: '0.80rem' } }}
               >
-                {rarity}
+                {rarityDisplayName[rarity]}
               </Typography>
             )}
           </Box>
@@ -256,6 +279,7 @@ export default function Gem({
               <Tooltip arrow title="more">
                 <MoreHorizRounded
                   sx={{
+                    zIndex: 1,
                     color: 'white',
                     fontSize: { laptop: '35px', mobile: '25px' },
                   }}
@@ -282,7 +306,7 @@ export default function Gem({
                 textAlign: 'center',
               }}
             >
-              {generation}
+              {`G${generation}`}
             </Typography>
           </Box>
           <video
@@ -295,7 +319,7 @@ export default function Gem({
               objectFit: 'cover',
               height: '100%',
               width: '100%',
-              borderRadius: theme.spacing(2.5)
+              borderRadius: theme.spacing(2.5),
             }}
             poster={image_ref}
           />

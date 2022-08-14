@@ -97,6 +97,7 @@ pub fn finalize_proposal(program_id:&Pubkey, accounts: &[AccountInfo]) -> Progra
 
     let index = global_gem_account_data.validator_list.iter().position(|x| *x == proposal_data.winner.unwrap()).unwrap();
     global_gem_account_data.validator_list.remove(index);
+    global_gem_account_data.is_proposal_ongoing = false;
     global_gem_account_data.serialize(&mut &mut global_gem_account_info.data.borrow_mut()[..])?;
     Ok(())
 }
@@ -125,9 +126,9 @@ pub fn vote_validator_proposal(program_id: &Pubkey, accounts: &[AccountInfo], nu
         assert_pubkeys_exactitude(&gem_account_pubkey, gem_account_data_info.key)
             .expect("Error: @gem_account_info");
 
-            assert_program_owned(gem_account_data_info)?;
-            assert_owned_by(mint_account_info, &spl_program::id())?;
-            assert_owned_by(associated_token_account_info, &spl_program::id())?;
+        assert_program_owned(gem_account_data_info)?;
+        assert_owned_by(mint_account_info, &spl_program::id())?;
+        assert_owned_by(associated_token_account_info, &spl_program::id())?;
 
         assert_pubkeys_exactitude(
             &get_associated_token_address(payer_account_info.key, mint_account_info.key),
@@ -194,16 +195,19 @@ pub fn create_validator_selection_proposal(program_id: &Pubkey, accounts: &[Acco
     invoke_signed(
         &system_instruction::create_account(payer_account_info.key, &expected_proposal_id, rent_lamports, space as u64, program_id),
         &[payer_account_info.clone(), proposal_account_info.clone()],
-        &[&[PROPOSAL_KEY.as_ref(), &global_gem_data.proposal_numeration.to_be_bytes(), &[expected_proposal_bump]]]
+        &[&[
+            PROPOSAL_KEY.as_ref(),
+            &global_gem_data.proposal_numeration.to_be_bytes(),
+            &[expected_proposal_bump],
+        ]],
     )?;
-
 
     let proposal_data = ValidatorProposal{
         validation_phrase: VALIDATOR_PROPOSAL_VAL_PHRASE,
         validator_ids : global_gem_data.clone().validator_list, // Vec([id1, id2, id3, id4, id5])
         date_created : Clock::get()?.unix_timestamp as u32,
         date_finalized : None,
-        votes: vec![0; global_gem_data.clone().validator_list.len() as usize], //Vec([2, 3, 5, 2, 1]) The total Sol backing the NFTs used to vote.
+        votes: [0, global_gem_data.clone().validator_list.len() as u32].to_vec(), //Vec([2, 3, 5, 2, 1]) The total Sol backing the NFTs used to vote.
         winner: None
     };
 
@@ -274,14 +278,13 @@ pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
     let sysvar_stake_history_info = next_account_info(account_info_iter)?;
     let sysvar_stake_config_info = next_account_info(account_info_iter)?;
 
-
     assert_program_owned(global_gem_account_info)?;
     assert_program_owned(proposal_account_info)?;
     assert_pubkeys_exactitude(sysvar_clock_info.key, &sysvar::clock::id())?;
     assert_pubkeys_exactitude(sysvar_stake_history_info.key, &sysvar::stake_history::id())?;
     assert_pubkeys_exactitude(sysvar_stake_config_info.key, &solana_program::stake::config::id())?;
 
-    let (pd_pool_pubkey, pd_pool_bump) =
+    let (pd_pool_pubkey, _pd_pool_bump) =
         Pubkey::find_program_address(&[PD_POOL_KEY.as_ref()], program_id);
     assert_pubkeys_exactitude(&pd_pool_pubkey, pd_pool_account_info.key)
         .expect("Error: @pd_pool_account_info");
@@ -373,12 +376,16 @@ pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
         node_pubkey: *validator_info.key,
         authorized_voter: *validator_info.key,
         commission: 10,
-        authorized_withdrawer: authorized_withdrawer,
+        authorized_withdrawer,
     };
     invoke_signed(
         &vote_create_account(validator_info.key, vote_account_info.key),
         &[validator_info.clone(), vote_account_info.clone()],
-        &[&[VOTE_ACCOUNT_KEY.as_ref(), &(global_gem_data.proposal_numeration-1).to_be_bytes(), &[expected_vote_pubkey_bump]]],
+        &[&[
+            VOTE_ACCOUNT_KEY.as_ref(),
+            &(global_gem_data.proposal_numeration-1).to_be_bytes(),
+            &[expected_vote_pubkey_bump],
+        ]],
     )?;
     invoke(
         &vote_initialize_account(vote_account_info.key, &vote_init),
@@ -390,28 +397,33 @@ pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
         ],
     )?;
 
-
-    let authorized = &Authorized{staker :*pd_pool_account_info.key, withdrawer: *pd_pool_account_info.key};
-    let lockup =  &Lockup{unix_timestamp: 0, epoch: 0, custodian: *pd_pool_account_info.key};
+    let authorized = &Authorized {
+        staker: *pd_pool_account_info.key,
+        withdrawer: *pd_pool_account_info.key,
+    };
+    let lockup = &Lockup {
+        unix_timestamp: 0,
+        epoch: 0,
+        custodian: *pd_pool_account_info.key,
+    };
     
     let lamports = 1*LAMPORTS_PER_SOL + Rent::get()?.minimum_balance(std::mem::size_of::<StakeState>() as usize);
     msg!("creating account");
     invoke_signed(
         &system_instruction::create_account(validator_info.key, stake_account_info.key, lamports, std::mem::size_of::<StakeState>() as u64, &stake::program::id()),
         &[validator_info.clone(), stake_account_info.clone()],
-        &[&[STAKE_ACCOUNT_KEY.as_ref(), expected_vote_pubkey.as_ref(), &[expected_stake_bump]]]
+        &[&[
+            STAKE_ACCOUNT_KEY.as_ref(),
+            expected_vote_pubkey.as_ref(),
+            &[expected_stake_bump],
+        ]],
     )?;
     msg!("Initializing stake");
     invoke(
-        &solana_program::stake::instruction::initialize(stake_account_info.key, authorized, lockup ),
-        &[stake_account_info.clone(), sysvar_rent_info.clone()]
+        &solana_program::stake::instruction::initialize(stake_account_info.key, authorized, lockup),
+        &[stake_account_info.clone(), sysvar_rent_info.clone()],
     )?;
 
-    invoke_signed(
-        &solana_program::stake::instruction::delegate_stake(stake_account_info.key, pd_pool_account_info.key, vote_account_info.key),
-        &[stake_account_info.clone(), vote_account_info.clone(), sysvar_clock_info.clone(), sysvar_stake_history_info.clone(), sysvar_stake_config_info.clone(), pd_pool_account_info.clone()],
-        &[&[PD_POOL_KEY.as_ref(), &[pd_pool_bump]]]
-    )?;
 
     Ok(())
 }
@@ -1424,18 +1436,17 @@ pub fn imprint_rarity(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
 
     let mut gem_data = GemAccountV0_0_1::validate(GemAccountVersions::decode_unchecked(&gem_account_info.data.borrow())?)?;
     let now = Clock::get()?;
-    msg!(
-        "now: {}, sedd_time: {}",
-        now.unix_timestamp,
-        gem_data.rarity_seed_time.unwrap()
-    );
+    
     if (now.unix_timestamp as u32) < gem_data.rarity_seed_time.unwrap() {
         Err(InglError::TooEarly.utilize(Some("imprint_rarity")))?
     }
     if let Some(_) = gem_data.rarity {
         Err(ProgramError::InvalidAccountData)?
     }
-
+    if gem_data.rarity_seed_time.is_none() {
+        Err(ProgramError::InvalidAccountData)?
+    }
+    
     let btc_history = AggregatorHistoryBuffer::new(btc_feed_account_info)?;
     let AggregatorHistoryRow {
         value: btc_value,
@@ -1644,32 +1655,31 @@ pub fn redeem_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResul
         let treasury_funds = (redeem_fees as f32 * TREASURY_FEE_MULTIPLYER as f32 / 100.0) as u64;
         let mint_authority_funds = redeem_fees.checked_sub(treasury_funds).ok_or(InglError::BeyondBounds.utilize(Some("overflow or underflow: 2"))).unwrap();
 
-        invoke_signed(
-            &system_instruction::transfer(
-                &minting_pool_id,
-                &program_treasury_id,
-                treasury_funds,
-            ),
-            &[
-                minting_pool_account_info.clone(),
-                program_treasury_account_info.clone(),
-            ],
-            &[&[INGL_MINTING_POOL_KEY.as_ref(), &[minting_pool_bump]]],
-        )?;
-        invoke_signed(
-            &system_instruction::transfer(
-                &minting_pool_id,
-                &mint_authority_key,
-                mint_authority_funds,
-            ),
-            &[
-                minting_pool_account_info.clone(),
-                mint_authority_account_info.clone(),
-            ],
-            &[&[INGL_MINTING_POOL_KEY.as_ref(), &[minting_pool_bump]]],
-        )?;
-    }
-
+            invoke_signed(
+                &system_instruction::transfer(
+                    &minting_pool_id,
+                    &program_treasury_id,
+                    treasury_funds,
+                ),
+                &[
+                    minting_pool_account_info.clone(),
+                    program_treasury_account_info.clone(),
+                ],
+                &[&[INGL_MINTING_POOL_KEY.as_ref(), &[minting_pool_bump]]],
+            )?;
+            invoke_signed(
+                &system_instruction::transfer(
+                    &minting_pool_id,
+                    &mint_authority_key,
+                    mint_authority_funds,
+                ),
+                &[
+                    minting_pool_account_info.clone(),
+                    mint_authority_account_info.clone(),
+                ],
+                &[&[INGL_MINTING_POOL_KEY.as_ref(), &[minting_pool_bump]]],
+            )?;
+        }
     }
 
     msg!("Redeem_fees: {:?} lamports: {:?}",redeem_fees, gem_data.class.get_class_lamports());
@@ -1677,7 +1687,7 @@ pub fn redeem_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResul
         &system_instruction::transfer(
             &minting_pool_id,
             payer_account_info.key,
-            gem_data.class.get_class_lamports().checked_sub(redeem_fees).ok_or(InglError::BeyondBounds.utilize(Some("overflow or underflow: 3"))).unwrap(),
+            gem_data.class.get_class_lamports().checked_sub(redeem_fees).ok_or(Err(InglError::BeyondBounds.utilize(Some("overflow or underflow")))?).unwrap(),
         ),
         &[
             minting_pool_account_info.clone(),
@@ -2015,7 +2025,7 @@ pub fn nft_withdraw(program_id: &Pubkey, accounts: &[AccountInfo], cnt: usize) -
         let mut total_reward: u64 = 0;
         for i in interested_index..ingl_vote_account_data.vote_rewards.len(){
             let epoch_reward = ingl_vote_account_data.vote_rewards[i];
-            total_reward = total_reward.checked_add((gem_account_data.class.get_class_lamports() as f64 * (NFTS_SHARE as f64 * (epoch_reward.total_reward as f64 / 100.0) / epoch_reward.total_stake as f64))as u64).unwrap();
+            total_reward = total_reward.checked_add((gem_account_data.class.get_class_lamports() as f64 * (NFTS_SHARE as f64 * (epoch_reward.total_reward as f64 / 100.0) / epoch_reward.total_stake as f64))as u64).unwrap();//unsafe Get back to this Cyrial
         }
         gem_account_data.last_withdrawal_epoch = Some(Clock::get()?.epoch);
         gem_account_data.all_withdraws.push(total_reward);
