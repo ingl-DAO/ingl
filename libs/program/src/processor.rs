@@ -2282,13 +2282,15 @@ pub fn inject_testing_data(program_id: &Pubkey, accounts: &[AccountInfo], num_mi
         gem_account_data.serialize(&mut &mut gem_account_data_info.data.borrow_mut()[..])?;        
     }
     invoke(
-        &system_instruction::transfer(payer_account_info.key, authorized_withdrawer_info.key, 2* LAMPORTS_PER_SOL),
+        &system_instruction::transfer(payer_account_info.key, authorized_withdrawer_info.key, LAMPORTS_PER_SOL.checked_mul(12_000).unwrap().checked_div(10_000).unwrap()),
         &[payer_account_info.clone(), authorized_withdrawer_info.clone()]
     )?;
     // ingl_vote_account_data.vote_rewards = Vec::new();
     ingl_vote_account_data.vote_rewards.push(VoteRewards{validation_phrase: VOTE_REWARDS_VAL_PHRASE, epoch_number: chosen_epoch-1, total_stake: ingl_vote_account_data.total_delegated, total_reward: 1 * LAMPORTS_PER_SOL });
-    ingl_vote_account_data.vote_rewards.push(VoteRewards{validation_phrase: VOTE_REWARDS_VAL_PHRASE, epoch_number: chosen_epoch, total_stake: ingl_vote_account_data.total_delegated, total_reward: LAMPORTS_PER_SOL.checked_mul(10_000).unwrap().checked_div(10_000).unwrap() });
+    ingl_vote_account_data.vote_rewards.push(VoteRewards{validation_phrase: VOTE_REWARDS_VAL_PHRASE, epoch_number: chosen_epoch, total_stake: ingl_vote_account_data.total_delegated, total_reward: 2*LAMPORTS_PER_SOL });
     ingl_vote_account_data.last_withdraw_epoch = chosen_epoch-1;
+
+
 
     ingl_vote_account_data.serialize(&mut &mut ingl_vote_data_account_info.data.borrow_mut()[..])?;
 
