@@ -60,6 +60,7 @@ pub fn process_instruction(
         InstructionEnum::CloseProposal => close_proposal(program_id, accounts)?,
         InstructionEnum::InitRebalance => init_rebalance(program_id, accounts)?,
         InstructionEnum::FinalizeRebalance => finalize_rebalance(program_id, accounts)?,
+        InstructionEnum::InjectTestingData{num_nfts} => inject_testing_data(program_id, accounts, num_nfts)?,
         _ => Err(ProgramError::InvalidInstructionData)?,
     })
 }
@@ -338,7 +339,7 @@ pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
         pending_delegation_total: 0,
         is_t_stake_initialized: false,
         vote_rewards: Vec::new(),
-        last_total_staked: 0,
+        last_total_staked: LAMPORTS_PER_SOL + Rent::get()?.minimum_balance(std::mem::size_of::<StakeState>() as usize),
     };
 
     ingl_vote_data.serialize(&mut &mut ingl_vote_data_account_info.data.borrow_mut()[..])?;
@@ -394,7 +395,7 @@ pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
     let authorized = &Authorized{staker :*pd_pool_account_info.key, withdrawer: *pd_pool_account_info.key};
     let lockup =  &Lockup{unix_timestamp: 0, epoch: 0, custodian: *pd_pool_account_info.key};
     
-    let lamports = 1*LAMPORTS_PER_SOL + Rent::get()?.minimum_balance(std::mem::size_of::<StakeState>() as usize);
+    let lamports = LAMPORTS_PER_SOL + Rent::get()?.minimum_balance(std::mem::size_of::<StakeState>() as usize);
     msg!("creating account");
     invoke_signed(
         &system_instruction::create_account(validator_info.key, stake_account_info.key, lamports, std::mem::size_of::<StakeState>() as u64, &stake::program::id()),
@@ -1922,7 +1923,7 @@ pub fn process_rewards(program_id: &Pubkey, accounts: &[AccountInfo]) -> Program
         &[&[AUTHORIZED_WITHDRAWER_KEY.as_ref(), &[authorized_withdrawer_bump]]]
     )?;
 
-    if ingl_vote_account_data.vote_rewards[ingl_vote_account_data.vote_rewards.len() - 1].epoch_number >= Clock::get()?.epoch{
+    if ingl_vote_account_data.vote_rewards.len() > 0 && ingl_vote_account_data.vote_rewards[ingl_vote_account_data.vote_rewards.len().checked_sub(1).unwrap()].epoch_number >= Clock::get()?.epoch{
         Err(InglError::TooEarly.utilize(Some("processing reward")))?
     }
 
@@ -2009,13 +2010,20 @@ pub fn nft_withdraw(program_id: &Pubkey, accounts: &[AccountInfo], cnt: usize) -
         else{
             Err(InglError::InvalidFundsLocation.utilize(Some("Gem's fund location")))?
         }
-
-        let interested_epoch = gem_account_data.last_withdrawal_epoch.unwrap().max(gem_account_data.last_delegation_epoch.unwrap());
-        let interested_index =1 + ingl_vote_account_data.vote_rewards.iter().position(|x| x.epoch_number == interested_epoch).expect("couldn't fine the last withdrawal epoch");
+        
+        
+        let interested_epoch = if let Some(_) = gem_account_data.last_withdrawal_epoch {
+            gem_account_data.last_withdrawal_epoch.unwrap().max(gem_account_data.last_delegation_epoch.unwrap())
+        }
+        else {
+            gem_account_data.last_delegation_epoch.unwrap()
+        };
+        let interested_index =1 + ingl_vote_account_data.vote_rewards.iter().position(|x| x.epoch_number == interested_epoch).expect("couldn't find the last withdrawal epoch");
         let mut total_reward: u64 = 0;
         for i in interested_index..ingl_vote_account_data.vote_rewards.len(){
             let epoch_reward = ingl_vote_account_data.vote_rewards[i];
-            total_reward = total_reward.checked_add((gem_account_data.class.get_class_lamports() as f64 * (NFTS_SHARE as f64 * (epoch_reward.total_reward as f64 / 100.0) / epoch_reward.total_stake as f64))as u64).unwrap();
+            msg!("epoch_reward: {:?}", epoch_reward);
+            total_reward = total_reward.checked_add((gem_account_data.class.get_class_lamports() as f64 * NFTS_SHARE as f64 * epoch_reward.total_reward as f64 / (100.0 * epoch_reward.total_stake as f64))as u64).unwrap();
         }
         gem_account_data.last_withdrawal_epoch = Some(Clock::get()?.epoch);
         gem_account_data.all_withdraws.push(total_reward);
@@ -2237,5 +2245,52 @@ pub fn finalize_rebalance(program_id: &Pubkey, accounts: &[AccountInfo]) -> Prog
     ingl_vote_account_data.last_total_staked = stake_account_info.lamports();
 
     ingl_vote_account_data.serialize(&mut &mut ingl_vote_data_account_info.data.borrow_mut()[..])?;
+    Ok(())
+}
+
+pub fn inject_testing_data(program_id: &Pubkey, accounts: &[AccountInfo], num_mints: u32) -> ProgramResult{
+    let account_info_iter = &mut accounts.iter();
+    let payer_account_info = next_account_info(account_info_iter)?;
+    let vote_account_info = next_account_info(account_info_iter)?;
+    let ingl_vote_data_account_info = next_account_info(account_info_iter)?;
+    let authorized_withdrawer_info = next_account_info(account_info_iter)?;
+
+    let (expected_vote_data_pubkey, _expected_vote_data_bump) = Pubkey::find_program_address(&[VOTE_DATA_ACCOUNT_KEY.as_ref(), vote_account_info.key.as_ref()], program_id);
+    assert_pubkeys_exactitude(&expected_vote_data_pubkey, ingl_vote_data_account_info.key).expect("Error: @vote_data_account_info");
+    assert_program_owned(ingl_vote_data_account_info)?;
+    let mut ingl_vote_account_data = InglVoteAccountData::decode(ingl_vote_data_account_info)?;
+    
+    let chosen_epoch = Clock::get()?.epoch.saturating_sub(2);
+    for _ in 0..num_mints{
+        let mint_account_info = next_account_info(account_info_iter)?;
+        let gem_account_data_info = next_account_info(account_info_iter)?;
+
+        let (gem_account_pubkey, _gem_account_bump) = Pubkey::find_program_address(
+            &[GEM_ACCOUNT_CONST.as_ref(), mint_account_info.key.as_ref()],
+            program_id,
+        );
+        assert_pubkeys_exactitude(&gem_account_pubkey, gem_account_data_info.key).expect("Error: @gem_account_info");
+        assert_program_owned(gem_account_data_info)?;
+        assert_owned_by(mint_account_info, &spl_program::id())?;
+        let mut gem_account_data: GemAccountV0_0_1 = GemAccountV0_0_1::validate(GemAccountVersions::decode_unchecked(&gem_account_data_info.data.borrow())?)?;
+
+        if let FundsLocation::VoteAccount { vote_account_id } = gem_account_data.funds_location{
+            assert_pubkeys_exactitude(&vote_account_id, vote_account_info.key)?;
+        }
+        gem_account_data.last_delegation_epoch = Some(chosen_epoch-1);
+        gem_account_data.last_withdrawal_epoch = Some(chosen_epoch-1);
+        gem_account_data.serialize(&mut &mut gem_account_data_info.data.borrow_mut()[..])?;        
+    }
+    invoke(
+        &system_instruction::transfer(payer_account_info.key, authorized_withdrawer_info.key, 2* LAMPORTS_PER_SOL),
+        &[payer_account_info.clone(), authorized_withdrawer_info.clone()]
+    )?;
+    // ingl_vote_account_data.vote_rewards = Vec::new();
+    ingl_vote_account_data.vote_rewards.push(VoteRewards{validation_phrase: VOTE_REWARDS_VAL_PHRASE, epoch_number: chosen_epoch-1, total_stake: ingl_vote_account_data.total_delegated, total_reward: 1 * LAMPORTS_PER_SOL });
+    ingl_vote_account_data.vote_rewards.push(VoteRewards{validation_phrase: VOTE_REWARDS_VAL_PHRASE, epoch_number: chosen_epoch, total_stake: ingl_vote_account_data.total_delegated, total_reward: LAMPORTS_PER_SOL.checked_mul(10_000).unwrap().checked_div(10_000).unwrap() });
+    ingl_vote_account_data.last_withdraw_epoch = chosen_epoch-1;
+
+    ingl_vote_account_data.serialize(&mut &mut ingl_vote_data_account_info.data.borrow_mut()[..])?;
+
     Ok(())
 }

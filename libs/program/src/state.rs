@@ -244,7 +244,7 @@ impl ValidatorProposal{
 }
 }
 
-#[derive(BorshDeserialize, Copy, Clone, BorshSerialize)]
+#[derive(BorshDeserialize, Copy, Debug, Clone, BorshSerialize)]
 pub struct VoteRewards{
     pub validation_phrase: u32,
     pub epoch_number: u64,
@@ -263,7 +263,7 @@ impl VoteRewards{
                 a.validate()
     }
 }
-#[derive(BorshDeserialize, BorshSerialize)]
+#[derive(BorshDeserialize, Debug, BorshSerialize)]
 pub struct InglVoteAccountData{
     pub validation_phrase: u32,
     pub total_delegated: u64,

@@ -23,6 +23,7 @@ InstructionEnum = Enum(
     "CloseProposal",
     "InitRebalance",
     "FinalizeRebalance",
+    "InjectTestingData" / CStruct("num_nfts" / U32),
     
     enum_name = "InstructionEnum",
 )

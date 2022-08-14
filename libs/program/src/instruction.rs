@@ -30,6 +30,7 @@ pub enum InstructionEnum {
     CloseProposal,
     InitRebalance,
     FinalizeRebalance,
+    InjectTestingData{num_nfts: u32}
 }
 
 
@@ -38,6 +39,7 @@ impl InstructionEnum {
         try_from_slice_unchecked(data).unwrap()
     }
 }
+
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 pub enum VoteInstruction {
@@ -49,6 +51,23 @@ pub enum VoteInstruction {
     ///   2. `[]` Clock sysvar
     ///   3. `[SIGNER]` New validator identity (node_pubkey)
     InitializeAccount(VoteInit),
+
+    ///NOT FOR USAGE:  Authorize a key to send votes or issue a withdrawal
+    ///
+    /// # Account references
+    ///   0. `[WRITE]` Vote account to be updated with the Pubkey for authorization
+    ///   1. `[]` Clock sysvar
+    ///   2. `[SIGNER]` Vote or withdraw authority
+    Authorize(),
+
+    /// NOT FOR USAGE:   A Vote instruction with recent votes
+    ///
+    /// # Account references
+    ///   0. `[WRITE]` Vote account to vote with
+    ///   1. `[]` Slot hashes sysvar
+    ///   2. `[]` Clock sysvar
+    ///   3. `[SIGNER]` Vote authority
+    Vote(), //Not for usage
 
     /// Withdraw some amount of funds
     ///
@@ -105,11 +124,11 @@ pub fn vote_update_validator_identity(
         AccountMeta::new_readonly(*authorized_withdrawer_pubkey, true),
     ];
 
-    Instruction{
-        program_id: vote_program::id(),
-        data: VoteInstruction::UpdateValidatorIdentity.try_to_vec().unwrap(),
-        accounts: account_metas,
-    }
+    Instruction::new_with_bincode(
+        vote_program::id(),
+        &VoteInstruction::UpdateValidatorIdentity,
+        account_metas,
+    )
 }
 
 pub fn vote_withdraw(
@@ -124,11 +143,11 @@ pub fn vote_withdraw(
         AccountMeta::new_readonly(*authorized_withdrawer_pubkey, true),
     ];
 
-    Instruction{
-        program_id: vote_program::id(),
-        data: VoteInstruction::Withdraw(lamports).try_to_vec().unwrap(),
-        accounts: account_metas
-    }
+    Instruction::new_with_bincode(
+        vote_program::id(),
+        &VoteInstruction::Withdraw(lamports),
+        account_metas
+    )
 }
 
 pub fn split(

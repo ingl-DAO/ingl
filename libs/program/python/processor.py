@@ -523,7 +523,7 @@ def init_rebalance(payer_keypair, vote_account_pubkey, client):
         stake_program_meta,
         stake_program_meta,
     ]
-    print(accounts)
+    # print(accounts)
     data = InstructionEnum.build(InstructionEnum.enum.InitRebalance())
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, data))
@@ -573,6 +573,117 @@ def finalize_rebalance(payer_keypair, vote_account_pubkey, client):
     ]
 
     data = InstructionEnum.build(InstructionEnum.enum.FinalizeRebalance())
+    transaction = Transaction()
+    transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, data))
+    return client.send_transaction(transaction, payer_keypair)
+
+def process_rewards(payer_keypair, vote_account_id, client):
+    mint_authority_pubkey, _mint_authority_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.INGL_MINT_AUTHORITY_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
+    expected_vote_data_pubkey, _expected_vote_data_bump = PublicKey.find_program_address([bytes(ingl_constants.VOTE_DATA_ACCOUNT_KEY, 'UTF-8'), bytes(vote_account_id)], ingl_constants.INGL_PROGRAM_ID)
+    validator_id = PublicKey(InglVoteAccountData.parse(base64.urlsafe_b64decode(client.get_account_info(expected_vote_data_pubkey)['result']['value']['data'][0])).validator_id)
+    authorized_withdrawer_key, _authorized_withdrawer_bump = PublicKey.find_program_address([bytes(ingl_constants.AUTHORIZED_WITHDRAWER_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
+    treasury_key, _treasury_bump = PublicKey.find_program_address([bytes(ingl_constants.TREASURY_ACCOUNT_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
+    print(f"Validator_Id: {validator_id}")
+
+    treasury_meta = AccountMeta(treasury_key, False, True)
+    payer_account_meta = AccountMeta(payer_keypair.public_key, True, True)
+    validator_meta = AccountMeta(validator_id, False, True)
+    vote_account_meta = AccountMeta(vote_account_id, False, True)
+    sys_program_meta = AccountMeta(system_program.SYS_PROGRAM_ID, False, False)
+    vote_program_meta = AccountMeta(ingl_constants.VOTE_PROGRAM_ID, False, False)
+    mint_authority_meta = AccountMeta(mint_authority_pubkey, False, True)
+    ingl_vote_data_account_meta = AccountMeta(expected_vote_data_pubkey, False, True)
+    authorized_withdrawer_meta = AccountMeta(authorized_withdrawer_key, False, True)
+
+
+    accounts = [
+        payer_account_meta,
+        validator_meta,
+        vote_account_meta,
+        ingl_vote_data_account_meta,
+        authorized_withdrawer_meta,
+        mint_authority_meta,
+        treasury_meta,
+        
+        
+        vote_program_meta,
+        sys_program_meta,
+        sys_program_meta,
+        sys_program_meta,
+    ]
+    # print(accounts)
+    data = InstructionEnum.build(InstructionEnum.enum.ProcessRewards())
+    transaction = Transaction()
+    transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, data))
+    return client.send_transaction(transaction, payer_keypair)
+
+def nft_withdraw(payer_keypair, mints, vote_account_id, client):
+    expected_vote_data_pubkey, _expected_vote_data_bump = PublicKey.find_program_address([bytes(ingl_constants.VOTE_DATA_ACCOUNT_KEY, 'UTF-8'), bytes(vote_account_id)], ingl_constants.INGL_PROGRAM_ID)
+    validator_id = PublicKey(InglVoteAccountData.parse(base64.urlsafe_b64decode(client.get_account_info(expected_vote_data_pubkey)['result']['value']['data'][0])).validator_id)
+    authorized_withdrawer_key, _authorized_withdrawer_bump = PublicKey.find_program_address([bytes(ingl_constants.AUTHORIZED_WITHDRAWER_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
+
+    payer_account_meta = AccountMeta(payer_keypair.public_key, True, True)
+    validator_meta = AccountMeta(validator_id, False, True)
+    vote_account_meta = AccountMeta(vote_account_id, False, True)
+    sys_program_meta = AccountMeta(system_program.SYS_PROGRAM_ID, False, False)
+    authorized_withdrawer_meta = AccountMeta(authorized_withdrawer_key, False, True)
+    ingl_vote_data_account_meta = AccountMeta(expected_vote_data_pubkey, False, True)
+
+    accounts = [
+        payer_account_meta,
+        vote_account_meta,
+        validator_meta,
+        ingl_vote_data_account_meta,
+        authorized_withdrawer_meta,
+        
+    ]
+
+    for mint_pubkey in mints:
+        mint_associated_account_pubkey = assoc_instructions.get_associated_token_address(payer_keypair.public_key, mint_pubkey)
+        accounts.append(AccountMeta(mint_associated_account_pubkey, False, False))
+        accounts.append(AccountMeta(mint_pubkey, False, False))
+        gem_account_pubkey, _gem_account_bump = PublicKey.find_program_address([bytes(ingl_constants.GEM_ACCOUNT_CONST, 'UTF-8'), bytes(mint_pubkey)], ingl_constants.INGL_PROGRAM_ID)
+        accounts.append(AccountMeta(gem_account_pubkey, False, True))
+
+
+
+
+    accounts.append(sys_program_meta)
+    # print(accounts)
+    data = InstructionEnum.build(InstructionEnum.enum.NFTWithdraw(len(mints)))
+    transaction = Transaction()
+    transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, data))
+    return client.send_transaction(transaction, payer_keypair)
+
+def inject_testing_data(payer_keypair, mints, vote_account_id, client):
+    expected_vote_data_pubkey, _expected_vote_data_bump = PublicKey.find_program_address([bytes(ingl_constants.VOTE_DATA_ACCOUNT_KEY, 'UTF-8'), bytes(vote_account_id)], ingl_constants.INGL_PROGRAM_ID)
+    authorized_withdrawer_key, _authorized_withdrawer_bump = PublicKey.find_program_address([bytes(ingl_constants.AUTHORIZED_WITHDRAWER_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
+
+    payer_account_meta = AccountMeta(payer_keypair.public_key, True, True)
+    vote_account_meta = AccountMeta(vote_account_id, False, True)
+    sys_program_meta = AccountMeta(system_program.SYS_PROGRAM_ID, False, False)
+    ingl_vote_data_account_meta = AccountMeta(expected_vote_data_pubkey, False, True)
+    authorized_withdrawer_meta = AccountMeta(authorized_withdrawer_key, False, True)
+
+    accounts = [
+        payer_account_meta,
+        vote_account_meta,
+        ingl_vote_data_account_meta,
+        authorized_withdrawer_meta,
+        
+    ]
+
+    for mint_pubkey in mints:
+        accounts.append(AccountMeta(mint_pubkey, False, False))
+        gem_account_pubkey, _gem_account_bump = PublicKey.find_program_address([bytes(ingl_constants.GEM_ACCOUNT_CONST, 'UTF-8'), bytes(mint_pubkey)], ingl_constants.INGL_PROGRAM_ID)
+        accounts.append(AccountMeta(gem_account_pubkey, False, True))
+
+
+
+
+    accounts.append(sys_program_meta)
+    # print(accounts)
+    data = InstructionEnum.build(InstructionEnum.enum.InjectTestingData(len(mints)))
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, data))
     return client.send_transaction(transaction, payer_keypair)
