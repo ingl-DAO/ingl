@@ -9,6 +9,22 @@ export enum NftClass {
   Serendibite,
   Benitoite,
 }
+export type NftClassToString =
+  | 'Benitoite'
+  | 'Diamond'
+  | 'Emerald'
+  | 'Ruby'
+  | 'Sapphire'
+  | 'Serendibite';
+
+export const inglGemSol: Record<NftClassToString, number> = {
+  Ruby: 500,
+  Diamond: 100,
+  Sapphire: 50,
+  Emerald: 10,
+  Serendibite: 5,
+  Benitoite: 1,
+};
 
 export enum Rarity {
   Common,
@@ -90,6 +106,7 @@ export const FEE_MULTIPLYER = 10;
 export const TREASURY_ACCOUNT_KEY = 'Treasury_account_key';
 export const STAKE_ACCOUNT_KEY = 'staking_account_key';
 export const VOTE_DATA_ACCOUNT_KEY = 'InglVoteData';
+export const NFTS_SHARE = 60;
 
 class Assignable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -231,6 +248,8 @@ const INGL_SCHEMA = new Map([
         ['rarity_seed_time', { kind: 'option', type: 'u32' }],
         ['date_allocated', { kind: 'option', type: 'u32' }],
         ['last_voted_proposal', { kind: 'option', type: ['u8', 32] }],
+        ['last_withdrawal_epoch', { kind: 'option', type: 'u64' }],
+        ['last_delegation_epoch', { kind: 'option', type: 'u64' }],
         ['all_withdraws', ['u64']],
         ['all_votes', [ValidatorVote]],
       ],

@@ -12,8 +12,8 @@ import {
 } from '@mui/material';
 import { TransitionProps } from '@mui/material/transitions';
 import { forwardRef, useState } from 'react';
-import { NftClass } from '.';
 import useNotification from '../../common/utils/notification';
+import { NftClass } from '../../services/state';
 import theme from '../../theme/theme';
 
 const Transition = forwardRef(function Transition(
