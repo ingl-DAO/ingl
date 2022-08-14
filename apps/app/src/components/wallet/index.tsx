@@ -209,7 +209,7 @@ export default function Wallet() {
           justifyItems: { laptop: 'initial', mobile: 'center' },
           alignItems: 'center',
           padding: theme.spacing(5.875),
-          borderBottom: `1px solid ${theme.common.line}`,
+          borderBottom: `4px solid ${theme.palette.secondary.dark}`,
         }}
       >
         <SectionTitle noMargin title="ingl Wallet" />
@@ -247,7 +247,6 @@ export default function Wallet() {
       </Box>
       <Box
         sx={{
-          backgroundColor: '#0d33345e',
           height: '100%',
           padding: '0 16px',
         }}
@@ -275,7 +274,7 @@ export default function Wallet() {
                     <TableCell
                       colSpan={4}
                       sx={{
-                        '&.MuiTableCell-root': { borderBottom: '0px' },
+                        '&.MuiTableCell-root': { border: 'none' },
                         textAlign: 'center',
                       }}
                     >

@@ -1,4 +1,10 @@
-import { Checkbox, TableCell, TableHead, TableRow } from '@mui/material';
+import {
+  Checkbox,
+  TableCell,
+  TableHead,
+  TableRow,
+  useTheme,
+} from '@mui/material';
 
 const WalletTableHead = ({
   onSelectAllClick,
@@ -9,11 +15,18 @@ const WalletTableHead = ({
   isDisabled: boolean;
   onSelectAllClick: () => void;
 }) => {
+  const theme = useTheme();
   const tableColumns = ['Ingl Gem', 'Validator Pub Key', 'Rewards (SOL)'];
   return (
     <TableHead>
       <TableRow>
-        <TableCell padding="normal">
+        <TableCell
+          padding="normal"
+          style={{
+            borderColor: theme.palette.secondary.dark,
+            borderBottomWidth: '2.5px',
+          }}
+        >
           <Checkbox
             checked={isHundredSelected}
             onChange={onSelectAllClick}
@@ -26,7 +39,11 @@ const WalletTableHead = ({
             width={index === 1 ? '100%' : 'initial'}
             key={index}
             padding="normal"
-            sx={{ color: 'white' }}
+            sx={{
+              color: 'white',
+              borderColor: theme.palette.secondary.dark,
+              borderBottomWidth: '2.5px',
+            }}
           >
             {columns}
           </TableCell>

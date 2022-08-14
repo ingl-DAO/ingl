@@ -15,7 +15,7 @@ export default function Question({
         border: `1px solid ${theme.palette.secondary.main}`,
         padding: '11px 30px',
         borderRadius: '20px',
-        marginBottom: theme.spacing(2)
+        marginBottom: theme.spacing(2),
       }}
     >
       <Box
@@ -44,7 +44,9 @@ export default function Question({
         sx={{ marginTop: isQuestionOpen ? '28px' : 0 }}
         in={isQuestionOpen}
       >
-        <Typography variant="caption">{answer}</Typography>
+        <Typography variant="caption" style={{ fontSize: '16px' }}>
+          {answer}
+        </Typography>
       </Collapse>
     </Box>
   );

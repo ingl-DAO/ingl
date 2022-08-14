@@ -193,7 +193,7 @@ export default function Gem({
         sx={{
           padding: theme.spacing(1.5),
           background:
-            'linear-gradient(151.27deg, #02C39A 10.17%, #00426B 32.86%, #015C74 65.73%, #02C39A 150.23%);',
+            'linear-gradient(151.27deg, #092C4C 9.62%, #02C39A 48.66%, #092C4C 73.09%, #02C39A 150.23%);',
           borderRadius: theme.spacing(3.75),
           width: 'fit-content',
         }}
