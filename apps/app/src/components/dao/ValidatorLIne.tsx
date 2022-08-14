@@ -117,7 +117,7 @@ export default function ValidatorLIne({
             sx={{
               color: is_winner ? theme.palette.secondary.main : 'white',
             }}
-          >{`${score}%`}</Typography>
+          >{`${score}`}</Typography>
         )}
       </Grid>
       <Grid item desktop={1} sx={{ display: 'grid', justifyItems: 'center' }}>

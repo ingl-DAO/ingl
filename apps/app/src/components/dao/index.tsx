@@ -53,8 +53,6 @@ export interface Validator {
 
 function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
   const { connection } = useConnection();
-  const notif = new useNotification();
-
   const wallet = useWallet();
 
   const [inglNumbers, setInglNumbers] = useState<InglSummary[]>([
@@ -109,6 +107,7 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
         const newSelectedProposal = proposals.find(
           (proposal: Proposal) => proposal.is_ongoing
         );
+        console.log('state', selectedProposal);
         if (newSelectedProposal) {
           setSelectedProposal(newSelectedProposal);
         } else if (newProposals.length > 0) {
@@ -173,8 +172,8 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
   const [isLoadingProposalData, setIsLoadingProposalData] =
     useState<boolean>(true);
   useEffect(() => {
-    //TODO: FETCH DATA OF THE selected proposal here
     if (selectedProposal) {
+      console.log(selectedProposal);
       const notif = new useNotification();
       setIsLoadingProposalData(true);
       const validatorStats: Validator[] = [];
@@ -191,9 +190,12 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
               av_distance: Number(
                 (validator.details?.average_distance / 1000).toFixed(3)
               ),
-              score: 60,
-              skip_rate:
-                Number(validator.details?.skipped_slot_percent ?? 0) * 100,
+              score: validator.details?.total_score,
+              skip_rate: Number(
+                (
+                  Number(validator.details?.skipped_slot_percent ?? 0) * 100
+                ).toFixed(3)
+              ),
               solana_cli: validator.details?.software_version,
               total_vote: selectedProposal.votes[index],
               is_winner: selectedProposal.winner === validator.pubkey,
@@ -202,7 +204,7 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
           setValidators(validatorStats);
           setIsLoadingProposalData(false);
         })
-        .catch((error) =>
+        .catch((error) => {
           notif.update({
             type: 'ERROR',
             render: (
@@ -217,20 +219,19 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
             ),
             autoClose: false,
             icon: () => <ReportRounded fontSize="large" color="error" />,
-          })
-        )
-        .finally(() => setIsLoadingProposalData(false));
+          });
+          setIsLoadingProposalData(false);
+        });
     }
   }, [selectedProposal]);
 
   useEffect(() => {
-    //TODO: FETCH DATA WITH RESPECT to the different proposals
     loadProposals();
+    console.log('Load proposal');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    //TODO: FETCH DATA HERE WITH RESPECT inglNumbers
     loadStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -255,7 +256,6 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
   const [notifs, setNotifs] = useState<useNotification[]>();
   const [isSubmittingVote, setIsSubmittingVote] = useState<boolean>(false);
   const voteValidator = (selectedGems: inglGem[]) => {
-    //TODO: CALL API HERE TO VOTE ON A PROPOSAL: THE DETAILS INCLUDE: selectedProposal, selectedValidator, selectedGems
     if (notifs) notifs.forEach((publishedNotif) => publishedNotif.dismiss());
     const notif = new useNotification();
     if (notifs) setNotifs([...notifs, notif]);
@@ -503,6 +503,7 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
           sx={{
             padding: `${theme.spacing(0.5)} ${theme.spacing(5)}`,
             background: theme.palette.secondary.main,
+            alignItems: 'center',
           }}
         >
           {tableHeaders.map(({ title, gridSpace }, index) => (
@@ -515,7 +516,7 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
                 justifyItems: 'center',
               }}
             >
-              <Typography sx={{ fontWeight: 'bold' }}>
+              <Typography sx={{ fontWeight: '500', fontSize: '18px' }}>
                 {title === 'Actions' && selectedProposal?.is_ongoing === false
                   ? 'Total Votes'
                   : title}

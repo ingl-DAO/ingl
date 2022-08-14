@@ -13,7 +13,7 @@ use solana_program::{
 use self::constants::*;
 pub mod constants {
     use solana_program::{declare_id, native_token::LAMPORTS_PER_SOL};
-    declare_id!("4ATadzrRQHetgSeByytfJRuVwWtXFPwKUySdb3279AGe");
+    declare_id!("41z2kpMac1RpH5XnBoKnY6vjmJwdbwc1aHRQszCgbyDv");
 
     pub const INGL_TREASURY_ACCOUNT_KEY: &str = "ingl_treasury_account_key";
     pub const INGL_NFT_COLLECTION_KEY: &str = "ingl_nft_collection_newer";
@@ -265,6 +265,8 @@ pub struct InglVoteAccountData {
     pub dealloced: u64,
     pub pending_validator_rewards: Option<u64>, // Field is also used to check if there is an ongoing rebalancing or not.
     pub validator_id: Pubkey,                   //To Reconsider.
+    pub last_total_staked: u64,
+    pub is_t_stake_initialized: bool,
     pub pending_delegation_total: u64,
     pub vote_rewards: Vec<VoteRewards>,
 }

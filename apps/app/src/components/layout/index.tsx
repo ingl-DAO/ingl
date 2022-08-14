@@ -18,10 +18,10 @@ export default function Layout() {
       <Box sx={{ height: '100%', px: theme.spacing(8) }}>
         <Box
           sx={{
-            border: `5px solid ${theme.palette.primary.main}`,
-            borderTopLeftRadius: '30px',
-            borderTopRightRadius: '30px',
-            borderBottom: '0px',
+            // border: `5px solid ${theme.palette.primary.main}`,
+            // borderTopLeftRadius: '30px',
+            // borderTopRightRadius: '30px',
+            // borderBottom: '0px',
             height: '100%',
             // px: theme.spacing(10),
           }}

@@ -72,13 +72,14 @@ export default function SelectValidatorDialog({
     }
   }, [isDialogOpen]);
 
-  const [selectedValidatorVoteKey, setSelectedValidatorVoteKey] = useState<string>();
+  const [selectedValidatorVoteKey, setSelectedValidatorVoteKey] =
+    useState<string>();
 
-  const exitDialog=()=>{
-    setValidators([])
-    setSelectedValidatorVoteKey(undefined)
-    closeDialog()
-  }
+  const exitDialog = () => {
+    setValidators([]);
+    setSelectedValidatorVoteKey(undefined);
+    closeDialog();
+  };
 
   return (
     <Dialog
@@ -104,13 +105,16 @@ export default function SelectValidatorDialog({
           <Grid container spacing={2}>
             {isValidatorsLoading ? (
               [...new Array(12)].map((_, index) => (
-                <Grid item mobile={12} laptop={6}>
+                <Grid item mobile={12} key={index} laptop={6}>
                   <Skeleton
                     key={index}
                     variant="rectangular"
                     height={200}
                     width={'100%'}
-                    sx={{ backgroundColor: 'rgba(177,177,177,0.17)', borderRadius: '9px' }}
+                    sx={{
+                      backgroundColor: 'rgba(177,177,177,0.17)',
+                      borderRadius: '9px',
+                    }}
                   />
                 </Grid>
               ))
@@ -128,7 +132,8 @@ export default function SelectValidatorDialog({
                       if (validator.vote_account) {
                         if (selectedValidatorVoteKey === validator.vote_account)
                           setSelectedValidatorVoteKey(undefined);
-                        else setSelectedValidatorVoteKey(validator.vote_account);
+                        else
+                          setSelectedValidatorVoteKey(validator.vote_account);
                       }
                     }}
                     isValidatorSelected={

@@ -13,8 +13,9 @@ import {
   BNB_HISTORY_BUFFER_KEY,
   INGL_TREASURY_ACCOUNT_KEY,
   GemAccountV0_0_1,
-  decodeInglData,
   PD_POOL_KEY,
+  PDPoolFundLocation,
+  VoteAccountFundLocation,
 } from './state';
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -36,6 +37,7 @@ import { PROGRAM_ID as METAPLEX_PROGRAM_ID } from '@metaplex-foundation/mpl-toke
 import { LazyNft, Metaplex, Nft } from '@metaplex-foundation/js';
 import { inglGem } from '../components/nftDisplay';
 import { WalletNotConnectedError } from '@solana/wallet-adapter-base';
+import { deserializeUnchecked } from '@dao-xyz/borsh';
 
 const [minting_pool_key] = PublicKey.findProgramAddressSync(
   [Buffer.from(INGL_MINTING_POOL_KEY)],
@@ -611,7 +613,8 @@ const getInglGemFromNft = async (connection: Connection, nft: Nft) => {
       INGL_PROGRAM_ID
     );
     const accountInfo = await connection.getAccountInfo(gem_pubkey);
-    const decodedData = await decodeInglData(
+    // deserialize buffer data into readable format
+    const decodedData = deserializeUnchecked(
       GemAccountV0_0_1,
       accountInfo?.data as Buffer
     );
@@ -627,14 +630,19 @@ const getInglGemFromNft = async (connection: Connection, nft: Nft) => {
       video_ref: properties?.files?.find((file) => file.type === 'video/mp4')
         ?.uri,
       rarity: decodedData['rarity'],
-      is_allocated: decodedData['funds_location']['enum'] === 'pDPool',
-      is_delegated: decodedData['funds_location']['enum'] === 'voteAccount',
-      allocation_date: decodedData['date_allocated'],
-      rarity_reveal_date: decodedData['rarity_seed_time'],
+      is_allocated: decodedData.funds_location instanceof PDPoolFundLocation,
+      is_delegated:
+        decodedData.funds_location instanceof VoteAccountFundLocation,
+      allocation_date: decodedData.date_allocated,
+      rarity_reveal_date: decodedData.rarity_seed_time,
+      last_voted_proposal_id: decodedData.last_voted_proposal
+        ? new PublicKey(decodedData.last_voted_proposal).toString()
+        : '',
     };
   }
   throw new Error('No json fields was found on metadata');
 };
+
 export async function loadInglGems(
   connection: Connection,
   ownerPubkey: PublicKey
@@ -649,7 +657,7 @@ export async function loadInglGems(
         collection &&
         collection.key.toString() === ingl_nft_collection_mint_key.toString()
     );
-    const myInglGems: inglGem[] = [];
+    const myInglGems: any[] = [];
     for (let i = 0; i < lazyNfts.length; i++) {
       const inglNft = await metaplexNft.loadNft(lazyNfts[i] as LazyNft).run();
       myInglGems.push(await getInglGemFromNft(connection, inglNft));

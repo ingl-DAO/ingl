@@ -1,4 +1,4 @@
-import { field, fixedArray, option, vec } from '@dao-xyz/borsh';
+import { field, fixedArray, option, variant, vec } from '@dao-xyz/borsh';
 import { PublicKey } from '@solana/web3.js';
 import { deserializeUnchecked } from 'borsh';
 
@@ -37,15 +37,28 @@ export enum Instruction {
   FinalizeProposal,
 }
 
-export enum FundsLocation {
-  MintingPool,
-  PDPool,
-  VoteAccount,
-}
+class GemAccountVersions {}
+@variant(1)
+export class GemAccountV0_0_1_Version extends GemAccountVersions {}
+@variant(0)
+export class BlanckCase_Version extends GemAccountVersions {}
 
-export enum GemAccountVersions {
-  GemAccountV0_0_1,
-  BlanckCase,
+class FundsLocation {}
+@variant(0)
+export class MintingPoolFundLocation extends FundsLocation {}
+
+@variant(1)
+export class PDPoolFundLocation extends FundsLocation {}
+
+@variant(2)
+export class VoteAccountFundLocation extends FundsLocation {
+  @field({ type: fixedArray('u8', 32) })
+  vote_account_id!: number;
+
+  constructor(vote_account_id: number) {
+    super();
+    this.vote_account_id = vote_account_id;
+  }
 }
 
 export const BTC_HISTORY_BUFFER_KEY = new PublicKey(
@@ -61,7 +74,7 @@ export const BNB_HISTORY_BUFFER_KEY = new PublicKey(
   'DR6PqK15tD21MEGSLmDpXwLA7Fw47kwtdZeUMdT7vd7L'
 );
 export const INGL_PROGRAM_ID = new PublicKey(
-  '8Tzkyx2vprriFPFF2RYmSykKZ51L3H5ayGmvequZQh2F'
+  '41z2kpMac1RpH5XnBoKnY6vjmJwdbwc1aHRQszCgbyDv'
 );
 export const INGL_TREASURY_ACCOUNT_KEY = 'ingl_treasury_account_key';
 export const AUTHORIZED_WITHDRAWER_KEY = 'InglAuthorizedWithdrawer';
@@ -95,8 +108,6 @@ class Assignable {
 export class VoteInit extends Assignable {}
 export class GlobalGems extends Assignable {}
 // export class VoteRewards extends Assignable {}
-export class ValidatorVote extends Assignable {}
-export class GemAccountV0_0_1 extends Assignable {}
 // export class ValidatorProposal extends Assignable {}
 // export class ProgramVoteAccount extends Assignable {}
 // export class InglVoteAccountData extends Assignable {}
@@ -133,7 +144,6 @@ class Enum {
 // export class ExaltedOption extends Assignable {}
 // export class MythicOption extends Assignable {}
 
-export class FundsLocationEnum extends Enum {}
 export class MintingPoolOption extends Assignable {}
 export class PDPoolOption extends Assignable {}
 export class VoteAccountOption extends Assignable {}
@@ -170,49 +180,6 @@ const INGL_SCHEMA = new Map([
         ['proposal_numeration', 'u32'],
         ['pending_delegation_total', 'u64'],
         ['validator_list', [['u8', 32]]],
-      ],
-    },
-  ],
-  [
-    ValidatorVote,
-    {
-      kind: 'struct',
-      fields: [
-        ['validation_phrase', 'u32'],
-        ['proposal_id', ['u8', 32]],
-        ['validator_index', 'u32'],
-      ],
-    },
-  ],
-  [
-    GemAccountV0_0_1,
-    {
-      kind: 'struct',
-      fields: [
-        ['struct_id', 'u8'],
-        ['validation_phrase', 'u32'],
-        ['date_created', 'u32'],
-        ['class', 'u8'],
-        ['redeemable_date', 'u32'],
-        ['numeration', 'u32'],
-        ['rarity', { kind: 'option', type: 'u8' }],
-        ['funds_location', FundsLocationEnum],
-        ['rarity_seed_time', { kind: 'option', type: 'u32' }],
-        ['date_allocated', { kind: 'option', type: 'u32' }],
-        ['last_voted_proposal', { kind: 'option', type: ['u8', 32] }],
-        ['all_votes', [ValidatorVote]],
-      ],
-    },
-  ],
-  [
-    FundsLocationEnum,
-    {
-      kind: 'enum',
-      field: 'enum',
-      values: [
-        ['mintingPool', MintingPoolOption],
-        ['pDPool', PDPoolOption],
-        ['voteAccount', VoteAccountOption],
       ],
     },
   ],
@@ -273,21 +240,21 @@ export class ValidatorProposal {
   public date_created!: number;
 
   @field({ type: option('u32') })
-  public date_finalized!: null | number;
+  public date_finalized!: undefined | number;
 
   @field({ type: vec('u32') })
   public votes!: number[];
 
   @field({ type: option(fixedArray('u8', 32)) })
-  public winner!: null | PublicKey;
+  public winner!: undefined | PublicKey;
 
   constructor(properties?: {
     validation_phrase: number;
     validator_ids: PublicKey[];
     date_created: number;
-    date_finalized: null | number;
+    date_finalized: undefined | number;
     votes: number[];
-    winner: null | PublicKey;
+    winner: undefined | PublicKey;
   }) {
     if (properties) {
       this.validation_phrase = properties.validation_phrase;
@@ -296,6 +263,112 @@ export class ValidatorProposal {
       this.date_finalized = properties.date_finalized;
       this.winner = properties.winner;
       this.votes = properties.votes;
+    }
+  }
+}
+
+export class ValidatorVote {
+  @field({ type: 'u32' })
+  public validation_phrase!: number;
+
+  @field({ type: fixedArray('u8', 32) })
+  public proposal_id!: PublicKey;
+
+  @field({ type: 'u32' })
+  public validator_index!: number;
+
+  constructor(properties?: {
+    validation_phrase: number;
+    proposal_id: PublicKey;
+    validator_index: number;
+  }) {
+    if (properties) {
+      this.validation_phrase = properties.validation_phrase;
+      this.proposal_id = properties.proposal_id;
+      this.validator_index = properties.validator_index;
+    }
+  }
+}
+
+export class GemAccountV0_0_1 {
+  @field({ type: GemAccountVersions })
+  public struct_id!: GemAccountVersions;
+
+  @field({ type: 'u32' })
+  public validation_phrase!: number;
+
+  @field({ type: 'u32' })
+  public date_created!: number;
+
+  @field({ type: 'u8' })
+  public class!: number;
+
+  @field({ type: 'u32' })
+  public redeemable_date!: number;
+
+  @field({ type: 'u32' })
+  public numeration!: number;
+
+  @field({ type: option('u8') })
+  public rarity!: undefined | number;
+
+  @field({ type: FundsLocation })
+  public funds_location!: FundsLocation;
+
+  @field({ type: option('u32') })
+  public rarity_seed_time!: undefined | number;
+
+  @field({ type: option('u32') })
+  public date_allocated!: undefined | number;
+
+  @field({ type: option(fixedArray('u8', 32)) })
+  public last_voted_proposal!: undefined | PublicKey;
+
+  @field({ type: option('u64') })
+  public last_withdrawal_epoch!: undefined | number;
+
+  @field({ type: option('u64') })
+  public last_delegation_epoch!: undefined | number;
+
+  @field({ type: vec('u64') })
+  public all_withdraws!: PublicKey[];
+
+  @field({ type: vec(ValidatorVote) })
+  public all_votes!: ValidatorVote[];
+
+  constructor(properties?: {
+    struct_id: GemAccountVersions;
+    validation_phrase: number;
+    date_created: number;
+    class: number;
+    redeemable_date: number;
+    numeration: number;
+    rarity: undefined | number;
+    funds_location: FundsLocation;
+    rarity_seed_time: undefined | number;
+    date_allocated: undefined | number;
+    last_voted_proposal: undefined | PublicKey;
+    last_withdrawal_epoch: undefined | number;
+    last_delegation_epoch: undefined | number;
+    all_withdraws: PublicKey[];
+    all_votes: ValidatorVote[];
+  }) {
+    if (properties) {
+      this.struct_id = properties.struct_id;
+      this.validation_phrase = properties.validation_phrase;
+      this.date_created = properties.date_created;
+      this.class = properties.class;
+      this.redeemable_date = properties.redeemable_date;
+      this.numeration = properties.numeration;
+      this.rarity = properties.rarity;
+      this.funds_location = properties.funds_location;
+      this.rarity_seed_time = properties.rarity_seed_time;
+      this.date_allocated = properties.date_allocated;
+      this.last_delegation_epoch = properties.last_delegation_epoch;
+      this.last_withdrawal_epoch = properties.last_withdrawal_epoch;
+      this.last_delegation_epoch = properties.last_delegation_epoch;
+      this.all_withdraws = properties.all_withdraws;
+      this.all_votes = properties.all_votes;
     }
   }
 }

@@ -1,79 +1,25 @@
 import {
-  NftClass,
-  Instruction,
   INGL_PROGRAM_ID,
-  INGL_MINT_AUTHORITY_KEY,
   GLOBAL_GEM_KEY,
   GEM_ACCOUNT_CONST,
-  INGL_MINTING_POOL_KEY,
-  INGL_NFT_COLLECTION_KEY,
-  BTC_HISTORY_BUFFER_KEY,
-  SOL_HISTORY_BUFFER_KEY,
-  ETH_HISTORY_BUFFER_KEY,
-  BNB_HISTORY_BUFFER_KEY,
-  INGL_TREASURY_ACCOUNT_KEY,
-  GemAccountV0_0_1,
   decodeInglData,
-  PD_POOL_KEY,
   GlobalGems,
   PROPOSAL_KEY,
   ValidatorProposal,
+  Instruction,
 } from './state';
-import {
-  ASSOCIATED_TOKEN_PROGRAM_ID,
-  getAssociatedTokenAddress,
-  TOKEN_PROGRAM_ID,
-} from '@solana/spl-token';
+import { getAssociatedTokenAddress } from '@solana/spl-token';
 import {
   AccountMeta,
   Connection,
   Keypair,
   LAMPORTS_PER_SOL,
   PublicKey,
-  SystemProgram,
-  SYSVAR_RENT_PUBKEY,
   Transaction,
   TransactionInstruction,
 } from '@solana/web3.js';
 import { WalletContextState } from '@solana/wallet-adapter-react';
-import { PROGRAM_ID as METAPLEX_PROGRAM_ID } from '@metaplex-foundation/mpl-token-metadata';
-import { LazyNft, Metaplex, Nft } from '@metaplex-foundation/js';
-import { inglGem } from '../components/nftDisplay';
-import { WalletNotConnectedError } from '@solana/wallet-adapter-base';
-import { deserialize, deserializeUnchecked } from '@dao-xyz/borsh';
-
-const [minting_pool_key] = PublicKey.findProgramAddressSync(
-  [Buffer.from(INGL_MINTING_POOL_KEY)],
-  INGL_PROGRAM_ID
-);
-const [mint_authority_key] = PublicKey.findProgramAddressSync(
-  [Buffer.from(INGL_MINT_AUTHORITY_KEY)],
-  INGL_PROGRAM_ID
-);
-const [ingl_nft_collection_mint_key] = PublicKey.findProgramAddressSync(
-  [Buffer.from(INGL_NFT_COLLECTION_KEY)],
-  INGL_PROGRAM_ID
-);
-const [ingl_nft_collection_key] = PublicKey.findProgramAddressSync(
-  [
-    Buffer.from('metadata'),
-    METAPLEX_PROGRAM_ID.toBuffer(),
-    ingl_nft_collection_mint_key.toBuffer(),
-  ],
-  METAPLEX_PROGRAM_ID
-);
-const [program_treasury_key] = PublicKey.findProgramAddressSync(
-  [Buffer.from(INGL_TREASURY_ACCOUNT_KEY)],
-  INGL_PROGRAM_ID
-);
-const [global_gem_pubkey] = PublicKey.findProgramAddressSync(
-  [Buffer.from(GLOBAL_GEM_KEY)],
-  INGL_PROGRAM_ID
-);
-const [pd_pool_account_key] = PublicKey.findProgramAddressSync(
-  [Buffer.from(PD_POOL_KEY)],
-  INGL_PROGRAM_ID
-);
+import { deserializeUnchecked } from '@dao-xyz/borsh';
 
 const toBytesInt32 = (num: number) => {
   const arr = new Uint8Array([
@@ -267,7 +213,6 @@ export const getValidatorsDetail = async (validator_ids: string[]) => {
         100,
     },
   }));
-  console.log(ASNFrequency, validatorsWithDetails);
 
   const getDistanceFromLatLonInKm = (
     lat1: number,
@@ -363,7 +308,7 @@ export const voteValidatorProposal = async (
     const associatedTokenAccount: AccountMeta = {
       pubkey: await getAssociatedTokenAddress(mint, payerAccount.pubkey),
       isSigner: false,
-      isWritable: true,
+      isWritable: false,
     };
     const mintAccount: AccountMeta = {
       pubkey: mint,
@@ -377,8 +322,15 @@ export const voteValidatorProposal = async (
 
   const voteValidatorInstruction = new TransactionInstruction({
     programId: INGL_PROGRAM_ID,
-    data: Buffer.from([nftPubkeys.length, validatorIndex]),
-    keys: [payerAccount, proposalAccount],
+    data: Buffer.from([
+      Instruction.VoteValidatorProposal,
+      nftPubkeys.length,
+      validatorIndex,
+      0,
+      0,
+      0,
+    ]),
+    keys: accounts,
   });
   try {
     await signAndConfirmTransaction(walletConnection, voteValidatorInstruction);

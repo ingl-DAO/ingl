@@ -105,15 +105,6 @@ export default function VoteDialog({
     }
   };
   useEffect(() => {
-    // if (isDialogOpen && !is_ongoing) {
-    //   //TODO: FETCH DATA HERE WITH RESPECT TO THE VOTES OF THE VALIDATOR
-    //   setIsValidatorVotesLoading(true);
-    //   setTimeout(() => {
-    //     const newValidatorVotes = 3000;
-    //     setValidatorVotes(newValidatorVotes);
-    //     setIsValidatorVotesLoading(false);
-    //   }, 3000);
-    // }
     if (isDialogOpen && is_ongoing) {
       //TODO: FETCH DATA HERE WITH RESPECT TO THE users gems
       loadGems();
