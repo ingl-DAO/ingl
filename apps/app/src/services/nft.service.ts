@@ -47,11 +47,12 @@ import { WalletContextState } from '@solana/wallet-adapter-react';
 import { PROGRAM_ID as METAPLEX_PROGRAM_ID } from '@metaplex-foundation/mpl-token-metadata';
 import { LazyNft, Metaplex, Nft } from '@metaplex-foundation/js';
 import { WalletNotConnectedError } from '@solana/wallet-adapter-base';
-import { deserializeUnchecked } from '@dao-xyz/borsh';
 import * as uint32 from 'uint32';
 import { Gem } from '../components/wallet';
 import { getGlobalGemData } from './validator-dao.service';
 import BN from 'bn.js';
+import { deserializeUnchecked } from '@dao-xyz/borsh';
+import { inglGem } from '../components/nftDisplay';
 
 const [minting_pool_key] = PublicKey.findProgramAddressSync(
   [Buffer.from(INGL_MINTING_POOL_KEY)],
@@ -646,7 +647,10 @@ export async function redeemInglGem(
   }
 }
 
-const getInglGemFromNft = async (connection: Connection, nft: Nft) => {
+const getInglGemFromNft = async (
+  connection: Connection,
+  nft: Nft
+): Promise<inglGem> => {
   const {
     mint: { address },
     json,
@@ -659,10 +663,13 @@ const getInglGemFromNft = async (connection: Connection, nft: Nft) => {
     );
     const accountInfo = await connection.getAccountInfo(gem_pubkey);
     // deserialize buffer data into readable format
-    const decodedData = deserializeUnchecked(
-      GemAccountV0_0_1,
-      accountInfo?.data as Buffer
-    );
+    const {
+      rarity,
+      funds_location,
+      date_allocated,
+      last_voted_proposal,
+      rarity_seed_time,
+    } = deserializeUnchecked(GemAccountV0_0_1, accountInfo?.data as Buffer);
     return {
       image_ref: image,
       generation: Number(
@@ -674,14 +681,13 @@ const getInglGemFromNft = async (connection: Connection, nft: Nft) => {
       has_loan: false,
       video_ref: properties?.files?.find((file) => file.type === 'video/mp4')
         ?.uri,
-      rarity: decodedData['rarity'],
-      is_allocated: decodedData.funds_location instanceof PDPoolFundLocation,
-      is_delegated:
-        decodedData.funds_location instanceof VoteAccountFundLocation,
-      allocation_date: decodedData.date_allocated,
-      rarity_reveal_date: decodedData.rarity_seed_time,
-      last_voted_proposal_id: decodedData.last_voted_proposal
-        ? new PublicKey(decodedData.last_voted_proposal).toString()
+      rarity: rarity,
+      is_allocated: funds_location instanceof PDPoolFundLocation,
+      is_delegated: funds_location instanceof VoteAccountFundLocation,
+      allocation_date: date_allocated,
+      rarity_reveal_date: rarity_seed_time,
+      last_voted_proposal_id: last_voted_proposal
+        ? last_voted_proposal.toString()
         : '',
     };
   }
@@ -701,7 +707,7 @@ export async function loadInglGems(
       ({ collection }) =>
         collection?.key.toString() === ingl_nft_collection_mint_key.toString()
     );
-    const myInglGems: any[] = [];
+    const myInglGems: inglGem[] = [];
     for (let i = 0; i < lazyNfts.length; i++) {
       const inglNft = await metaplexNft.loadNft(lazyNfts[i] as LazyNft).run();
       const inglGem = await getInglGemFromNft(connection, inglNft);
@@ -1303,11 +1309,8 @@ export async function loadRewards(
           INGL_PROGRAM_ID
         );
         const accountInfo = await connection.getAccountInfo(gem_pubkey);
-        const gemAccountData = deserializeUnchecked(
-          GemAccountV0_0_1,
-          accountInfo?.data as Buffer
-        );
-        const funds_location = gemAccountData.funds_location;
+        const { funds_location, last_withdrawal_epoch, last_delegation_epoch } =
+          deserializeUnchecked(GemAccountV0_0_1, accountInfo?.data as Buffer);
         const gemClass = attributes?.find(
           ({ trait_type }) => trait_type === 'Class'
         )?.value as NftClassToString;
@@ -1327,23 +1330,25 @@ export async function loadRewards(
               InglVoteAccountData,
               inglVoteAccount?.data as Buffer
             );
-            const voteRewards = inglVoteData.vote_rewards;
-
-            const lastWithdrawalEpoch =
-              gemAccountData.last_withdrawal_epoch as BN;
-            const lastDelegationEpoch =
-              gemAccountData.last_delegation_epoch as BN;
-            const comp = lastDelegationEpoch.cmp(lastWithdrawalEpoch ?? 0);
+            const voteRewards = inglVoteData['vote_rewards'] as {
+              epoch_number: BN;
+              total_reward: BN;
+              total_stake: BN;
+            }[];
+            const comp = last_delegation_epoch?.cmp(
+              last_withdrawal_epoch as BN
+            );
             const interestedEpoch =
               comp === 0
-                ? lastDelegationEpoch
+                ? last_delegation_epoch
                 : comp === -1
-                ? lastWithdrawalEpoch
-                : lastDelegationEpoch;
+                ? last_withdrawal_epoch
+                : last_delegation_epoch;
             const interestedIndex =
               1 +
               voteRewards.findIndex(
-                ({ epoch_number }) => epoch_number.cmp(interestedEpoch) === 0
+                ({ epoch_number }) =>
+                  epoch_number.cmp(interestedEpoch as BN) === 0
               );
             if (interestedIndex === 0) {
               gemRewards.push({

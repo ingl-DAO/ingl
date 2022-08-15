@@ -35,18 +35,17 @@ export default function MintGemDialog({
   closeDialog: () => void;
   onValidate: (mintClass: NftClass) => void;
 }) {
-  const [selectedMintClassIndex, setSelectedMintClassIndex] =
-    useState<number>(0);
-  const [NftClasses, setNftClasses] = useState<
-    { price: number; value: NftClass; label: string }[]
-  >([
+  const [selectedMintClass, setSelectedMintClass] = useState<NftClass>(
+    NftClass.Benitoite
+  );
+  const NftClasses: { price: number; value: NftClass; label: string }[] = [
     { price: 1, label: 'Benitoite', value: NftClass.Benitoite },
     { price: 100, label: 'Diamond', value: NftClass.Diamond },
     { price: 10, label: 'Emerald', value: NftClass.Emerald },
     { price: 500, label: 'Ruby', value: NftClass.Ruby },
     { price: 50, label: 'Sapphire', value: NftClass.Sapphire },
     { price: 5, label: 'Serendibite', value: NftClass.Serendibite },
-  ]);
+  ];
   return (
     <Dialog
       open={isDialogOpen}
@@ -65,8 +64,7 @@ export default function MintGemDialog({
         <TextField
           select
           label="Gem class"
-          defaultValue={0}
-          value={selectedMintClassIndex}
+          value={selectedMintClass}
           color="secondary"
           fullWidth
           sx={{
@@ -78,12 +76,19 @@ export default function MintGemDialog({
               borderColor: 'white',
             },
           }}
-          onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-            setSelectedMintClassIndex(Number(event.target.value))
-          }
+          onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+            const nftClass = NftClasses.find(
+              (_) => _.value === Number(event.target.value)
+            );
+            if (nftClass) setSelectedMintClass(nftClass.value);
+          }}
         >
           {NftClasses.map((nftClass, index) => (
-            <MenuItem sx={{ color: 'black' }} key={index} value={index}>
+            <MenuItem
+              sx={{ color: 'black' }}
+              key={index}
+              value={nftClass.value}
+            >
               {`${nftClass.label} - ${nftClass.price} SOL`}
             </MenuItem>
           ))}
@@ -97,8 +102,8 @@ export default function MintGemDialog({
           variant="contained"
           color="secondary"
           onClick={() => {
-            if (selectedMintClassIndex >= 0) {
-              onValidate(NftClasses[selectedMintClassIndex].value);
+            if (selectedMintClass) {
+              onValidate(selectedMintClass);
               closeDialog();
             } else {
               const notif = new useNotification();

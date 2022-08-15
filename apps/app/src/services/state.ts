@@ -139,21 +139,21 @@ export class ValidatorProposal {
   public date_created!: number;
 
   @field({ type: option('u32') })
-  public date_finalized!: undefined | number;
+  public date_finalized?: number;
 
   @field({ type: vec('u32') })
   public votes!: number[];
 
   @field({ type: option(fixedArray('u8', 32)) })
-  public winner!: undefined | PublicKey;
+  public winner?: PublicKey;
 
   constructor(properties?: {
     validation_phrase: number;
     validator_ids: PublicKey[];
     date_created: number;
-    date_finalized: undefined | number;
+    date_finalized?: number;
     votes: number[];
-    winner: undefined | PublicKey;
+    winner?: PublicKey;
   }) {
     if (properties) {
       this.validation_phrase = properties.validation_phrase;
@@ -209,19 +209,19 @@ export class GemAccountV0_0_1 {
   public numeration!: number;
 
   @field({ type: option('u8') })
-  public rarity!: undefined | number;
+  public rarity?: number;
 
   @field({ type: FundsLocation })
   public funds_location!: FundsLocation;
 
   @field({ type: option('u32') })
-  public rarity_seed_time!: undefined | number;
+  public rarity_seed_time?: number;
 
   @field({ type: option('u32') })
-  public date_allocated!: undefined | number;
+  public date_allocated?: number;
 
   @field({ type: option(fixedArray('u8', 32)) })
-  public last_voted_proposal!: undefined | PublicKey;
+  public last_voted_proposal?: PublicKey;
 
   @field({ type: option('u64') })
   public last_withdrawal_epoch!: undefined | BN;
@@ -242,7 +242,7 @@ export class GemAccountV0_0_1 {
     class: number;
     redeemable_date: number;
     numeration: number;
-    rarity: undefined | number;
+    rarity: number;
     funds_location: FundsLocation;
     rarity_seed_time: undefined | number;
     date_allocated: undefined | number;

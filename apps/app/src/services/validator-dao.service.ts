@@ -11,29 +11,18 @@ import { getAssociatedTokenAddress } from '@solana/spl-token';
 import {
   AccountMeta,
   Connection,
-  Keypair,
   LAMPORTS_PER_SOL,
   PublicKey,
-  Transaction,
   TransactionInstruction,
 } from '@solana/web3.js';
 import { WalletContextState } from '@solana/wallet-adapter-react';
 import { deserializeUnchecked } from '@dao-xyz/borsh';
+import { signAndConfirmTransaction, toBytesInt32 } from './utils';
 
-const toBytesInt32 = (num: number) => {
-  const arr = new Uint8Array([
-    (num & 0xff000000) >> 24,
-    (num & 0x00ff0000) >> 16,
-    (num & 0x0000ff00) >> 8,
-    num & 0x000000ff,
-  ]);
-  return arr;
-};
-
-const promiseAll = async (promiseData: any) => {
-  const filteredPromiseData: any = [];
+async function promiseAll<T>(promiseData: Promise<T>[]) {
+  const filteredPromiseData: T[] = [];
   const getTokenData = await Promise.allSettled(promiseData);
-  await getTokenData.forEach((tokenD) => {
+  getTokenData.forEach((tokenD) => {
     if (tokenD?.status === 'fulfilled' && tokenD.value) {
       filteredPromiseData.push(tokenD.value);
     }
@@ -41,37 +30,9 @@ const promiseAll = async (promiseData: any) => {
     return false;
   });
   return filteredPromiseData;
-};
+}
 
-const signAndConfirmTransaction = async (
-  walletConnection: { connection: Connection; wallet: WalletContextState },
-  instruction: TransactionInstruction,
-  signingKeypair?: Keypair
-) => {
-  const {
-    connection,
-    wallet: { publicKey: payerKey, sendTransaction, signTransaction },
-  } = walletConnection;
-
-  const transaction = new Transaction();
-  transaction.add(instruction).feePayer = payerKey as PublicKey;
-
-  const blockhashObj = await connection.getLatestBlockhash();
-  transaction.recentBlockhash = blockhashObj.blockhash;
-
-  if (signingKeypair) transaction.sign(...[signingKeypair]);
-  const signedTransaction = signTransaction
-    ? await signTransaction(transaction)
-    : null;
-
-  const signature = await sendTransaction(
-    signedTransaction as Transaction,
-    connection
-  );
-  await connection.confirmTransaction({ ...blockhashObj, signature });
-};
-
-export const getGlobalGemData = async (connection: Connection) => {
+export const getProposalsData = async (connection: Connection) => {
   const [global_gem_pubkey] = PublicKey.findProgramAddressSync(
     [Buffer.from(GLOBAL_GEM_KEY)],
     INGL_PROGRAM_ID
@@ -80,68 +41,64 @@ export const getGlobalGemData = async (connection: Connection) => {
   const globalGemAccountInfo = await connection.getAccountInfo(
     global_gem_pubkey
   );
-  const decodedData = deserializeUnchecked(
+  const { proposal_numeration: proposalsCounter } = deserializeUnchecked(
     GlobalGems,
     globalGemAccountInfo?.data as Buffer
   );
 
-  return {
-    counter: decodedData.counter,
-    total_raised: Number(decodedData.total_raised) / LAMPORTS_PER_SOL,
-    pd_pool_total: Number(decodedData.pd_pool_total) / LAMPORTS_PER_SOL,
-    delegated_total: Number(decodedData.delegated_total) / LAMPORTS_PER_SOL,
-    dealloced_total: Number(decodedData.dealloced_total) / LAMPORTS_PER_SOL,
-    proposal_numeration: decodedData.proposal_numeration,
-    is_proposal_ongoing: decodedData.is_proposal_ongoing,
-    validator_list: decodedData.validator_list,
-  };
-};
-
-export const getProposalsData = async (connection: Connection) => {
-  const proposalsCounter = await (
-    await getGlobalGemData(connection)
-  ).proposal_numeration;
-
-  let proposalsPDAPromise = [];
+  const proposalsPDAPromise: Promise<PublicKey>[] = [];
   for (let i = 0; i < proposalsCounter; i++) {
-    const promise = new Promise((resolve, reject) => {
-      try {
-        (async () => {
-          const [proposal_pubkey] = await PublicKey.findProgramAddress(
-            [Buffer.from(PROPOSAL_KEY), toBytesInt32(i)],
-            INGL_PROGRAM_ID
-          );
-          resolve(proposal_pubkey);
-        })();
-      } catch (error) {
-        reject(error);
+    const promise = new Promise(
+      (resolve: (value: PublicKey) => void, reject) => {
+        try {
+          (async () => {
+            const [proposal_pubkey] = await PublicKey.findProgramAddress(
+              [Buffer.from(PROPOSAL_KEY), toBytesInt32(i)],
+              INGL_PROGRAM_ID
+            );
+            resolve(proposal_pubkey);
+          })();
+        } catch (error) {
+          reject(error);
+        }
       }
-    });
+    );
     proposalsPDAPromise.push(promise);
   }
 
-  proposalsPDAPromise = await promiseAll(proposalsPDAPromise);
+  const proposalsPDA = await promiseAll(proposalsPDAPromise);
 
-  let proposalsInfo = proposalsPDAPromise.map(
-    (proposal_pubkey: PublicKey) =>
-      new Promise((resolve, reject) => {
-        (async () => {
-          const proposalInfo = await connection.getAccountInfo(proposal_pubkey);
-          if (!proposalInfo?.data) {
-            // if data null, token is not what we expect, delete it
-            reject(false);
-          } else {
-            resolve({
-              proposal_pubkey: proposal_pubkey,
-              data: proposalInfo?.data,
-            });
-          }
-        })();
-      })
+  const proposalsPromiseInfo = proposalsPDA.map(
+    (proposal_pubkey) =>
+      new Promise(
+        (
+          resolve: (value: {
+            proposal_pubkey: PublicKey;
+            data: Buffer;
+          }) => void,
+          reject
+        ) => {
+          (async () => {
+            const proposalInfo = await connection.getAccountInfo(
+              proposal_pubkey as PublicKey
+            );
+            if (!proposalInfo?.data) {
+              // if data null, token is not what we expect, delete it
+              reject(false);
+            } else {
+              resolve({
+                proposal_pubkey: proposal_pubkey,
+                data: proposalInfo?.data,
+              });
+            }
+          })();
+        }
+      )
   );
 
-  proposalsInfo = await promiseAll(proposalsInfo);
-  const decodedData = [];
+  const proposalsInfo = await promiseAll(proposalsPromiseInfo);
+  const decodedData: { proposal_pubkey: PublicKey; data: ValidatorProposal }[] =
+    [];
   for (let i = 0; i < proposalsInfo.length; i++) {
     const element = proposalsInfo[i];
     const value = element?.data;
@@ -151,8 +108,8 @@ export const getProposalsData = async (connection: Connection) => {
       proposal_pubkey: element?.proposal_pubkey,
       data: {
         ...data,
-        validator_ids: data.validator_ids.map((validator_id) =>
-          new PublicKey(validator_id).toString()
+        validator_ids: data.validator_ids.map(
+          (validator_id) => new PublicKey(validator_id)
         ),
       },
     });
@@ -169,16 +126,17 @@ export const getValidatorsDetail = async (validator_ids: string[]) => {
     pubkey: value,
     details: {} as any,
   }));
-  let allValidators: any = await fetch(
-    'https://www.validators.app/api/v1/validators/testnet.json',
-    {
+  let allValidators: any[] = await (
+    await fetch('https://www.validators.app/api/v1/validators/testnet.json', {
       headers: {
         token: token as string,
       },
-    }
+      mode: 'cors',
+    })
+  ).json();
+  allValidators = allValidators.filter(({ account }) =>
+    validator_ids.includes(account as string)
   );
-
-  allValidators = await allValidators.json();
   if (allValidators.length > 0) {
     for (let i = 0; i < allValidators.length; i++) {
       const validatorDetail = allValidators[i];
@@ -233,6 +191,7 @@ export const getValidatorsDetail = async (validator_ids: string[]) => {
         Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const d = R * c; // Distance in km
+    console.log(d);
     return d;
   };
   for (let i = 0; i < validatorsWithDetails.length; i++) {
@@ -240,10 +199,10 @@ export const getValidatorsDetail = async (validator_ids: string[]) => {
     let copyAllValidators = allValidators.map((validatorDetail: any) => ({
       ...validatorDetail,
       distance: getDistanceFromLatLonInKm(
-        validator.details?.latitude,
-        validator.details?.longitude,
-        validatorDetail?.latitude,
-        validatorDetail?.longitude
+        Number(validator.details?.latitude),
+        Number(validator.details?.longitude),
+        Number(validatorDetail?.latitude),
+        Number(validatorDetail?.longitude)
       ),
     }));
     copyAllValidators = copyAllValidators.sort((valA: any, valB: any) => {
@@ -254,6 +213,8 @@ export const getValidatorsDetail = async (validator_ids: string[]) => {
         .slice(0, 5)
         .reduce((acc: number, value: any) => acc + value?.distance, 0) / 5;
   }
+
+  console.log(validatorsWithDetails);
   return validatorsWithDetails;
 };
 
@@ -268,9 +229,18 @@ export const voteValidatorProposal = async (
   } = walletConnection;
   if (!payerKey) throw new Error('Please connect your wallet');
 
-  const proposalsCounter = await (
-    await getGlobalGemData(connection)
-  ).proposal_numeration;
+  const [global_gem_pubkey] = PublicKey.findProgramAddressSync(
+    [Buffer.from(GLOBAL_GEM_KEY)],
+    INGL_PROGRAM_ID
+  );
+
+  const globalGemAccountInfo = await connection.getAccountInfo(
+    global_gem_pubkey
+  );
+  const { proposal_numeration: proposalsCounter } = deserializeUnchecked(
+    GlobalGems,
+    globalGemAccountInfo?.data as Buffer
+  );
 
   let accounts: AccountMeta[] = [];
   const payerAccount: AccountMeta = {
@@ -279,7 +249,7 @@ export const voteValidatorProposal = async (
     isWritable: true,
   };
 
-  const [proposal_pubkey] = await PublicKey.findProgramAddressSync(
+  const [proposal_pubkey] = PublicKey.findProgramAddressSync(
     [Buffer.from(PROPOSAL_KEY), toBytesInt32(proposalsCounter - 1)],
     INGL_PROGRAM_ID
   );
@@ -338,4 +308,38 @@ export const voteValidatorProposal = async (
       'Vote validator proposal transaction failed with error ' + error
     );
   }
+};
+
+export const getGlobalGemData = async (connection: Connection) => {
+  const [global_gem_pubkey] = PublicKey.findProgramAddressSync(
+    [Buffer.from(GLOBAL_GEM_KEY)],
+    INGL_PROGRAM_ID
+  );
+
+  const globalGemAccountInfo = await connection.getAccountInfo(
+    global_gem_pubkey
+  );
+
+  const globalGems = deserializeUnchecked(
+    GlobalGems,
+    globalGemAccountInfo?.data as Buffer
+  );
+  const { total_raised, pd_pool_total, delegated_total, dealloced_total } =
+    globalGems;
+
+  return {
+    ...globalGems,
+    total_raised:
+      total_raised.toNumber() !== 0 ? total_raised.divn(LAMPORTS_PER_SOL) : 0,
+    pd_pool_total:
+      pd_pool_total.toNumber() !== 0 ? pd_pool_total.divn(LAMPORTS_PER_SOL) : 0,
+    delegated_total:
+      delegated_total.toNumber() !== 0
+        ? delegated_total.divn(LAMPORTS_PER_SOL)
+        : 0,
+    dealloced_total:
+      dealloced_total.toNumber() !== 0
+        ? dealloced_total.divn(LAMPORTS_PER_SOL)
+        : 0,
+  };
 };

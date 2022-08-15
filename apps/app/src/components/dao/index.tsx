@@ -20,19 +20,20 @@ import {
   voteValidatorProposal,
 } from '../../services/validator-dao.service';
 import { PublicKey } from '@solana/web3.js';
+import { ValidatorProposal } from '../../services/state';
 export interface InglSummary {
   title: 'counter' | 'total_raised' | 'pd_pool_total' | 'delegated_total';
-  amount: number;
+  amount: string;
   displayTitle: string;
 }
 
 export interface Proposal {
   proposal_id: string;
   start_date: Date;
-  end_date?: Date | undefined;
+  end_date?: Date;
   is_ongoing: boolean;
   proposal_numeration: number;
-  winner: string | undefined;
+  winner: string;
   votes: number[];
   validator_ids: string[];
 }
@@ -52,20 +53,20 @@ export interface Validator {
 }
 
 function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
-  const { connection } = useConnection();
   const wallet = useWallet();
+  const { connection } = useConnection();
 
   const [inglNumbers, setInglNumbers] = useState<InglSummary[]>([
-    { title: 'counter', amount: 0, displayTitle: 'Total Nfts Minted' },
-    { title: 'total_raised', amount: 0, displayTitle: 'Total Raised (SOL)' },
+    { title: 'counter', amount: '0', displayTitle: 'Total Nfts Minted' },
+    { title: 'total_raised', amount: '0', displayTitle: 'Total Raised (SOL)' },
     {
       title: 'pd_pool_total',
-      amount: 0,
+      amount: '0',
       displayTitle: 'Pending Delegation (SOL)',
     },
     {
       title: 'delegated_total',
-      amount: 0,
+      amount: '0',
       displayTitle: 'Total Delegated (SOL)',
     },
   ]);
@@ -80,45 +81,51 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
     setIsProposalsLoading(true);
     const notif = new useNotification();
     getProposalsData(connection)
-      .then((proposals: any) => {
-        const newProposals: Proposal[] = proposals.map(
-          (proposal: any, index: number) => {
-            return {
-              proposal_id: proposal?.proposal_pubkey.toString(),
-              start_date: proposal?.data?.date_created * 1000,
-              end_date: proposal?.data?.date_finalized
-                ? proposal?.data?.date_finalized * 1000
-                : undefined,
-              votes: proposal?.data?.votes,
-              winner: proposal?.data?.winner
-                ? new PublicKey(proposal?.data?.winner).toString()
-                : undefined,
-              validator_ids: proposal?.data?.validator_ids,
-              is_ongoing:
-                index === proposals.length - 1 &&
-                !proposal?.data?.date_finalized
-                  ? true
-                  : false,
-              proposal_numeration: index + 1,
-            };
-          }
-        );
-        setProposals(newProposals);
-        const newSelectedProposal = proposals.find(
-          (proposal: Proposal) => proposal.is_ongoing
-        );
-        if (newSelectedProposal) {
-          setSelectedProposal(newSelectedProposal);
-        } else if (newProposals.length > 0) {
-          setSelectedProposal(
-            newProposals.sort((propA, propB) => {
-              return new Date(propA.start_date) > new Date(propB.start_date)
-                ? -1
-                : 1;
-            })[0]
+      .then(
+        (
+          proposals: { proposal_pubkey: PublicKey; data: ValidatorProposal }[]
+        ) => {
+          const newProposals = proposals.map<Proposal>(
+            (proposal, index: number) => {
+              return {
+                proposal_id: proposal?.proposal_pubkey.toString(),
+                start_date: new Date(proposal?.data?.date_created * 1000),
+                end_date: proposal?.data?.date_finalized
+                  ? new Date(proposal?.data?.date_finalized * 1000)
+                  : undefined,
+                votes: proposal?.data?.votes,
+                winner: proposal?.data?.winner
+                  ? new PublicKey(proposal?.data?.winner).toString()
+                  : '',
+                validator_ids: proposal?.data?.validator_ids.map((id) =>
+                  id.toString()
+                ),
+                is_ongoing:
+                  index === proposals.length - 1 &&
+                  !proposal?.data?.date_finalized
+                    ? true
+                    : false,
+                proposal_numeration: index + 1,
+              };
+            }
           );
+          setProposals(newProposals);
+          const newSelectedProposal = newProposals.find(
+            (proposal) => proposal.is_ongoing
+          );
+          if (newSelectedProposal) {
+            setSelectedProposal(newSelectedProposal);
+          } else if (newProposals.length > 0) {
+            setSelectedProposal(
+              newProposals.sort((propA, propB) => {
+                return new Date(propA.start_date) > new Date(propB.start_date)
+                  ? -1
+                  : 1;
+              })[0]
+            );
+          }
         }
-      })
+      )
       .catch((error) => {
         notif.update({
           type: 'ERROR',
@@ -145,22 +152,22 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
     setInglNumbers([
       {
         title: 'counter',
-        amount: data.counter,
+        amount: data.counter.toString(),
         displayTitle: 'Total Nfts Minted',
       },
       {
         title: 'total_raised',
-        amount: data.total_raised,
+        amount: data.total_raised.toString(),
         displayTitle: 'Total Raised (SOL)',
       },
       {
         title: 'pd_pool_total',
-        amount: data.pd_pool_total,
+        amount: data.pd_pool_total.toString(),
         displayTitle: 'Pending Delegation (SOL)',
       },
       {
         title: 'delegated_total',
-        amount: data.delegated_total,
+        amount: data.delegated_total.toString(),
         displayTitle: 'Total Delegated (SOL)',
       },
     ]);
@@ -170,15 +177,21 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
   const [validators, setValidators] = useState<Validator[]>([]);
   const [isLoadingProposalData, setIsLoadingProposalData] =
     useState<boolean>(true);
+
+  useEffect(() => {
+    loadStats();
+    loadProposals();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => {
     if (selectedProposal) {
       const notif = new useNotification();
       setIsLoadingProposalData(true);
-      const validatorStats: Validator[] = [];
       getValidatorsDetail(selectedProposal.validator_ids)
         .then((validators) => {
-          validators.forEach((validator, index) => {
-            validatorStats.push({
+          console.log(validators);
+          const validatorStats = validators.map((validator, index) => {
+            return {
               validator_index: index,
               validator_pub_key: validator.pubkey,
               asn: validator.details?.autonomous_system_number,
@@ -197,8 +210,9 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
               solana_cli: validator.details?.software_version,
               total_vote: selectedProposal.votes[index],
               is_winner: selectedProposal.winner === validator.pubkey,
-            });
+            };
           });
+
           setValidators(validatorStats);
           setIsLoadingProposalData(false);
         })
@@ -220,17 +234,8 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
           setIsLoadingProposalData(false);
         });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProposal]);
-
-  useEffect(() => {
-    loadProposals();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    loadStats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -276,7 +281,6 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
             <ErrorMessage
               retryFunction={() => voteValidator(selectedGems)}
               notification={notif}
-              //TODO: this message is that coming from the backend
               message={
                 error?.message || 'There was a problem submitting your vote'
               }

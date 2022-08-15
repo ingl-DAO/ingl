@@ -35,11 +35,12 @@ export interface inglGem {
   generation?: number;
   rarity?: Rarity;
   gemClass?: string;
-  allocation_date?: string | Date;
+  allocation_date?: number;
   is_allocated: boolean;
   is_delegated: boolean;
   has_loan: boolean;
-  rarity_reveal_date?: string | Date;
+  rarity_reveal_date?: number;
+  last_voted_proposal_id?: string
 }
 
 export interface dialogContent {
