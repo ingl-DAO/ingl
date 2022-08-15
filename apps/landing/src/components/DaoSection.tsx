@@ -41,7 +41,11 @@ export default function DaoSection() {
         href="https://app.ingl.io/"
         rel="noreferrer"
         target="_blank"
-        sx={{ borderRadius: '90px', marginTop: theme.spacing(11) }}
+        sx={{
+          borderRadius: '90px',
+          marginTop: theme.spacing(11),
+          padding: theme.spacing(1, 8),
+        }}
       >
         Join
       </Button>

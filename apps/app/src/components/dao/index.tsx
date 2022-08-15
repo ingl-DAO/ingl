@@ -189,7 +189,7 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
       setIsLoadingProposalData(true);
       getValidatorsDetail(selectedProposal.validator_ids)
         .then((validators) => {
-          console.log(validators)
+          console.log(validators);
           const validatorStats = validators.map((validator, index) => {
             return {
               validator_index: index,
@@ -212,7 +212,7 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
               is_winner: selectedProposal.winner === validator.pubkey,
             };
           });
-          
+
           setValidators(validatorStats);
           setIsLoadingProposalData(false);
         })
@@ -224,8 +224,7 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
                 retryFunction={() => null}
                 notification={notif}
                 message={
-                  error?.message ||
-                  "There was a problem revealing your gem's rarity"
+                  error?.message || 'There was a problem loading validators'
                 }
               />
             ),
@@ -246,8 +245,8 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
     { title: 'Skip Rate', gridSpace: 1 },
     { title: 'Solana CLI', gridSpace: 2 },
     { title: 'Av. Distance', gridSpace: 1 },
+    { title: 'Ingl Score', gridSpace: 1 },
     { title: 'ASN( Concentration )', gridSpace: 2 },
-    { title: 'Score', gridSpace: 1 },
     { title: 'Actions', gridSpace: 1 },
   ];
 
@@ -309,14 +308,13 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
       <Box
         sx={{
           padding: theme.spacing(4),
-          borderBottom: `5px solid ${theme.palette.primary.main}`,
           display: 'grid',
           gridTemplateColumns: {
             laptop: 'repeat(auto-fit, minmax(290px, 1fr))',
             mobile: 'repeat(auto-fit, minmax(auto, 1fr))',
           },
-          columnGap: theme.spacing(2),
-          rowGap: theme.spacing(2),
+          columnGap: theme.spacing(5),
+          rowGap: theme.spacing(5),
         }}
       >
         {inglNumbers.map((data, index) => (
@@ -334,7 +332,6 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
           gridAutoFlow: 'column',
           alignItems: 'center',
           gridGap: theme.spacing(1),
-          borderBottom: `5px solid ${theme.palette.primary.main}`,
         }}
       >
         <Box
@@ -432,23 +429,43 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
                   {selectedProposal?.proposal_id}
                 </Typography>
               </Box>
-              <Typography
-                sx={{ color: theme.palette.secondary.main }}
-                variant="overline"
-              >
-                {`${formatDate(new Date(selectedProposal.start_date), {
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric',
-                })} - ${
-                  selectedProposal.end_date
-                    ? formatDate(new Date(selectedProposal.end_date), {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                      })
-                    : 'now'
-                }`}
+              <Typography variant="overline">
+                <Typography
+                  sx={{ color: theme.palette.common.white }}
+                  variant="overline"
+                >
+                  From{'     '}
+                </Typography>
+                <Typography
+                  sx={{ color: theme.palette.secondary.main }}
+                  variant="overline"
+                >
+                  {`${formatDate(new Date(selectedProposal.start_date), {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                  })}`}
+                </Typography>
+                <Typography
+                  sx={{ color: theme.palette.common.white }}
+                  variant="overline"
+                >
+                  {'     '} to {'     '}
+                </Typography>
+                <Typography
+                  sx={{ color: theme.palette.secondary.main }}
+                  variant="overline"
+                >
+                  {`${
+                    selectedProposal.end_date
+                      ? formatDate(new Date(selectedProposal.end_date), {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        })
+                      : 'now'
+                  }`}
+                </Typography>{' '}
               </Typography>{' '}
             </Box>
             <Box
@@ -481,8 +498,7 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
       {selectedProposal && (
         <Typography
           sx={{
-            backgroundColor: 'black',
-            padding: theme.spacing(3),
+            padding: theme.spacing(1.5, 2.5, 3.5, 2.5),
             textAlign: 'center',
           }}
         >
@@ -502,8 +518,8 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
           container
           columnSpacing={2}
           sx={{
-            padding: `${theme.spacing(0.5)} ${theme.spacing(5)}`,
-            background: theme.palette.secondary.main,
+            padding: `${theme.spacing(1.5)} ${theme.spacing(5)}`,
+            background: theme.palette.secondary.dark,
             alignItems: 'center',
           }}
         >

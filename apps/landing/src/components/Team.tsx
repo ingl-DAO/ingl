@@ -16,25 +16,25 @@ export interface Member {
 export default function Team() {
   const members: Member[] = [
     {
-      fullname: 'Kamda Cyrial',
+      fullname: 'Cyrial Kamda',
       role: 'dev',
       linkedinRef: 'https://www.linkedin.com/in/kamda-cyrial/',
       imageRef: cyrial,
     },
     {
-      fullname: 'Kuidja Marco',
+      fullname: 'Marco Kuidja',
       role: 'dev',
       linkedinRef: 'https://www.linkedin.com/in/marco-kuidja',
       imageRef: marco,
     },
     {
-      fullname: 'Ange Diepe',
+      fullname: 'Ange Noubissie',
       role: 'dev',
       linkedinRef: 'https://www.linkedin.com/in/diepe-angelo/',
       imageRef: angelo,
     },
     {
-      fullname: 'Tchakoumi Lorrain',
+      fullname: 'Lorrain Tchakoumi',
       role: 'dev',
       linkedinRef: 'https://www.linkedin.com/in/ltchakoumi',
       imageRef: lorrain,
@@ -68,7 +68,7 @@ export default function Team() {
           },
           rowGap: theme.spacing(3.75),
           columnGap: theme.spacing(5.75),
-          justifyContent:'center'
+          justifyContent: 'center',
         }}
       >
         {members.map((member, index) => (

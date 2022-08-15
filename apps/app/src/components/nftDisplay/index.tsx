@@ -19,10 +19,10 @@ import {
   loadInglGems,
   mintInglGem,
   redeemInglGem,
+  undelegateNft,
 } from '../../services/nft.service';
 import { NftClass, Rarity } from '../../services/state';
 import theme from '../../theme/theme';
-import SectionTitle from '../layout/SectionTitle';
 import ActionDialog from './ActionDialog';
 import Gem from './Gem';
 import MintGemDialog from './MintGemDialog';
@@ -183,7 +183,7 @@ export default function NftDisplay() {
       redeem: {
         title: 'Redeem Gem',
         content:
-          "are you sure you want to redeem this gem? Note that this will remove it from your list of nft's forever. Do you still want to continue?",
+          "Are you sure you want to redeem this gem? Note that this will remove it from your list of nft's forever. Do you still want to continue?",
         agreeText: 'Redeem',
         agreeFunction: () => executeAction(action, nft_id),
       },
@@ -197,7 +197,7 @@ export default function NftDisplay() {
       allocate: {
         title: 'Allocate Gem',
         content:
-          "are you sure you want to allocate this gem? Note that this action will reveal the gem's rarity and will lock your gem from redemption for a period of at least 2 (two) years. Are you want to continue?",
+          "Are you sure you want to allocate this gem? Note that this action will reveal the gem's rarity and will lock your gem from redemption for a period of at least 2 (two) years. Are you want to continue?",
         agreeText: 'Allocate',
         agreeFunction: () => executeAction(action, nft_id),
       },
@@ -218,7 +218,7 @@ export default function NftDisplay() {
       undelegate: {
         title: 'Undelegate Gem',
         content:
-          'are you sure you want to undelegate this gem? This action will prevent you from getting any benefits from your gem. Do you still want to continue?',
+          'Are you sure you want to undelegate this gem? This action will prevent you from getting any benefits from your gem. Do you still want to continue?',
         agreeText: 'Undelegate',
         agreeFunction: () => executeAction(action, nft_id),
       },
@@ -311,7 +311,8 @@ export default function NftDisplay() {
         );
       },
       undelegate: async () => {
-        console.log('undelegate');
+        console.log('start');
+        await undelegateNft({ connection, wallet }, tokenMint);
       },
     };
 
@@ -420,7 +421,17 @@ export default function NftDisplay() {
           // borderBottom: `1px solid ${theme.common.line}`,
         }}
       >
-        <SectionTitle noMargin title="mint nft" />
+        <Typography
+          variant="h1"
+          component="span"
+          sx={{
+            color: theme.palette.secondary.main,
+            textAlign: 'justify',
+            fontSize: { mobile: '1.5rem', laptop: '2.125rem' },
+          }}
+        >
+          MINT NFT
+        </Typography>
         <Button
           color="secondary"
           variant="contained"
@@ -449,7 +460,25 @@ export default function NftDisplay() {
           justifyContent: 'center',
         }}
       >
-        <SectionTitle title="my nft collection " center />
+        <Box
+          sx={{
+            marginBottom: theme.spacing(5.875),
+            marginTop: theme.spacing(5.875),
+            textAlign: 'center',
+          }}
+        >
+          <Typography
+            variant="h1"
+            component="span"
+            sx={{
+              color: 'white',
+              textAlign: 'justify',
+              fontSize: { mobile: '2rem', laptop: '3.125rem' },
+            }}
+          >
+            MY NFT COLLECTION
+          </Typography>
+        </Box>
         <Button
           sx={{ color: 'white' }}
           onClick={(event) => {

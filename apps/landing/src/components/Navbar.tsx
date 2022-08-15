@@ -30,7 +30,11 @@ const NAV_LINKS: { name: string; link: string; isExternal: boolean }[] = [
     link: 'https://whitepaper.ingl.io',
     isExternal: true,
   },
-  { name: 'Join our discord', link: 'https://discord.gg/9KWvjKV3Ed', isExternal: true },
+  {
+    name: 'Join our discord',
+    link: 'https://discord.gg/9KWvjKV3Ed',
+    isExternal: true,
+  },
   { name: 'Explore', link: '/', isExternal: false },
 ];
 
@@ -133,6 +137,7 @@ export default function Navbar() {
               borderRadius: '90px',
               justifySelf: 'end',
               display: { laptop: 'initial', mobile: 'none' },
+              padding: theme.spacing(1.25, 6),
             }}
           >
             Visit App

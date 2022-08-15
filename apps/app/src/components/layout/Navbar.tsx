@@ -6,6 +6,7 @@ import { IconButton, SwipeableDrawer, Tooltip } from '@mui/material';
 import NavItem, { ExternalNavItem } from './NavItem';
 import { MenuRounded } from '@mui/icons-material';
 import ConnectButton from './ConnectButton';
+import { Link } from 'react-router-dom';
 
 const NAV_LINKS: { name: string; link: string; isExternal: boolean }[] = [
   {
@@ -65,7 +66,7 @@ export default function Navbar() {
           <ExternalNavItem link={{ link, name }} />
         )
       )}
-      <ConnectButton isSideNavElement={true}/>
+      <ConnectButton isSideNavElement={true} />
     </Box>
   );
 
@@ -85,7 +86,9 @@ export default function Navbar() {
         }}
       >
         <Box sx={{ height: { laptop: '59.88px', mobile: '40px' } }}>
-          <img src={Logo} height="100%" alt="ingl logo" />
+          <Link to={'/'}>
+            <img src={Logo} height="100%" alt="ingl logo" />
+          </Link>
         </Box>
         <Box
           sx={{

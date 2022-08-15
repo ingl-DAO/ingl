@@ -6,13 +6,13 @@ export default function HeroSection() {
   return (
     <Grid container spacing={4.5} sx={{ marginTop: 12.3 }}>
       <Grid item container mobile={12} laptop={6.5} alignContent="center">
-        <Grid item mobile={12} sx={{ textAlign: 'justify' }}>
+        <Grid item mobile={12} sx={{ textAlign: 'left', wordSpacing: '25px' }}>
           <Typography
             variant="h1"
             component="span"
             sx={{
               background:
-                'linear-gradient(90deg, #003566 31.09%, #02C39A 73.96%)',
+                'linear-gradient(90.71deg, #003566 46.26%, #02C39A 80.31%);',
               backgroundClip: 'text',
               textFillColor: 'transparent',
               fontSize: { mobile: '2rem', laptop: '3.125rem' },
@@ -30,7 +30,7 @@ export default function HeroSection() {
             }}
           >
             {' '}
-            by purchasing equivalently backed and {' '}
+            by purchasing equivalently backed and{' '}
           </Typography>
           <Typography
             color="secondary"
@@ -48,15 +48,23 @@ export default function HeroSection() {
               textAlign: 'justify',
               fontSize: { mobile: '2rem', laptop: '3.125rem' },
             }}
-          >{' '}
+          >
+            {' '}
             and delegating to
           </Typography>
           <Typography
             color="secondary"
             variant="h1"
             component="span"
-            sx={{ fontSize: { mobile: '2rem', laptop: '3.125rem' } }}
-          >{' '}
+            sx={{
+              fontSize: { mobile: '2rem', laptop: '3.125rem' },
+              background:
+                'linear-gradient(90.71deg,  #02C39A 46.26%, #003566 80.31%);',
+              backgroundClip: 'text',
+              textFillColor: 'transparent',
+            }}
+          >
+            {' '}
             DAO voted validators
           </Typography>
         </Grid>
@@ -73,6 +81,7 @@ export default function HeroSection() {
           <Button
             sx={{
               borderRadius: '90px',
+              padding: theme.spacing(1.25, 6),
             }}
             variant="contained"
             color="primary"
@@ -86,6 +95,7 @@ export default function HeroSection() {
           <Button
             sx={{
               borderRadius: '90px',
+              padding: theme.spacing(1.25, 6),
             }}
             variant="contained"
             color="secondary"

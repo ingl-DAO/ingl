@@ -40,7 +40,9 @@ export default function ActionDialog({
       TransitionComponent={Transition}
       keepMounted
       onClose={closeDialog}
-      sx={{ '& .MuiPaper-root': { backgroundColor: 'black' } }}
+      sx={{
+        '& .MuiPaper-root': { backgroundColor: 'black', maxWidth: '500px' },
+      }}
     >
       <DialogTitle sx={{ color: 'white' }}>{title}</DialogTitle>
       <DialogContent>
@@ -51,7 +53,16 @@ export default function ActionDialog({
         </DialogContentText>
       </DialogContent>
       <DialogActions>
-        <Button variant="outlined" color="primary" onClick={closeDialog}>
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={closeDialog}
+          sx={{
+            zIndex: 1,
+            borderRadius: '30px',
+            fontSize: { mobile: '0.55rem', laptop: 'initial' },
+          }}
+        >
           Cancel
         </Button>
         <Button
@@ -60,6 +71,11 @@ export default function ActionDialog({
           onClick={() => {
             agreeFunction();
             closeDialog();
+          }}
+          sx={{
+            zIndex: 1,
+            borderRadius: '30px',
+            fontSize: { mobile: '0.55rem', laptop: 'initial' },
           }}
         >
           {agreeText}
