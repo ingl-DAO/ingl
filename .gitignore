@@ -45,3 +45,6 @@ Cargo.lock
 arweave-key.json
 keypair.json
 /deploy
+
+# Env
+.env

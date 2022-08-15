@@ -23,18 +23,34 @@ function ProposalNumber({
       }}
     >
       <Typography variant="body1">{proposal_numeration}</Typography>
-      <Typography
-        sx={{ color: theme.palette.secondary.main }}
-        variant="overline"
-      >{is_ongoing?'( current )': end_date?`( ${formatDate(new Date(start_date), {
-        year: 'numeric',
-        month: 'numeric',
-        day: 'numeric',
-      })} - ${formatDate(new Date(end_date), {
-        year: 'numeric',
-        month: 'numeric',
-        day: 'numeric',
-      })} )`: '( indeterminate )'}</Typography>
+      {is_ongoing ? (
+        <Typography
+          sx={{ color: theme.palette.secondary.main }}
+          variant="overline"
+        >
+          ( current )
+        </Typography>
+      ) : end_date ? (
+        <Typography variant="overline" sx={{ color: 'white' }}>
+          (
+          {formatDate(new Date(start_date), {
+            year: 'numeric',
+            month: 'numeric',
+            day: 'numeric',
+          })}{' '}
+          -
+          {formatDate(new Date(end_date), {
+            year: 'numeric',
+            month: 'numeric',
+            day: 'numeric',
+          })}{' '}
+          )
+        </Typography>
+      ) : (
+        <Typography variant="overline" sx={{ color: 'white' }}>
+          ( indeterminate )
+        </Typography>
+      )}
     </Box>
   );
 }

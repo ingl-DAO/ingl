@@ -1,4 +1,4 @@
-import { ContentCopyRounded } from '@mui/icons-material';
+import { OpenInNew } from '@mui/icons-material';
 import { Button, Grid, Tooltip, Typography } from '@mui/material';
 import { Validator } from '.';
 import theme from '../../theme/theme';
@@ -22,6 +22,8 @@ export default function ValidatorLIne({
     skip_rate,
     solana_cli,
     validator_pub_key,
+    is_winner,
+    total_vote,
   } = validator;
   return (
     <Grid
@@ -29,6 +31,7 @@ export default function ValidatorLIne({
       columnSpacing={2}
       sx={{
         padding: `${theme.spacing(3)} ${theme.spacing(5)}`,
+        color: is_winner ? theme.palette.secondary.main : 'white',
       }}
     >
       <Grid
@@ -41,44 +44,100 @@ export default function ValidatorLIne({
           alignItems: 'center',
         }}
       >
-        <Typography variant="caption">{validator_pub_key}</Typography>
-        <Tooltip arrow title="copy">
-          <ContentCopyRounded
-            fontSize="small"
-            onClick={() => navigator.clipboard.writeText(validator_pub_key)}
-            sx={{
-              color: 'white',
-              '&:hover': { color: theme.palette.secondary.main },
-              justifySelf: 'start',
-              cursor: 'pointer',
-            }}
-          />
+        <Typography
+          variant="caption"
+          sx={{
+            color: is_winner ? theme.palette.secondary.main : 'white',
+          }}
+        >
+          {validator_pub_key}
+        </Typography>
+        <Tooltip arrow title="view in explorer">
+          <a
+            href={`https://explorer.solana.com/address/${validator_pub_key}?cluster=testnet`}
+            target="_"
+          >
+            <OpenInNew
+              fontSize="small"
+              // onClick={() => navigator.clipboard.writeText(validator_pub_key)}
+              sx={{
+                color: is_winner ? theme.palette.secondary.main : 'white',
+                '&:hover': { color: theme.palette.secondary.main },
+                justifySelf: 'start',
+                cursor: 'pointer',
+              }}
+            />
+          </a>
         </Tooltip>
       </Grid>
       <Grid item desktop={1} sx={{ display: 'grid', justifyItems: 'center' }}>
-        <Typography variant="caption">{`${skip_rate}%`}</Typography>
+        <Typography
+          variant="caption"
+          sx={{
+            color: is_winner ? theme.palette.secondary.main : 'white',
+          }}
+        >{`${skip_rate}%`}</Typography>
       </Grid>
       <Grid item desktop={2} sx={{ display: 'grid', justifyItems: 'center' }}>
-        <Typography variant="caption">{`v${solana_cli}`}</Typography>
+        {solana_cli && (
+          <Typography
+            variant="caption"
+            sx={{
+              color: is_winner ? theme.palette.secondary.main : 'white',
+            }}
+          >{`v${solana_cli}`}</Typography>
+        )}
       </Grid>
       <Grid item desktop={1} sx={{ display: 'grid', justifyItems: 'center' }}>
-        <Typography variant="caption">{`${av_distance}km`}</Typography>
+        {av_distance ? (
+          <Typography
+            variant="caption"
+            sx={{
+              color: is_winner ? theme.palette.secondary.main : 'white',
+            }}
+          >{`${av_distance}km`}</Typography>
+        ) : (
+          ''
+        )}
       </Grid>
       <Grid item desktop={2} sx={{ display: 'grid', justifyItems: 'center' }}>
-        <Typography variant="caption">{`${asn}(${asn_concentration})`}</Typography>
+        {asn && (
+          <Typography
+            variant="caption"
+            sx={{
+              color: is_winner ? theme.palette.secondary.main : 'white',
+            }}
+          >{`${asn}(${asn_concentration}%)`}</Typography>
+        )}
       </Grid>
       <Grid item desktop={1} sx={{ display: 'grid', justifyItems: 'center' }}>
-        <Typography variant="caption">{`${score}%`}</Typography>
+        {score && (
+          <Typography
+            variant="caption"
+            sx={{
+              color: is_winner ? theme.palette.secondary.main : 'white',
+            }}
+          >{`${score}`}</Typography>
+        )}
       </Grid>
       <Grid item desktop={1} sx={{ display: 'grid', justifyItems: 'center' }}>
-        <Button
-          variant="contained"
-          size="small"
-          disabled={isSubmittingVote}
-          onClick={() => onVote(validator)}
-        >
-          {isProposalOngoing ? 'Vote' : 'View'}
-        </Button>
+        {isProposalOngoing ? (
+          <Button
+            variant="contained"
+            size="small"
+            disabled={isSubmittingVote}
+            onClick={() => onVote(validator)}
+          >
+            Vote
+          </Button>
+        ) : (
+          <Typography
+            variant="caption"
+            sx={{
+              color: is_winner ? theme.palette.secondary.main : 'white',
+            }}
+          >{`${total_vote} ${is_winner ? '( WINNER👑 )' : ''}`}</Typography>
+        )}
       </Grid>
     </Grid>
   );

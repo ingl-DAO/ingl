@@ -46,19 +46,22 @@ export function App() {
   // Only the wallets you configure here will be compiled into your application, and only the dependencies
   // of wallets that your users connect to will be loaded.
 
-  const wallets = [
-    new SolanaMobileWalletAdapter({
-      cluster: network,
-      appIdentity: { name: 'Solana Wallet Adapter App' },
-      authorizationResultCache: createDefaultAuthorizationResultCache(),
-    }),
-    new CoinbaseWalletAdapter(),
-    new PhantomWalletAdapter(),
-    new GlowWalletAdapter(),
-    new SlopeWalletAdapter(),
-    new SolflareWalletAdapter({ network }),
-    new TorusWalletAdapter(),
-  ];
+  const wallets = useMemo(
+    () => [
+      new PhantomWalletAdapter(),
+      new SolanaMobileWalletAdapter({
+        cluster: network,
+        appIdentity: { name: 'Solana Wallet Adapter App' },
+        authorizationResultCache: createDefaultAuthorizationResultCache(),
+      }),
+      new CoinbaseWalletAdapter(),
+      new GlowWalletAdapter(),
+      new SlopeWalletAdapter(),
+      new SolflareWalletAdapter({ network }),
+      new TorusWalletAdapter(),
+    ],
+    [network]
+  );
 
   return (
     <ConnectionProvider endpoint={endpoint}>

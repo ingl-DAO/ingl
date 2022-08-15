@@ -150,7 +150,7 @@ export default function SelectValidatorDialog({
           <Grid container spacing={2}>
             {isValidatorsLoading ? (
               [...new Array(12)].map((_, index) => (
-                <Grid key={index} item mobile={12} laptop={6}>
+                <Grid item mobile={12} laptop={6}>
                   <Skeleton
                     variant="rectangular"
                     height={200}

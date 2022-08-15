@@ -13,7 +13,6 @@ import {
   BNB_HISTORY_BUFFER_KEY,
   INGL_TREASURY_ACCOUNT_KEY,
   GemAccountV0_0_1,
-  decodeInglData,
   PD_POOL_KEY,
   VOTE_DATA_ACCOUNT_KEY,
   VOTE_ACCOUNT_KEY,
@@ -26,6 +25,8 @@ import {
   NftClassToString,
   NFTS_SHARE,
   inglGemSol,
+  PDPoolFundLocation,
+  VoteAccountFundLocation,
 } from './state';
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -48,11 +49,12 @@ import {
 import { WalletContextState } from '@solana/wallet-adapter-react';
 import { PROGRAM_ID as METAPLEX_PROGRAM_ID } from '@metaplex-foundation/mpl-token-metadata';
 import { LazyNft, Metaplex, Nft } from '@metaplex-foundation/js';
-import { inglGem } from '../components/nftDisplay';
 import { WalletNotConnectedError } from '@solana/wallet-adapter-base';
 import * as uint32 from 'uint32';
 import { Gem } from '../components/wallet';
 import BN from 'bn.js';
+import { deserializeUnchecked } from '@dao-xyz/borsh';
+import { inglGem } from '../components/nftDisplay';
 
 const [minting_pool_key] = PublicKey.findProgramAddressSync(
   [Buffer.from(INGL_MINTING_POOL_KEY)],
@@ -628,7 +630,10 @@ export async function redeemInglGem(
   }
 }
 
-const getInglGemFromNft = async (connection: Connection, nft: Nft) => {
+const getInglGemFromNft = async (
+  connection: Connection,
+  nft: Nft
+): Promise<inglGem> => {
   const {
     mint: { address },
     json,
@@ -640,10 +645,14 @@ const getInglGemFromNft = async (connection: Connection, nft: Nft) => {
       INGL_PROGRAM_ID
     );
     const accountInfo = await connection.getAccountInfo(gem_pubkey);
-    const decodedData = await decodeInglData(
-      GemAccountV0_0_1,
-      accountInfo?.data as Buffer
-    );
+    // deserialize buffer data into readable format
+    const {
+      rarity,
+      funds_location,
+      date_allocated,
+      last_voted_proposal,
+      rarity_seed_time,
+    } = deserializeUnchecked(GemAccountV0_0_1, accountInfo?.data as Buffer);
     return {
       image_ref: image,
       generation: Number(
@@ -655,15 +664,19 @@ const getInglGemFromNft = async (connection: Connection, nft: Nft) => {
       has_loan: false,
       video_ref: properties?.files?.find((file) => file.type === 'video/mp4')
         ?.uri,
-      rarity: decodedData['rarity'],
-      is_allocated: decodedData['funds_location']['enum'] === 'pDPool',
-      is_delegated: decodedData['funds_location']['enum'] === 'voteAccount',
-      allocation_date: decodedData['date_allocated'],
-      rarity_reveal_date: decodedData['rarity_seed_time'],
+      rarity: rarity,
+      is_allocated: funds_location instanceof PDPoolFundLocation,
+      is_delegated: funds_location instanceof VoteAccountFundLocation,
+      allocation_date: date_allocated,
+      rarity_reveal_date: rarity_seed_time,
+      last_voted_proposal_id: last_voted_proposal
+        ? last_voted_proposal.toString()
+        : '',
     };
   }
   throw new Error('No json fields was found on metadata');
 };
+
 export async function loadInglGems(
   connection: Connection,
   ownerPubkey: PublicKey
@@ -1006,7 +1019,7 @@ export async function getVoteAccounts(connection: Connection) {
     const globalGemsAccount = await connection.getAccountInfo(
       global_gem_pubkey
     );
-    const globalGemData = await decodeInglData(
+    const globalGemData = deserializeUnchecked(
       GlobalGems,
       globalGemsAccount?.data as Buffer
     );
@@ -1028,14 +1041,13 @@ export async function getVoteAccounts(connection: Connection) {
         ingl_vote_data_account_key
       );
       if (inglVoteAccount) {
-        const inglVoteData = await decodeInglData(
+        const { validator_id } = deserializeUnchecked(
           InglVoteAccountData,
           inglVoteAccount?.data as Buffer
         );
-        console.log(new PublicKey(inglVoteData['validator_id']).toString());
         votesIds.push({
+          validator_id,
           vote_account: vote_account_key,
-          validator_id: new PublicKey(inglVoteData['validator_id']),
         });
       }
     }
@@ -1099,13 +1111,13 @@ export async function claimInglRewards(
     const inglVoteAccount = await connection.getAccountInfo(
       ingl_vote_data_account_key
     );
-    const inglVoteData = await decodeInglData(
+    const { validator_id } = deserializeUnchecked(
       InglVoteAccountData,
       inglVoteAccount?.data as Buffer
     );
 
     const validatorAccount: AccountMeta = {
-      pubkey: new PublicKey(Buffer.from(inglVoteData['validator_id'])),
+      pubkey: validator_id,
       isSigner: false,
       isWritable: false,
     };
@@ -1215,17 +1227,14 @@ export async function loadRewards(
           INGL_PROGRAM_ID
         );
         const accountInfo = await connection.getAccountInfo(gem_pubkey);
-        const gemAccountData = await decodeInglData(
-          GemAccountV0_0_1,
-          accountInfo?.data as Buffer
-        );
-        const funds_location = gemAccountData['funds_location'];
+        const { funds_location, last_withdrawal_epoch, last_delegation_epoch } =
+          deserializeUnchecked(GemAccountV0_0_1, accountInfo?.data as Buffer);
         const gemClass = attributes?.find(
           ({ trait_type }) => trait_type === 'Class'
         )?.value as NftClassToString;
-        if (funds_location['enum'] === 'voteAccount') {
+        if (funds_location instanceof VoteAccountFundLocation) {
           const vote_account_key = new PublicKey(
-            funds_location['voteAccount']['id']
+            funds_location.vote_account_id
           );
           console.log(vote_account_key);
           const [ingl_vote_data_account_key] = PublicKey.findProgramAddressSync(
@@ -1236,7 +1245,7 @@ export async function loadRewards(
             ingl_vote_data_account_key
           );
           if (inglVoteAccount) {
-            const inglVoteData = await decodeInglData(
+            const inglVoteData = deserializeUnchecked(
               InglVoteAccountData,
               inglVoteAccount?.data as Buffer
             );
@@ -1245,23 +1254,20 @@ export async function loadRewards(
               total_reward: BN;
               total_stake: BN;
             }[];
-            const lastWithdrawalEpoch = gemAccountData[
-              'last_withdrawal_epoch'
-            ] as BN;
-            const lastDelegationEpoch = gemAccountData[
-              'last_delegation_epoch'
-            ] as BN;
-            const comp = lastDelegationEpoch.cmp(lastWithdrawalEpoch);
+            const comp = last_delegation_epoch?.cmp(
+              last_withdrawal_epoch as BN
+            );
             const interestedEpoch =
               comp === 0
-                ? lastDelegationEpoch
+                ? last_delegation_epoch
                 : comp === -1
-                ? lastWithdrawalEpoch
-                : lastDelegationEpoch;
+                ? last_withdrawal_epoch
+                : last_delegation_epoch;
             const interestedIndex =
               1 +
               voteRewards.findIndex(
-                ({ epoch_number }) => epoch_number.cmp(interestedEpoch) === 0
+                ({ epoch_number }) =>
+                  epoch_number.cmp(interestedEpoch as BN) === 0
               );
             const totalRewards: BN = voteRewards
               .slice(interestedIndex)

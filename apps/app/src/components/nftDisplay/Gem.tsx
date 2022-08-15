@@ -152,8 +152,8 @@ export default function Gem({
           render: 'successfully revealed ingl gem rarity',
         });
         const newGem = await loadGem(connection, new PublicKey(nft_id));
-        setGems((gems) =>
-          gems.map((gem) => {
+        setGems((gems: any) =>
+          gems.map((gem: any) => {
             return nft_id === gem.nft_id ? newGem : gem;
           })
         );
@@ -191,9 +191,9 @@ export default function Gem({
     <>
       <Box
         sx={{
-          padding: theme.spacing(2),
+          padding: theme.spacing(1.5),
           background:
-            'linear-gradient(151.27deg, #042F57 10.17%, #00426B 32.86%, #015C74 65.73%, #02C39A 150.23%)',
+            'linear-gradient(151.27deg, #02C39A 10.17%, #00426B 32.86%, #015C74 65.73%, #02C39A 150.23%);',
           borderRadius: theme.spacing(3.75),
           width: 'fit-content',
         }}

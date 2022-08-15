@@ -9,6 +9,7 @@
   },
   "private": true,
   "dependencies": {
+    "@dao-xyz/borsh": "^2.1.5",
     "@emotion/react": "^11.9.3",
     "@emotion/styled": "^11.9.3",
     "@metaplex-foundation/js": "^0.13.3",
@@ -25,6 +26,7 @@
     "@solana/web3.js": "^1.50.1",
     "@types/uuid": "^8.3.4",
     "assert": "^2.0.0",
+    "bn.js": "^5.2.1",
     "borsh": "^0.7.0",
     "browserify-zlib": "^0.2.0",
     "buffer": "^6.0.3",
@@ -43,6 +45,7 @@
     "react-router-dom": "^6.4.0-pre.2",
     "react-scripts": "^5.0.1",
     "react-toastify": "^9.0.5",
+    "reflect-metadata": "^0.1.13",
     "regenerator-runtime": "0.13.7",
     "stream-browserify": "^3.0.0",
     "tslib": "^2.3.0",

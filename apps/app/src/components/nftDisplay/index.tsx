@@ -35,11 +35,12 @@ export interface inglGem {
   generation?: number;
   rarity?: Rarity;
   gemClass?: string;
-  allocation_date?: string | Date;
+  allocation_date?: number;
   is_allocated: boolean;
   is_delegated: boolean;
   has_loan: boolean;
-  rarity_reveal_date?: string | Date;
+  rarity_reveal_date?: number;
+  last_voted_proposal_id?: string
 }
 
 export interface dialogContent {
@@ -107,10 +108,12 @@ export default function NftDisplay() {
     }
   };
   const [gems, setGems] = useState<inglGem[]>([]);
+  const [isLoadingGems, setIsLoadingGems] = useState<boolean>(true);
 
   const loadGems = () => {
     const notif = new useNotification();
     if (wallet?.publicKey) {
+      setIsLoadingGems(true);
       loadInglGems(connection, wallet.publicKey)
         .then((inglGems) => {
           setGems(inglGems);
@@ -131,14 +134,17 @@ export default function NftDisplay() {
             autoClose: false,
             icon: () => <ReportRounded fontSize="large" color="error" />,
           });
-        });
+        })
+        .finally(() => setIsLoadingGems(false));
+    } else {
+      setIsLoadingGems(false);
     }
   };
 
   useEffect(() => {
     loadGems();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wallet?.publicKey]);
+  }, [wallet.connected]);
 
   const [isValidatorDialogOpen, setIsValidatorDialogOpen] =
     useState<boolean>(false);
@@ -411,7 +417,7 @@ export default function NftDisplay() {
           justifyItems: { laptop: 'initial', mobile: 'center' },
           alignItems: 'center',
           padding: theme.spacing(5.875),
-          borderBottom: `1px solid ${theme.common.line}`,
+          // borderBottom: `1px solid ${theme.common.line}`,
         }}
       >
         <SectionTitle noMargin title="mint nft" />
@@ -425,7 +431,7 @@ export default function NftDisplay() {
             justifySelf: { laptop: 'end', mobile: 'center' },
           }}
           onClick={() => setIsMintDialogOpen(true)}
-          disabled={!wallet.connected || isMintingGem || isMintDialogOpen}
+          disabled={isMintingGem || isMintDialogOpen}
         >
           Mint now
         </Button>
@@ -470,7 +476,7 @@ export default function NftDisplay() {
         onClose={handleClose}
         sx={{
           '& .MuiPaper-root': {
-            backgroundColor: 'transparent',
+            backgroundColor: 'black',
           },
         }}
       >
@@ -497,7 +503,18 @@ export default function NftDisplay() {
           rowGap: '20px',
         }}
       >
-        {displayGems.length === 0 ? (
+        {isLoadingGems ? (
+          <Typography
+            variant="h6"
+            sx={{
+              textAlign: 'center',
+              color: theme.palette.secondary.main,
+              fontStyle: 'italic',
+            }}
+          >
+            Loading your NFTs...
+          </Typography>
+        ) : displayGems.length === 0 ? (
           selectedAttribute.attName ? (
             <Typography variant="h5" sx={{ textAlign: 'center' }}>
               You own now ingl gem that respects this criteria

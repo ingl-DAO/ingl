@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
 import { injectIntl, IntlShape } from 'react-intl';
 import ErrorMessage from '../../common/components/ErrorMessage';
 import useNotification from '../../common/utils/notification';
-import random from '../../common/utils/random';
 import theme from '../../theme/theme';
 import InglNumber from './inglNumber';
 import ProposalNumber from './ProposalNumber';
@@ -13,9 +12,18 @@ import ProposalSelectionMenu from './ProposalSelectionMenu';
 import ValidatorLIne from './ValidatorLIne';
 import VoteDialog, { inglGem } from './VoteDialog';
 
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import {
+  getGlobalGemData,
+  getProposalsData,
+  getValidatorsDetail,
+  voteValidatorProposal,
+} from '../../services/validator-dao.service';
+import { PublicKey } from '@solana/web3.js';
+import { ValidatorProposal } from '../../services/state';
 export interface InglSummary {
   title: 'counter' | 'total_raised' | 'pd_pool_total' | 'delegated_total';
-  amount: number;
+  amount: string;
   displayTitle: string;
 }
 
@@ -25,6 +33,9 @@ export interface Proposal {
   end_date?: Date;
   is_ongoing: boolean;
   proposal_numeration: number;
+  winner: string;
+  votes: number[];
+  validator_ids: string[];
 }
 
 export interface Validator {
@@ -35,21 +46,27 @@ export interface Validator {
   asn: string;
   asn_concentration: number;
   score: number;
-  vote_account?:string;
+  vote_account?: string;
+  total_vote?: number;
+  is_winner?: boolean;
+  validator_index?: number;
 }
 
 function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
+  const wallet = useWallet();
+  const { connection } = useConnection();
+
   const [inglNumbers, setInglNumbers] = useState<InglSummary[]>([
-    { title: 'counter', amount: 0, displayTitle: 'Total Nfts Minted' },
-    { title: 'total_raised', amount: 0, displayTitle: 'Total Raised (SOL)' },
+    { title: 'counter', amount: '0', displayTitle: 'Total Nfts Minted' },
+    { title: 'total_raised', amount: '0', displayTitle: 'Total Raised (SOL)' },
     {
       title: 'pd_pool_total',
-      amount: 0,
+      amount: '0',
       displayTitle: 'Pending Delegation (SOL)',
     },
     {
       title: 'delegated_total',
-      amount: 0,
+      amount: '0',
       displayTitle: 'Total Delegated (SOL)',
     },
   ]);
@@ -60,86 +77,166 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
   const [selectedProposal, setSelectedProposal] = useState<Proposal>();
   const [isProposalsLoading, setIsProposalsLoading] = useState<boolean>(false);
 
-  useEffect(() => {
-    //TODO: FETCH DATA WITH RESPECT to the different proposals
+  const loadProposals = async () => {
     setIsProposalsLoading(true);
-    setTimeout(() => {
-      const newProposals: Proposal[] = [
-        {
-          proposal_id: 'h',
-          start_date: new Date('12/12/12'),
-          end_date: new Date(),
-          is_ongoing: true,
-          proposal_numeration: 1,
-        },
-      ];
-      setProposals(newProposals);
-      const newSelectedProposal = proposals.find(
-        (proposal) => proposal.is_ongoing
-      );
-      if (newSelectedProposal) {
-        setSelectedProposal(newSelectedProposal);
-      } else if (newProposals.length > 0) {
-        setSelectedProposal(
-          newProposals.sort((propA, propB) =>
-            new Date(propA.start_date) > new Date(propB.start_date) ? -1 : 1
-          )[0]
-        );
-      }
-      setIsProposalsLoading(false);
-    }, 3000);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const notif = new useNotification();
+    getProposalsData(connection)
+      .then(
+        (
+          proposals: { proposal_pubkey: PublicKey; data: ValidatorProposal }[]
+        ) => {
+          const newProposals = proposals.map<Proposal>(
+            (proposal, index: number) => {
+              return {
+                proposal_id: proposal?.proposal_pubkey.toString(),
+                start_date: new Date(proposal?.data?.date_created * 1000),
+                end_date: proposal?.data?.date_finalized
+                  ? new Date(proposal?.data?.date_finalized * 1000)
+                  : undefined,
+                votes: proposal?.data?.votes,
+                winner: proposal?.data?.winner
+                  ? new PublicKey(proposal?.data?.winner).toString()
+                  : '',
+                validator_ids: proposal?.data?.validator_ids.map((id) =>
+                  id.toString()
+                ),
+                is_ongoing:
+                  index === proposals.length - 1 &&
+                  !proposal?.data?.date_finalized
+                    ? true
+                    : false,
+                proposal_numeration: index + 1,
+              };
+            }
+          );
+          setProposals(newProposals);
+          const newSelectedProposal = newProposals.find(
+            (proposal) => proposal.is_ongoing
+          );
+          if (newSelectedProposal) {
+            setSelectedProposal(newSelectedProposal);
+          } else if (newProposals.length > 0) {
+            setSelectedProposal(
+              newProposals.sort((propA, propB) => {
+                return new Date(propA.start_date) > new Date(propB.start_date)
+                  ? -1
+                  : 1;
+              })[0]
+            );
+          }
+        }
+      )
+      .catch((error) => {
+        notif.update({
+          type: 'ERROR',
+          render: (
+            <ErrorMessage
+              retryFunction={loadProposals}
+              notification={notif}
+              message={
+                error?.message ||
+                "There was a problem revealing your gem's rarity"
+              }
+            />
+          ),
+          autoClose: false,
+          icon: () => <ReportRounded fontSize="large" color="error" />,
+        });
+      })
+      .finally(() => setIsProposalsLoading(false));
+  };
+
+  const loadStats = async () => {
+    setIsInglNumbersLoading(true);
+    const data = await getGlobalGemData(connection);
+    setInglNumbers([
+      {
+        title: 'counter',
+        amount: data.counter.toString(),
+        displayTitle: 'Total Nfts Minted',
+      },
+      {
+        title: 'total_raised',
+        amount: data.total_raised.toString(),
+        displayTitle: 'Total Raised (SOL)',
+      },
+      {
+        title: 'pd_pool_total',
+        amount: data.pd_pool_total.toString(),
+        displayTitle: 'Pending Delegation (SOL)',
+      },
+      {
+        title: 'delegated_total',
+        amount: data.delegated_total.toString(),
+        displayTitle: 'Total Delegated (SOL)',
+      },
+    ]);
+    setIsInglNumbersLoading(false);
+  };
 
   const [validators, setValidators] = useState<Validator[]>([]);
   const [isLoadingProposalData, setIsLoadingProposalData] =
     useState<boolean>(true);
-  useEffect(() => {
-    //TODO: FETCH DATA OF THE selected proposal here
-    if (selectedProposal) {
-      setIsLoadingProposalData(true);
-      setTimeout(() => {
-        setValidators([
-          {
-            validator_pub_key: 'qXh3G5eogP6NHx5FLRzDTrLJwiaNCYULwguZTGaa9Fw',
-            asn: 'AS12424',
-            asn_concentration: 0.34,
-            av_distance: 15,
-            score: 60,
-            skip_rate: 23,
-            solana_cli: '2.3.33',
-          },
-        ]);
-        setIsLoadingProposalData(false);
-      }, 3000);
-    }
-  }, [selectedProposal]);
 
   useEffect(() => {
-    //TODO: FETCH DATA HERE WITH RESPECT inglNumbers
-    setIsInglNumbersLoading(true);
-    setTimeout(() => {
-      setInglNumbers([
-        { title: 'counter', amount: 90, displayTitle: 'Total Nfts Minted' },
-        {
-          title: 'total_raised',
-          amount: 60070000,
-          displayTitle: 'Total Raised (SOL)',
-        },
-        {
-          title: 'pd_pool_total',
-          amount: 60070000,
-          displayTitle: 'Pending Delegation (SOL)',
-        },
-        {
-          title: 'delegated_total',
-          amount: 60070000,
-          displayTitle: 'Total Delegated (SOL)',
-        },
-      ]);
-      setIsInglNumbersLoading(false);
-    }, 3000);
+    loadStats();
+    loadProposals();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useEffect(() => {
+    if (selectedProposal) {
+      const notif = new useNotification();
+      setIsLoadingProposalData(true);
+      getValidatorsDetail(selectedProposal.validator_ids)
+        .then((validators) => {
+          console.log(validators)
+          const validatorStats = validators.map((validator, index) => {
+            return {
+              validator_index: index,
+              validator_pub_key: validator.pubkey,
+              asn: validator.details?.autonomous_system_number,
+              asn_concentration: validator.details?.autonomous_system_number
+                ? validator.details?.asn_concentration.toFixed(3)
+                : null,
+              av_distance: Number(
+                (validator.details?.average_distance / 1000).toFixed(3)
+              ),
+              score: validator.details?.total_score,
+              skip_rate: Number(
+                (
+                  Number(validator.details?.skipped_slot_percent ?? 0) * 100
+                ).toFixed(3)
+              ),
+              solana_cli: validator.details?.software_version,
+              total_vote: selectedProposal.votes[index],
+              is_winner: selectedProposal.winner === validator.pubkey,
+            };
+          });
+          
+          setValidators(validatorStats);
+          setIsLoadingProposalData(false);
+        })
+        .catch((error) => {
+          notif.update({
+            type: 'ERROR',
+            render: (
+              <ErrorMessage
+                retryFunction={() => null}
+                notification={notif}
+                message={
+                  error?.message ||
+                  "There was a problem revealing your gem's rarity"
+                }
+              />
+            ),
+            autoClose: false,
+            icon: () => <ReportRounded fontSize="large" color="error" />,
+          });
+          setIsLoadingProposalData(false);
+        });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProposal]);
 
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -161,36 +258,42 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
   const [notifs, setNotifs] = useState<useNotification[]>();
   const [isSubmittingVote, setIsSubmittingVote] = useState<boolean>(false);
   const voteValidator = (selectedGems: inglGem[]) => {
-    //TODO: CALL API HERE TO VOTE ON A PROPOSAL: THE DETAILS INCLUDE: selectedProposal, selectedValidator, selectedGems
     if (notifs) notifs.forEach((publishedNotif) => publishedNotif.dismiss());
     const notif = new useNotification();
     if (notifs) setNotifs([...notifs, notif]);
     else setNotifs([notif]);
     notif.notify({ render: `Submitting your vote` });
+
     setIsSubmittingVote(true);
-    setTimeout(() => {
-      if (random() > 5) {
-        // TODO CALL API HERE TO  MINT NFT with class mintClass
+    voteValidatorProposal(
+      { connection, wallet },
+      selectedGems.map((gem) => new PublicKey(gem.nft_id)),
+      selectedValidator?.validator_index as number
+    )
+      .then((data) => {
         notif.update({
           render: 'Vote submitted successfully',
         });
-      } else {
+      })
+      .catch((error) => {
         notif.update({
           type: 'ERROR',
           render: (
             <ErrorMessage
               retryFunction={() => voteValidator(selectedGems)}
               notification={notif}
-              //TODO: this message is that coming from the backend
-              message="There was a problem submitting your vote"
+              message={
+                error?.message || 'There was a problem submitting your vote'
+              }
             />
           ),
           autoClose: false,
           icon: () => <ReportRounded fontSize="large" color="error" />,
         });
-      }
-      setIsSubmittingVote(false);
-    }, 3000);
+      })
+      .finally(() => {
+        setIsSubmittingVote(false);
+      });
   };
 
   return (
@@ -270,7 +373,11 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
                   : 'initial',
             }}
             onClick={(event) => {
-              if (!isProposalsLoading && proposals.length > 0 && !isSubmittingVote) {
+              if (
+                !isProposalsLoading &&
+                proposals.length > 0 &&
+                !isSubmittingVote
+              ) {
                 setAnchorEl(event.currentTarget);
                 setIsMenuOpen(true);
               }
@@ -397,6 +504,7 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
           sx={{
             padding: `${theme.spacing(0.5)} ${theme.spacing(5)}`,
             background: theme.palette.secondary.main,
+            alignItems: 'center',
           }}
         >
           {tableHeaders.map(({ title, gridSpace }, index) => (
@@ -409,7 +517,11 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
                 justifyItems: 'center',
               }}
             >
-              <Typography sx={{ fontWeight: 'bold' }}>{title}</Typography>
+              <Typography sx={{ fontWeight: '500', fontSize: '18px' }}>
+                {title === 'Actions' && selectedProposal?.is_ongoing === false
+                  ? 'Total Votes'
+                  : title}
+              </Typography>
             </Grid>
           ))}
         </Grid>
@@ -441,8 +553,12 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
                   selectedProposal ? selectedProposal.is_ongoing : false
                 }
                 onVote={(validator: Validator) => {
-                  setSelectedValidator(validator);
-                  setIsValidatorVoteDialogOpen(true);
+                  if (selectedProposal?.is_ongoing && !wallet.connected) {
+                    alert('Connect your wallet to vote');
+                  } else {
+                    setSelectedValidator(validator);
+                    setIsValidatorVoteDialogOpen(true);
+                  }
                 }}
               />
             ))
