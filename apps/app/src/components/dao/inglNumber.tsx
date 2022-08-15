@@ -14,19 +14,23 @@ export default function InglNumber({
   return (
     <Box
       sx={{
-        backgroundColor: theme.palette.primary.main,
+        backgroundColor: '#092C4C88',
         borderRadius: theme.spacing(3),
         padding: theme.spacing(2),
       }}
     >
-      <Typography sx={{textAlign: 'center'}}>{displayTitle}</Typography>
+      <Typography sx={{ textAlign: 'center' }}>{displayTitle}</Typography>
       {isDataLoading ? (
         <Skeleton
           variant="text"
           sx={{ backgroundColor: 'rgba(177,177,177,0.17)' }}
         />
       ) : (
-        <Typography sx={{fontWeight: 'bold', fontSize: '3rem', textAlign:'center'}}>{shortenNumber(amount)}</Typography>
+        <Typography
+          sx={{ fontWeight: 'bold', fontSize: '4rem', textAlign: 'center' }}
+        >
+          {shortenNumber(amount)}
+        </Typography>
       )}
     </Box>
   );

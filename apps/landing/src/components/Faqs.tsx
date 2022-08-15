@@ -13,12 +13,12 @@ export default function Faqs() {
     {
       question: 'who can onboard a computing unit?',
       answer:
-        'anyone, provided they mean the minimum solana validator requirements',
+        'Anyone, provided they mean the minimum solana validator requirements',
     },
     {
       question: 'How are yields generated ?',
       answer:
-        'validators earn voting rewards that are later redistributed to all participants.',
+        'Validators earn voting rewards that are later redistributed to all participants.',
     },
   ];
   return (

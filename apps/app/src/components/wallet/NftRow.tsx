@@ -16,7 +16,14 @@ export default function NftRow({
 }) {
   return (
     <TableRow sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-      <TableCell component="th" scope="row">
+      <TableCell
+        component="th"
+        scope="row"
+        style={{
+          borderColor: theme.palette.secondary.dark,
+          borderBottomWidth: '2.5px',
+        }}
+      >
         <Checkbox
           checked={isChecked}
           onChange={selectNft}
@@ -24,19 +31,38 @@ export default function NftRow({
           disabled={isClaimingDialog || isNftsLoading}
         />
       </TableCell>
-      <TableCell component="th" scope="row">
+      <TableCell
+        component="th"
+        scope="row"
+        style={{
+          borderColor: theme.palette.secondary.dark,
+          borderBottomWidth: '2.5px',
+        }}
+      >
         <Avatar
           src={image_ref}
           alt="ingl gem"
           sx={{ height: '75px', width: '75px' }}
         />
       </TableCell>
-      <TableCell width="100%" align="left" sx={{ color: theme.common.line }}>
+      <TableCell
+        width="100%"
+        align="left"
+        sx={{
+          color: theme.common.line,
+          borderColor: theme.palette.secondary.dark,
+          borderBottomWidth: '2.5px',
+        }}
+      >
         {vote_account_id}
       </TableCell>
       <TableCell
         align="right"
-        sx={{ color: theme.palette.secondary.main }}
+        sx={{
+          color: theme.palette.secondary.main,
+          borderColor: theme.palette.secondary.dark,
+          borderBottomWidth: '2.5px',
+        }}
       >{`${rewards}`}</TableCell>
     </TableRow>
   );
