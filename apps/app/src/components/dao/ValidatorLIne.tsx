@@ -52,9 +52,9 @@ export default function ValidatorLIne({
         >
           {validator_pub_key}
         </Typography>
-        <Tooltip arrow title="view in explorer">
+        <Tooltip arrow title="view on validators app">
           <a
-            href={`https://explorer.solana.com/address/${validator_pub_key}?cluster=testnet`}
+            href={`https://www.validators.app/validators/${validator_pub_key}?locale=en&network=testnet`}
             target="_"
           >
             <OpenInNew

@@ -224,10 +224,10 @@ export class GemAccountV0_0_1 {
   public last_voted_proposal?: PublicKey;
 
   @field({ type: option('u64') })
-  public last_withdrawal_epoch!: undefined | BN;
+  public last_withdrawal_epoch?: BN;
 
   @field({ type: option('u64') })
-  public last_delegation_epoch!: undefined | BN;
+  public last_delegation_epoch?: BN;
 
   @field({ type: vec('u64') })
   public all_withdraws!: BN[];
@@ -244,11 +244,11 @@ export class GemAccountV0_0_1 {
     numeration: number;
     rarity: number;
     funds_location: FundsLocation;
-    rarity_seed_time: undefined | number;
-    date_allocated: undefined | number;
-    last_voted_proposal: undefined | PublicKey;
-    last_withdrawal_epoch: undefined | BN;
-    last_delegation_epoch: undefined | BN;
+    rarity_seed_time?: number;
+    date_allocated?: number;
+    last_voted_proposal?: PublicKey;
+    last_withdrawal_epoch?: BN;
+    last_delegation_epoch?: BN;
     all_withdraws: BN[];
     all_votes: ValidatorVote[];
   }) {

@@ -18,6 +18,7 @@ import {
 import { WalletContextState } from '@solana/wallet-adapter-react';
 import { deserializeUnchecked } from '@dao-xyz/borsh';
 import { signAndConfirmTransaction, toBytesInt32 } from './utils';
+import BN from 'bn.js';
 
 async function promiseAll<T>(promiseData: Promise<T>[]) {
   const filteredPromiseData: T[] = [];
@@ -155,66 +156,63 @@ export const getValidatorsDetail = async (validator_ids: string[]) => {
         };
       }
     }
-  }
-
-  const totalASNConcentration = Object.values(ASNFrequency).reduce(
-    (acc, value) => acc + value
-  );
-  validatorsWithDetails = validatorsWithDetails.map((validatorDetail) => ({
-    ...validatorDetail,
-    details: {
-      ...validatorDetail.details,
-      asn_concentration:
-        (ASNFrequency[validatorDetail.details?.autonomous_system_number] /
-          totalASNConcentration) *
-        100,
-    },
-  }));
-
-  const getDistanceFromLatLonInKm = (
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number
-  ) => {
-    const deg2rad = (deg: number) => {
-      return deg * (Math.PI / 180);
-    };
-    const R = 6371; // Radius of the earth in km
-    const dLat = deg2rad(lat2 - lat1); // deg2rad below
-    const dLon = deg2rad(lon2 - lon1);
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(deg2rad(lat1)) *
-        Math.cos(deg2rad(lat2)) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const d = R * c; // Distance in km
-    console.log(d);
-    return d;
-  };
-  for (let i = 0; i < validatorsWithDetails.length; i++) {
-    const validator: any = validatorsWithDetails[i];
-    let copyAllValidators = allValidators.map((validatorDetail: any) => ({
+    const totalASNConcentration = Object.values(ASNFrequency).reduce(
+      (acc, value) => acc + value
+    );
+    validatorsWithDetails = validatorsWithDetails.map((validatorDetail) => ({
       ...validatorDetail,
-      distance: getDistanceFromLatLonInKm(
-        Number(validator.details?.latitude),
-        Number(validator.details?.longitude),
-        Number(validatorDetail?.latitude),
-        Number(validatorDetail?.longitude)
-      ),
+      details: {
+        ...validatorDetail.details,
+        asn_concentration: validatorDetail.details?.autonomous_system_number
+          ? (ASNFrequency[validatorDetail.details?.autonomous_system_number] /
+              totalASNConcentration) *
+            100
+          : 0,
+      },
     }));
-    copyAllValidators = copyAllValidators.sort((valA: any, valB: any) => {
-      return new Date(valA?.distance) > new Date(valB?.distance) ? -1 : 1;
-    });
-    validator.details.average_distance =
-      copyAllValidators
-        .slice(0, 5)
-        .reduce((acc: number, value: any) => acc + value?.distance, 0) / 5;
+    const getDistanceFromLatLonInKm = (
+      lat1: number,
+      lon1: number,
+      lat2: number,
+      lon2: number
+    ) => {
+      const deg2rad = (deg: number) => {
+        return deg * (Math.PI / 180);
+      };
+      const R = 6371; // Radius of the earth in km
+      const dLat = deg2rad(lat2 - lat1); // deg2rad below
+      const dLon = deg2rad(lon2 - lon1);
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(deg2rad(lat1)) *
+          Math.cos(deg2rad(lat2)) *
+          Math.sin(dLon / 2) *
+          Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      const d = R * c; // Distance in km
+      return d;
+    };
+    for (let i = 0; i < validatorsWithDetails.length; i++) {
+      const validator: any = validatorsWithDetails[i];
+      let copyAllValidators = allValidators.map((validatorDetail: any) => ({
+        ...validatorDetail,
+        distance: getDistanceFromLatLonInKm(
+          Number(validator.details?.latitude),
+          Number(validator.details?.longitude),
+          Number(validatorDetail?.latitude),
+          Number(validatorDetail?.longitude)
+        ),
+      }));
+      copyAllValidators = copyAllValidators.sort((valA: any, valB: any) => {
+        return new Date(valA?.distance) > new Date(valB?.distance) ? -1 : 1;
+      });
+      validator.details.average_distance =
+        copyAllValidators
+          .slice(0, 5)
+          .reduce((acc: number, value: any) => acc + value?.distance, 0) / 5;
+    }
   }
 
-  console.log(validatorsWithDetails);
   return validatorsWithDetails;
 };
 
@@ -329,17 +327,9 @@ export const getGlobalGemData = async (connection: Connection) => {
 
   return {
     ...globalGems,
-    total_raised:
-      total_raised.toNumber() !== 0 ? total_raised.divn(LAMPORTS_PER_SOL) : 0,
-    pd_pool_total:
-      pd_pool_total.toNumber() !== 0 ? pd_pool_total.divn(LAMPORTS_PER_SOL) : 0,
-    delegated_total:
-      delegated_total.toNumber() !== 0
-        ? delegated_total.divn(LAMPORTS_PER_SOL)
-        : 0,
-    dealloced_total:
-      dealloced_total.toNumber() !== 0
-        ? dealloced_total.divn(LAMPORTS_PER_SOL)
-        : 0,
+    total_raised: total_raised.div(new BN(LAMPORTS_PER_SOL)),
+    pd_pool_total: pd_pool_total.div(new BN(LAMPORTS_PER_SOL)),
+    delegated_total: delegated_total.div(new BN(LAMPORTS_PER_SOL)),
+    dealloced_total: dealloced_total.div(new BN(LAMPORTS_PER_SOL)),
   };
 };

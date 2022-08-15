@@ -1790,6 +1790,7 @@ pub fn redeem_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResul
     let mut redeem_fees: u64 = 0;
     if let Some(val) = gem_data.rarity_seed_time {
         let spent_time = (now - val) as f32 / (60 * 60 * 24 * 365) as f32;
+        msg!("spent time: {:?}", spent_time);
 
         if spent_time < 1.0 {
             redeem_fees = redeem_fees
@@ -1853,9 +1854,7 @@ pub fn redeem_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResul
                 .class
                 .get_class_lamports()
                 .checked_sub(redeem_fees)
-                .ok_or(Err(
-                    InglError::BeyondBounds.utilize(Some("overflow or underflow"))
-                )?)
+                .ok_or(InglError::BeyondBounds.utilize(Some("overflow or underflow")))
                 .unwrap(),
         ),
         &[

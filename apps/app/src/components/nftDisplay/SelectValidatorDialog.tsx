@@ -57,28 +57,30 @@ export default function SelectValidatorDialog({
           voteAccounts.map((voteAccount) => voteAccount.validator_id.toString())
         )
           .then((_validators) => {
-            const newValidators: Validator[] = [];
-            _validators.forEach((validator, index) => {
-              newValidators.push({
-                vote_account: voteAccounts[index].vote_account.toString(),
-                validator_index: index,
-                validator_pub_key: validator.pubkey,
-                asn: validator.details?.autonomous_system_number,
-                asn_concentration: validator.details?.autonomous_system_number
-                  ? validator.details?.asn_concentration.toFixed(3)
-                  : null,
-                av_distance: Number(
-                  (validator.details?.average_distance / 1000).toFixed(3)
-                ),
-                score: validator.details?.total_score,
-                skip_rate: Number(
-                  (
-                    Number(validator.details?.skipped_slot_percent ?? 0) * 100
-                  ).toFixed(3)
-                ),
-                solana_cli: validator.details?.software_version,
-              });
-            });
+            const newValidators = _validators.map(
+              (validator, index) => {
+                return {
+                  vote_account: voteAccounts[index].vote_account.toString(),
+                  validator_index: index,
+                  validator_pub_key: validator.pubkey,
+                  asn: validator.details?.autonomous_system_number,
+                  asn_concentration: validator.details?.autonomous_system_number
+                    ? validator.details?.asn_concentration.toFixed(3)
+                    : null,
+                  av_distance: Number(
+                    (validator.details?.average_distance / 1000).toFixed(3)
+                  ),
+                  score: validator.details?.total_score,
+                  skip_rate: Number(
+                    (
+                      Number(validator.details?.skipped_slot_percent ?? 0) * 100
+                    ).toFixed(3)
+                  ),
+                  solana_cli: validator.details?.software_version,
+                };
+              }
+            );
+            console.log(newValidators);
 
             setValidators(newValidators);
             setIsValidatorsLoading(false);
