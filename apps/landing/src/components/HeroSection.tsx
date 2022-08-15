@@ -30,7 +30,7 @@ export default function HeroSection() {
             }}
           >
             {' '}
-            by purchasing equivalently backed and{' '}
+            by minting equivalently backed and{' '}
           </Typography>
           <Typography
             color="secondary"
