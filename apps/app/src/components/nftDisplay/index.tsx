@@ -15,13 +15,14 @@ import useNotification from '../../common/utils/notification';
 import {
   allocateSol,
   deallocatedSol,
+  delegateNft,
   loadInglGems,
   mintInglGem,
   redeemInglGem,
+  undelegateNft,
 } from '../../services/nft.service';
-import { Rarity } from '../../services/state';
+import { NftClass, Rarity } from '../../services/state';
 import theme from '../../theme/theme';
-import SectionTitle from '../layout/SectionTitle';
 import ActionDialog from './ActionDialog';
 import Gem from './Gem';
 import MintGemDialog from './MintGemDialog';
@@ -48,14 +49,15 @@ export interface dialogContent {
   agreeFunction: () => void;
 }
 
-export enum NftClass {
-  Ruby,
-  Diamond,
-  Sapphire,
-  Emerald,
-  Serendibite,
-  Benitoite,
-}
+export type NftAction =
+  | 'redeem'
+  | 'take_loan'
+  | 'allocate'
+  | 'deallocate'
+  | 'delegate'
+  | 'undelegate';
+
+export type AttName = 'is_redeemable' | 'is_allocated' | 'is_delegated';
 
 export default function NftDisplay() {
   const wallet = useWallet();
@@ -68,7 +70,7 @@ export default function NftDisplay() {
     setAnchorEl(null);
   };
   interface nftOption {
-    attName?: 'is_redeemable' | 'is_allocated' | 'is_delegated';
+    attName?: AttName;
     dispName: string;
   }
 
@@ -87,10 +89,7 @@ export default function NftDisplay() {
     handleClose();
   };
 
-  const sortNft = (
-    nfts: inglGem[],
-    selectionAttribute?: 'is_delegated' | 'is_allocated' | 'is_redeemable'
-  ) => {
+  const sortNft = (nfts: inglGem[], selectionAttribute?: AttName) => {
     if (selectionAttribute === undefined) return nfts;
     if (
       selectionAttribute !== 'is_redeemable' &&
@@ -155,9 +154,9 @@ export default function NftDisplay() {
     setIsValidatorDialogOpen(true);
   };
 
-  const [selectedValidatorId, setSelectedValidaorId] = useState<string>();
-  const getValidatorId = (validatorId: string) => {
-    setSelectedValidaorId(validatorId);
+  const [selectedVoteAccount, setSelectedVoteAccount] = useState<string>();
+  const getValidatorId = (vote_account: string) => {
+    setSelectedVoteAccount(vote_account);
     if (toDelegateNft) activateDialog('delegate', toDelegateNft);
     else {
       const notif = new useNotification();
@@ -170,29 +169,16 @@ export default function NftDisplay() {
       });
     }
   };
+  useEffect(() => {
+    if (toDelegateNft) activateDialog('delegate', toDelegateNft);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedVoteAccount]);
 
   const [activeGemDialogContent, setActiveGemDialogContent] =
     useState<dialogContent>();
   const [isGemDialogOpen, setIsGemDialogOpen] = useState<boolean>(false);
-  const activateDialog = (
-    action:
-      | 'redeem'
-      | 'take loan'
-      | 'allocate'
-      | 'deallocate'
-      | 'delegate'
-      | 'undelegate',
-    nft_id: string
-  ) => {
-    const dialogContents: Record<
-      | 'redeem'
-      | 'take loan'
-      | 'allocate'
-      | 'deallocate'
-      | 'delegate'
-      | 'undelegate',
-      dialogContent
-    > = {
+  const activateDialog = (action: NftAction, nft_id: string) => {
+    const dialogContents: Record<NftAction, dialogContent> = {
       redeem: {
         title: 'Redeem Gem',
         content:
@@ -200,7 +186,7 @@ export default function NftDisplay() {
         agreeText: 'Redeem',
         agreeFunction: () => executeAction(action, nft_id),
       },
-      'take loan': {
+      take_loan: {
         title: 'Take Loan',
         content:
           'Are you sure you want to take a loan on this gem? this will prevent you from redeeming the nft should you want to. But also, you will have to pay 10% of the loan every month. Do you still want to continue?',
@@ -244,13 +230,7 @@ export default function NftDisplay() {
   const [actionNotifs, setActionNotifs] = useState<
     {
       notif: useNotification;
-      action:
-        | 'redeem'
-        | 'take loan'
-        | 'allocate'
-        | 'deallocate'
-        | 'delegate'
-        | 'undelegate';
+      action: NftAction;
       isExecuting: boolean;
       nft_id: string;
     }[]
@@ -258,12 +238,7 @@ export default function NftDisplay() {
 
   const notif = new useNotification();
   const notificationContent: Record<
-    | 'redeem'
-    | 'take loan'
-    | 'allocate'
-    | 'deallocate'
-    | 'delegate'
-    | 'undelegate',
+    NftAction,
     { executing: string; success: string; error: string }
   > = {
     redeem: {
@@ -271,7 +246,7 @@ export default function NftDisplay() {
       success: 'Gem successfully redeemed',
       error: 'There was an error redeeming your gem. Please try again',
     },
-    'take loan': {
+    take_loan: {
       executing: 'Please wait while we compute and give you your loan',
       success: 'Loan sucessfully allocated',
       error: 'There was an allocating the loan. Please try again',
@@ -298,16 +273,7 @@ export default function NftDisplay() {
     },
   };
 
-  const executeAction = (
-    action:
-      | 'redeem'
-      | 'take loan'
-      | 'allocate'
-      | 'deallocate'
-      | 'delegate'
-      | 'undelegate',
-    nft_id: string
-  ) => {
+  const executeAction = (action: NftAction, nft_id: string) => {
     if (actionNotifs)
       setActionNotifs(
         actionNotifs?.filter((publishedNotif) => {
@@ -326,18 +292,10 @@ export default function NftDisplay() {
     else setActionNotifs([{ action, nft_id, isExecuting: true, notif }]);
     const tokenMint = new PublicKey(nft_id);
     notif.notify({ render: notificationContent[action].executing });
-    const actions: Record<
-      | 'redeem'
-      | 'take loan'
-      | 'allocate'
-      | 'deallocate'
-      | 'delegate'
-      | 'undelegate',
-      () => Promise<void>
-    > = {
+    const actions: Record<NftAction, () => Promise<void>> = {
       redeem: async () =>
         await redeemInglGem({ connection, wallet }, tokenMint),
-      'take loan': async () => {
+      take_loan: async () => {
         console.log('take a loan');
       },
       allocate: async () =>
@@ -345,10 +303,15 @@ export default function NftDisplay() {
       deallocate: async () =>
         await deallocatedSol({ connection, wallet }, tokenMint),
       delegate: async () => {
-        console.log('delegate');
+        console.log(selectedVoteAccount);
+        await delegateNft(
+          { connection, wallet },
+          { tokenMint, voteMint: new PublicKey(selectedVoteAccount as string) }
+        );
       },
       undelegate: async () => {
-        console.log('undelegate');
+        console.log('start');
+        await undelegateNft({ connection, wallet }, tokenMint);
       },
     };
 

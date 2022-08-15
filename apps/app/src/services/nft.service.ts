@@ -16,6 +16,14 @@ import {
   PD_POOL_KEY,
   PDPoolFundLocation,
   VoteAccountFundLocation,
+  VOTE_DATA_ACCOUNT_KEY,
+  VOTE_ACCOUNT_KEY,
+  AUTHORIZED_WITHDRAWER_KEY,
+  InglVoteAccountData,
+  STAKE_PROGRAM_ID,
+  NftClassToString,
+  NFTS_SHARE,
+  inglGemSol,
 } from './state';
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -24,10 +32,13 @@ import {
 } from '@solana/spl-token';
 import {
   AccountMeta,
+  ComputeBudgetProgram,
   Connection,
   Keypair,
   PublicKey,
+  STAKE_CONFIG_ID,
   SystemProgram,
+  SYSVAR_CLOCK_PUBKEY,
   SYSVAR_RENT_PUBKEY,
   Transaction,
   TransactionInstruction,
@@ -35,9 +46,12 @@ import {
 import { WalletContextState } from '@solana/wallet-adapter-react';
 import { PROGRAM_ID as METAPLEX_PROGRAM_ID } from '@metaplex-foundation/mpl-token-metadata';
 import { LazyNft, Metaplex, Nft } from '@metaplex-foundation/js';
-import { inglGem } from '../components/nftDisplay';
 import { WalletNotConnectedError } from '@solana/wallet-adapter-base';
 import { deserializeUnchecked } from '@dao-xyz/borsh';
+import * as uint32 from 'uint32';
+import { Gem } from '../components/wallet';
+import { getGlobalGemData } from './validator-dao.service';
+import BN from 'bn.js';
 
 const [minting_pool_key] = PublicKey.findProgramAddressSync(
   [Buffer.from(INGL_MINTING_POOL_KEY)],
@@ -71,18 +85,31 @@ const [pd_pool_account_key] = PublicKey.findProgramAddressSync(
   [Buffer.from(PD_POOL_KEY)],
   INGL_PROGRAM_ID
 );
+const [authorized_withdrawer_key] = PublicKey.findProgramAddressSync(
+  [Buffer.from(AUTHORIZED_WITHDRAWER_KEY)],
+  INGL_PROGRAM_ID
+);
 
 const signAndConfirmTransaction = async (
   walletConnection: { connection: Connection; wallet: WalletContextState },
   instruction: TransactionInstruction,
-  signingKeypair?: Keypair
+  signingKeypair?: Keypair,
+  additionalUnits?: number
 ) => {
   const {
     connection,
-    wallet: { publicKey: payerKey, sendTransaction, signTransaction },
+    wallet: { publicKey: payerKey, signTransaction, sendTransaction },
   } = walletConnection;
 
   const transaction = new Transaction();
+  if (additionalUnits) {
+    const additionalComputeBudgetInstruction =
+      ComputeBudgetProgram.requestUnits({
+        units: additionalUnits,
+        additionalFee: 0,
+      });
+    transaction.add(additionalComputeBudgetInstruction);
+  }
   transaction.add(instruction).feePayer = payerKey as PublicKey;
 
   const blockhashObj = await connection.getLatestBlockhash();
@@ -285,12 +312,11 @@ export async function mintInglGem(
     await signAndConfirmTransaction(
       walletConnection,
       mintNftInstruction,
-      mintKeyPair
+      mintKeyPair,
+      240_000
     );
   } catch (error) {
-    throw new Error(
-      'Collection Minting transaction failed with error ' + error
-    );
+    throw new Error('NFT Minting transaction failed with error ' + error);
   }
 }
 
@@ -300,6 +326,7 @@ export async function imprintRarity(
 ) {
   const {
     wallet: { publicKey: payerKey },
+    connection,
   } = walletConnection;
   if (!payerKey) throw new WalletNotConnectedError();
 
@@ -312,6 +339,13 @@ export async function imprintRarity(
     [Buffer.from(GEM_ACCOUNT_CONST), tokenMint.toBuffer()],
     INGL_PROGRAM_ID
   );
+
+  const accountInfo = await connection.getAccountInfo(gem_pubkey);
+  const gemAccountData = deserializeUnchecked(
+    GemAccountV0_0_1,
+    accountInfo?.data as Buffer
+  );
+
   const gemAccount: AccountMeta = {
     pubkey: gem_pubkey,
     isSigner: false,
@@ -402,7 +436,7 @@ export async function imprintRarity(
     isSigner: false,
     isWritable: false,
   };
-
+  console.log(gemAccountData);
   const initRarityImprintIntrustion = new TransactionInstruction({
     programId: INGL_PROGRAM_ID,
     data: Buffer.from([Instruction.InitRarityImprint]),
@@ -440,28 +474,39 @@ export async function imprintRarity(
       metaplexProgramAccount,
     ],
   });
+  if (!gemAccountData.rarity_seed_time) {
+    try {
+      await signAndConfirmTransaction(
+        walletConnection,
+        initRarityImprintIntrustion
+      );
 
-  try {
-    await signAndConfirmTransaction(
-      walletConnection,
-      initRarityImprintIntrustion
-    );
-
-    await new Promise((resolve, reject) =>
-      setTimeout(async () => {
-        try {
-          const transactionId = await signAndConfirmTransaction(
-            walletConnection,
-            imprintRarityInstruction
-          );
-          resolve(transactionId);
-        } catch (error) {
-          reject(error);
-        }
-      }, 20000)
-    );
-  } catch (error) {
-    throw new Error('Failed to imprint rarity with error ' + error);
+      await new Promise((resolve, reject) =>
+        setTimeout(async () => {
+          try {
+            const transactionId = await signAndConfirmTransaction(
+              walletConnection,
+              imprintRarityInstruction
+            );
+            resolve(transactionId);
+          } catch (error) {
+            reject(error);
+          }
+        }, 20000)
+      );
+    } catch (error) {
+      throw new Error('Failed to imprint rarity with error ' + error);
+    }
+  } else if (gemAccountData.rarity === undefined) {
+    try {
+      const transactionId = await signAndConfirmTransaction(
+        walletConnection,
+        imprintRarityInstruction
+      );
+      return transactionId;
+    } catch (error) {
+      throw new Error('Failed to imprint rarity with error ' + error);
+    }
   }
 }
 
@@ -654,13 +699,13 @@ export async function loadInglGems(
     let lazyNfts = await metaplexNft.findAllByOwner(ownerPubkey).run();
     lazyNfts = lazyNfts.filter(
       ({ collection }) =>
-        collection &&
-        collection.key.toString() === ingl_nft_collection_mint_key.toString()
+        collection?.key.toString() === ingl_nft_collection_mint_key.toString()
     );
     const myInglGems: any[] = [];
     for (let i = 0; i < lazyNfts.length; i++) {
       const inglNft = await metaplexNft.loadNft(lazyNfts[i] as LazyNft).run();
-      myInglGems.push(await getInglGemFromNft(connection, inglNft));
+      const inglGem = await getInglGemFromNft(connection, inglNft);
+      myInglGems.push(inglGem);
     }
     return myInglGems;
   } catch (error) {
@@ -794,4 +839,542 @@ export async function deallocatedSol(
   }
 }
 
-// export async function delegate
+const getDelegateInstructionAccounts = async ({
+  voteMint,
+  tokenMint,
+  payerKey,
+}: {
+  tokenMint: PublicKey;
+  voteMint: PublicKey;
+  payerKey: PublicKey;
+}) => {
+  const payerAccount: AccountMeta = {
+    pubkey: payerKey as PublicKey,
+    isSigner: true,
+    isWritable: true,
+  };
+  const voteAccount: AccountMeta = {
+    pubkey: voteMint,
+    isSigner: false,
+    isWritable: false,
+  };
+
+  const [ignl_vote_account_data__key] = PublicKey.findProgramAddressSync(
+    [Buffer.from(VOTE_DATA_ACCOUNT_KEY), voteMint.toBuffer()],
+    INGL_PROGRAM_ID
+  );
+
+  const ignlVoteAccountData: AccountMeta = {
+    pubkey: ignl_vote_account_data__key,
+    isSigner: false,
+    isWritable: true,
+  };
+
+  const mintAccount: AccountMeta = {
+    pubkey: tokenMint,
+    isSigner: false,
+    isWritable: false,
+  };
+
+  const [gem_pubkey] = PublicKey.findProgramAddressSync(
+    [Buffer.from(GEM_ACCOUNT_CONST), tokenMint.toBuffer()],
+    INGL_PROGRAM_ID
+  );
+  const gemAccount: AccountMeta = {
+    pubkey: gem_pubkey,
+    isSigner: false,
+    isWritable: true,
+  };
+
+  const associatedTokenAccount: AccountMeta = {
+    pubkey: await getAssociatedTokenAddress(
+      mintAccount.pubkey,
+      payerAccount.pubkey
+    ),
+    isSigner: false,
+    isWritable: true,
+  };
+  const globalGemAccount: AccountMeta = {
+    pubkey: global_gem_pubkey,
+    isSigner: false,
+    isWritable: true,
+  };
+
+  const sysvarClockAccount: AccountMeta = {
+    pubkey: SYSVAR_CLOCK_PUBKEY,
+    isSigner: false,
+    isWritable: true,
+  };
+
+  const stakeConfigProgramAccount: AccountMeta = {
+    pubkey: STAKE_CONFIG_ID,
+    isSigner: false,
+    isWritable: false,
+  };
+
+  const systemProgramAccount: AccountMeta = {
+    pubkey: SystemProgram.programId,
+    isSigner: false,
+    isWritable: false,
+  };
+  const stakeProgramAccount: AccountMeta = {
+    pubkey: STAKE_PROGRAM_ID,
+    isSigner: false,
+    isWritable: false,
+  };
+
+  return [
+    payerAccount,
+    voteAccount,
+    ignlVoteAccountData,
+    mintAccount,
+    gemAccount,
+    associatedTokenAccount,
+    globalGemAccount,
+    sysvarClockAccount,
+    stakeConfigProgramAccount,
+
+    systemProgramAccount,
+    stakeProgramAccount,
+  ];
+};
+
+const getUnDelegateInstructionAccounts = async ({
+  voteMint,
+  tokenMint,
+  payerKey,
+}: {
+  tokenMint: PublicKey;
+  voteMint: PublicKey;
+  payerKey: PublicKey;
+}) => {
+  const payerAccount: AccountMeta = {
+    pubkey: payerKey as PublicKey,
+    isSigner: true,
+    isWritable: true,
+  };
+  const pDPoolAccount: AccountMeta = {
+    pubkey: pd_pool_account_key,
+    isSigner: false,
+    isWritable: true,
+  };
+
+  const voteAccount: AccountMeta = {
+    pubkey: voteMint,
+    isSigner: false,
+    isWritable: false,
+  };
+
+  const [ignl_vote_account_data__key] = PublicKey.findProgramAddressSync(
+    [Buffer.from(VOTE_DATA_ACCOUNT_KEY), voteMint.toBuffer()],
+    INGL_PROGRAM_ID
+  );
+
+  const ignlVoteAccountData: AccountMeta = {
+    pubkey: ignl_vote_account_data__key,
+    isSigner: false,
+    isWritable: true,
+  };
+
+  const mintAccount: AccountMeta = {
+    pubkey: tokenMint,
+    isSigner: false,
+    isWritable: false,
+  };
+
+  const [gem_pubkey] = PublicKey.findProgramAddressSync(
+    [Buffer.from(GEM_ACCOUNT_CONST), tokenMint.toBuffer()],
+    INGL_PROGRAM_ID
+  );
+  const gemAccount: AccountMeta = {
+    pubkey: gem_pubkey,
+    isSigner: false,
+    isWritable: true,
+  };
+
+  const associatedTokenAccount: AccountMeta = {
+    pubkey: await getAssociatedTokenAddress(
+      mintAccount.pubkey,
+      payerAccount.pubkey
+    ),
+    isSigner: false,
+    isWritable: true,
+  };
+  const globalGemAccount: AccountMeta = {
+    pubkey: global_gem_pubkey,
+    isSigner: false,
+    isWritable: true,
+  };
+
+  return [
+    payerAccount,
+    pDPoolAccount,
+    voteAccount,
+    ignlVoteAccountData,
+    mintAccount,
+    gemAccount,
+    associatedTokenAccount,
+    globalGemAccount,
+  ];
+};
+
+export async function delegateNft(
+  walletConnection: { connection: Connection; wallet: WalletContextState },
+  {
+    voteMint,
+    tokenMint,
+  }: {
+    tokenMint: PublicKey;
+    voteMint: PublicKey;
+  }
+) {
+  const {
+    wallet: { publicKey: payerKey },
+  } = walletConnection;
+  console.log(voteMint, tokenMint);
+  const delegateSolInstruction = new TransactionInstruction({
+    programId: INGL_PROGRAM_ID,
+    data: Buffer.from([Instruction.DelegateSol]),
+    keys: await getDelegateInstructionAccounts({
+      voteMint,
+      tokenMint,
+      payerKey: payerKey as PublicKey,
+    }),
+  });
+
+  try {
+    await signAndConfirmTransaction(walletConnection, delegateSolInstruction);
+  } catch (error) {
+    throw new Error('Failed to deallocate gem sol with error ' + error);
+  }
+}
+
+export async function undelegateNft(
+  walletConnection: { connection: Connection; wallet: WalletContextState },
+  tokenMint: PublicKey
+) {
+  const {
+    wallet: { publicKey: payerKey },
+    connection,
+  } = walletConnection;
+  const [gem_pubkey] = PublicKey.findProgramAddressSync(
+    [Buffer.from(GEM_ACCOUNT_CONST), tokenMint.toBuffer()],
+    INGL_PROGRAM_ID
+  );
+  const accountInfo = await connection.getAccountInfo(gem_pubkey);
+  const gemAccountData = deserializeUnchecked(
+    GemAccountV0_0_1,
+    accountInfo?.data as Buffer
+  );
+  const funds_location = gemAccountData.funds_location;
+
+  if (funds_location instanceof VoteAccountFundLocation) {
+    const voteMint = new PublicKey(funds_location.vote_account_id);
+    const accountsMeta = await getUnDelegateInstructionAccounts({
+      voteMint,
+      tokenMint,
+      payerKey: payerKey as PublicKey,
+    });
+
+    const delegateSolInstruction = new TransactionInstruction({
+      programId: INGL_PROGRAM_ID,
+      data: Buffer.from([Instruction.UnDelegateSol]),
+      keys: accountsMeta,
+    });
+    try {
+      await signAndConfirmTransaction(walletConnection, delegateSolInstruction);
+    } catch (error) {
+      throw new Error('Failed to undelegate gem  with error ' + error);
+    }
+  } else {
+    throw new Error('Gem is not delegated');
+  }
+}
+
+export async function getVoteAccounts(connection: Connection) {
+  try {
+    let proposalNumeration = (await getGlobalGemData(connection))
+      .proposal_numeration;
+    const votesIds: { vote_account: PublicKey; validator_id: PublicKey }[] = [];
+    while (proposalNumeration-- > 0) {
+      const [vote_account_key] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from(VOTE_ACCOUNT_KEY),
+          Buffer.from(uint32.getBytesBigEndian(proposalNumeration)),
+        ],
+        INGL_PROGRAM_ID
+      );
+      const [ingl_vote_data_account_key] = PublicKey.findProgramAddressSync(
+        [Buffer.from(VOTE_DATA_ACCOUNT_KEY), vote_account_key.toBuffer()],
+        INGL_PROGRAM_ID
+      );
+      const inglVoteAccount = await connection.getAccountInfo(
+        ingl_vote_data_account_key
+      );
+      if (inglVoteAccount) {
+        const inglVoteData = deserializeUnchecked(
+          InglVoteAccountData,
+          inglVoteAccount?.data as Buffer
+        );
+        votesIds.push({
+          vote_account: vote_account_key,
+          validator_id: new PublicKey(inglVoteData.validator_id),
+        });
+      }
+    }
+    return votesIds;
+  } catch (error) {
+    throw new Error('Failed to get Votes accounts with error: ' + error);
+  }
+}
+
+export async function claimInglRewards(
+  walletConnection: { connection: Connection; wallet: WalletContextState },
+  gems: { tokenMint: PublicKey; voteMint: PublicKey }[]
+) {
+  const {
+    wallet: { publicKey: payerKey, sendTransaction, signTransaction },
+    connection,
+  } = walletConnection;
+
+  const authorizeWithdrawerAccount: AccountMeta = {
+    pubkey: authorized_withdrawer_key,
+    isSigner: false,
+    isWritable: true,
+  };
+  const systemProgramAccount: AccountMeta = {
+    pubkey: SystemProgram.programId,
+    isSigner: false,
+    isWritable: false,
+  };
+  const payerAccount: AccountMeta = {
+    pubkey: payerKey as PublicKey,
+    isSigner: true,
+    isWritable: true,
+  };
+  const voteMints: PublicKey[] = [];
+  gems.forEach(({ voteMint }) => {
+    if (!voteMints.includes(voteMint)) {
+      voteMints.push(voteMint);
+    }
+  });
+  const claimRewardsInstructions: TransactionInstruction[] = [];
+  for (let j = 0; j < voteMints.length; j++) {
+    const voteMint = voteMints[j];
+
+    const voteAccount: AccountMeta = {
+      pubkey: voteMint,
+      isSigner: false,
+      isWritable: false,
+    };
+
+    const [ingl_vote_data_account_key] = PublicKey.findProgramAddressSync(
+      [Buffer.from(VOTE_DATA_ACCOUNT_KEY), voteMint.toBuffer()],
+      INGL_PROGRAM_ID
+    );
+
+    const ignlVoteDataAccount: AccountMeta = {
+      pubkey: ingl_vote_data_account_key,
+      isSigner: false,
+      isWritable: false,
+    };
+
+    const inglVoteAccount = await connection.getAccountInfo(
+      ingl_vote_data_account_key
+    );
+    const inglVoteData = deserializeUnchecked(
+      InglVoteAccountData,
+      inglVoteAccount?.data as Buffer
+    );
+
+    const validatorAccount: AccountMeta = {
+      pubkey: new PublicKey(inglVoteData.validator_id),
+      isSigner: false,
+      isWritable: false,
+    };
+
+    const gemsAccounts: AccountMeta[] = [];
+    const voteAccountGems = gems.filter(
+      ({ voteMint }) => voteMint.toString() === voteAccount.pubkey.toString()
+    );
+    for (let i = 0; i < voteAccountGems.length; i++) {
+      const { tokenMint } = voteAccountGems[i];
+
+      const [gem_pubkey] = PublicKey.findProgramAddressSync(
+        [Buffer.from(GEM_ACCOUNT_CONST), tokenMint.toBuffer()],
+        INGL_PROGRAM_ID
+      );
+
+      const gemAccount: AccountMeta = {
+        pubkey: gem_pubkey,
+        isSigner: false,
+        isWritable: true,
+      };
+
+      const mintAccount: AccountMeta = {
+        pubkey: tokenMint,
+        isSigner: false,
+        isWritable: false,
+      };
+      const associatedTokenAccount: AccountMeta = {
+        pubkey: await getAssociatedTokenAddress(
+          mintAccount.pubkey,
+          payerKey as PublicKey
+        ),
+        isSigner: false,
+        isWritable: true,
+      };
+      gemsAccounts.push(associatedTokenAccount, mintAccount, gemAccount);
+    }
+
+    claimRewardsInstructions.push(
+      new TransactionInstruction({
+        programId: INGL_PROGRAM_ID,
+        data: Buffer.from([
+          Instruction.NFTWithdraw,
+          ...uint32.getBytesBigEndian(voteAccountGems.length).reverse(),
+        ]),
+        keys: [
+          payerAccount,
+          voteAccount,
+          validatorAccount,
+          ignlVoteDataAccount,
+          authorizeWithdrawerAccount,
+          ...gemsAccounts,
+
+          systemProgramAccount,
+        ],
+      })
+    );
+  }
+
+  try {
+    const transaction = new Transaction();
+    const additionalComputeBudgetInstruction =
+      ComputeBudgetProgram.requestUnits({
+        units: 400_000,
+        additionalFee: 0,
+      });
+    transaction.add(additionalComputeBudgetInstruction);
+    transaction.feePayer = payerKey as PublicKey;
+    claimRewardsInstructions.forEach((instruction) => {
+      transaction.add(instruction);
+    });
+
+    const blockhashObj = await connection.getLatestBlockhash();
+    transaction.recentBlockhash = blockhashObj.blockhash;
+
+    const signedTransaction = signTransaction
+      ? await signTransaction(transaction)
+      : null;
+
+    const signature = await sendTransaction(
+      signedTransaction as Transaction,
+      connection
+    );
+    await connection.confirmTransaction({ ...blockhashObj, signature });
+  } catch (error) {
+    throw new Error('Failed to claim gems rewards  with error ' + error);
+  }
+}
+
+export async function loadRewards(
+  ownerPubkey: PublicKey,
+  connection: Connection
+) {
+  try {
+    const metaplex = new Metaplex(connection);
+    const metaplexNft = metaplex.nfts();
+
+    let lazyNfts = await metaplexNft.findAllByOwner(ownerPubkey).run();
+    lazyNfts = lazyNfts.filter(
+      ({ collection }) =>
+        collection?.key.toString() === ingl_nft_collection_mint_key.toString()
+    );
+    const gemRewards: Gem[] = [];
+    for (let i = 0; i < lazyNfts.length; i++) {
+      const { json, mintAddress } = await metaplexNft
+        .loadNft(lazyNfts[i] as LazyNft)
+        .run();
+      if (json) {
+        const { image, attributes } = json;
+        const [gem_pubkey] = PublicKey.findProgramAddressSync(
+          [Buffer.from(GEM_ACCOUNT_CONST), mintAddress.toBuffer()],
+          INGL_PROGRAM_ID
+        );
+        const accountInfo = await connection.getAccountInfo(gem_pubkey);
+        const gemAccountData = deserializeUnchecked(
+          GemAccountV0_0_1,
+          accountInfo?.data as Buffer
+        );
+        const funds_location = gemAccountData.funds_location;
+        const gemClass = attributes?.find(
+          ({ trait_type }) => trait_type === 'Class'
+        )?.value as NftClassToString;
+        if (funds_location instanceof VoteAccountFundLocation) {
+          const vote_account_key = new PublicKey(
+            funds_location.vote_account_id
+          );
+          const [ingl_vote_data_account_key] = PublicKey.findProgramAddressSync(
+            [Buffer.from(VOTE_DATA_ACCOUNT_KEY), vote_account_key.toBuffer()],
+            INGL_PROGRAM_ID
+          );
+          const inglVoteAccount = await connection.getAccountInfo(
+            ingl_vote_data_account_key
+          );
+          if (inglVoteAccount) {
+            const inglVoteData = deserializeUnchecked(
+              InglVoteAccountData,
+              inglVoteAccount?.data as Buffer
+            );
+            const voteRewards = inglVoteData.vote_rewards;
+
+            const lastWithdrawalEpoch =
+              gemAccountData.last_withdrawal_epoch as BN;
+            const lastDelegationEpoch =
+              gemAccountData.last_delegation_epoch as BN;
+            const comp = lastDelegationEpoch.cmp(lastWithdrawalEpoch ?? 0);
+            const interestedEpoch =
+              comp === 0
+                ? lastDelegationEpoch
+                : comp === -1
+                ? lastWithdrawalEpoch
+                : lastDelegationEpoch;
+            const interestedIndex =
+              1 +
+              voteRewards.findIndex(
+                ({ epoch_number }) => epoch_number.cmp(interestedEpoch) === 0
+              );
+            if (interestedIndex === 0) {
+              gemRewards.push({
+                image_ref: image as string,
+                nft_id: mintAddress.toString(),
+                vote_account_id: vote_account_key.toString(),
+                rewards: 0,
+              });
+            } else {
+              const totalRewards: number = voteRewards
+                .slice(interestedIndex)
+                .reduce((total, { total_reward, total_stake }, i) => {
+                  return (total += Number(
+                    (Number(total_reward.muln(NFTS_SHARE)) /
+                      (100 * Number(total_stake))) *
+                      inglGemSol[gemClass]
+                  ));
+                }, 0);
+              gemRewards.push({
+                image_ref: image as string,
+                nft_id: mintAddress.toString(),
+                vote_account_id: vote_account_key.toString(),
+                rewards: Number(totalRewards.toString(10)),
+              });
+            }
+          }
+        }
+      }
+    }
+    return gemRewards;
+  } catch (error) {
+    throw new Error('Failed to load gems rewards  with error ' + error);
+  }
+}

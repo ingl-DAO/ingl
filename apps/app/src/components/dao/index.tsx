@@ -107,7 +107,6 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
         const newSelectedProposal = proposals.find(
           (proposal: Proposal) => proposal.is_ongoing
         );
-        console.log('state', selectedProposal);
         if (newSelectedProposal) {
           setSelectedProposal(newSelectedProposal);
         } else if (newProposals.length > 0) {
@@ -173,7 +172,6 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
     useState<boolean>(true);
   useEffect(() => {
     if (selectedProposal) {
-      console.log(selectedProposal);
       const notif = new useNotification();
       setIsLoadingProposalData(true);
       const validatorStats: Validator[] = [];
@@ -212,8 +210,7 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
                 retryFunction={() => null}
                 notification={notif}
                 message={
-                  error?.message ||
-                  "There was a problem revealing your gem's rarity"
+                  error?.message || 'There was a problem loading validators'
                 }
               />
             ),
@@ -227,7 +224,6 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
 
   useEffect(() => {
     loadProposals();
-    console.log('Load proposal');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

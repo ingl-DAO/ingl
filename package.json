@@ -49,6 +49,7 @@
     "regenerator-runtime": "0.13.7",
     "stream-browserify": "^3.0.0",
     "tslib": "^2.3.0",
+    "uint32": "^0.2.1",
     "util": "^0.12.4",
     "uuid": "^8.3.2",
     "yup": "^0.32.11"
@@ -67,6 +68,7 @@
     "@types/node": "16.11.7",
     "@types/react": "18.0.14",
     "@types/react-dom": "18.0.5",
+    "@types/uint32": "^0.2.0",
     "@typescript-eslint/eslint-plugin": "^5.29.0",
     "@typescript-eslint/parser": "^5.29.0",
     "babel-jest": "27.5.1",

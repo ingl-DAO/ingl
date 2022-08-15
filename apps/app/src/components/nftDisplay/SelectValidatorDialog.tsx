@@ -1,10 +1,10 @@
-import { PriorityHighRounded } from '@mui/icons-material';
+import { PriorityHighRounded, ReportRounded } from '@mui/icons-material';
 import {
+  Box,
   Button,
   Dialog,
   DialogActions,
   DialogContent,
-  DialogContentText,
   DialogTitle,
   Grid,
   Skeleton,
@@ -12,8 +12,12 @@ import {
   Typography,
 } from '@mui/material';
 import { TransitionProps } from '@mui/material/transitions';
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { forwardRef, useEffect, useState } from 'react';
+import ErrorMessage from '../../common/components/ErrorMessage';
 import useNotification from '../../common/utils/notification';
+import { getVoteAccounts } from '../../services/nft.service';
+import { getValidatorsDetail } from '../../services/validator-dao.service';
 import { Validator } from '../dao';
 import ValidatorCard from './ValidatorCard';
 
@@ -34,42 +38,94 @@ export default function SelectValidatorDialog({
 }: {
   isDialogOpen: boolean;
   closeDialog: () => void;
-  onValidate: (validator_id: string) => void;
+  onValidate: (vote_account: string) => void;
 }) {
   const [validators, setValidators] = useState<Validator[]>([]);
   const [isValidatorsLoading, setIsValidatorsLoading] =
     useState<boolean>(false);
+
+  const { connection } = useConnection();
+
+  const notif = new useNotification();
+
+  const loadValidators = () => {
+    setIsValidatorsLoading(true);
+
+    getVoteAccounts(connection)
+      .then((voteAccounts) => {
+        getValidatorsDetail(
+          voteAccounts.map((voteAccount) => voteAccount.validator_id.toString())
+        )
+          .then((_validators) => {
+            const newValidators: Validator[] = [];
+            _validators.forEach((validator, index) => {
+              newValidators.push({
+                vote_account: voteAccounts[index].vote_account.toString(),
+                validator_index: index,
+                validator_pub_key: validator.pubkey,
+                asn: validator.details?.autonomous_system_number,
+                asn_concentration: validator.details?.autonomous_system_number
+                  ? validator.details?.asn_concentration.toFixed(3)
+                  : null,
+                av_distance: Number(
+                  (validator.details?.average_distance / 1000).toFixed(3)
+                ),
+                score: validator.details?.total_score,
+                skip_rate: Number(
+                  (
+                    Number(validator.details?.skipped_slot_percent ?? 0) * 100
+                  ).toFixed(3)
+                ),
+                solana_cli: validator.details?.software_version,
+              });
+            });
+
+            setValidators(newValidators);
+            setIsValidatorsLoading(false);
+          })
+          .catch((error) => {
+            notif.update({
+              type: 'ERROR',
+              render: (
+                <ErrorMessage
+                  retryFunction={() => null}
+                  notification={notif}
+                  message={
+                    error?.message || 'There was a problem loading validators'
+                  }
+                />
+              ),
+              autoClose: false,
+              icon: () => <ReportRounded fontSize="large" color="error" />,
+            });
+            setIsValidatorsLoading(false);
+          });
+      })
+      .catch((error) => {
+        notif.update({
+          type: 'ERROR',
+          render: (
+            <ErrorMessage
+              retryFunction={() => loadValidators()}
+              notification={notif}
+              closeFunction={() => {
+                notif.dismiss();
+              }}
+              message={error?.message}
+            />
+          ),
+          autoClose: false,
+          icon: () => <ReportRounded fontSize="large" color="error" />,
+        });
+        setIsValidatorsLoading(false);
+      });
+  };
+
   useEffect(() => {
     if (isDialogOpen) {
-      setIsValidatorsLoading(true);
-      // TODO: CALL API HERE TO LOAD VALIDATORS
-      setTimeout(() => {
-        const newValidators: Validator[] = [
-          {
-            validator_pub_key: 'qXh3G5eogP6NHx5FLRzDTrLJwiaNCYULwguZTGaa9Fw',
-            asn: 'AS12424',
-            asn_concentration: 0.34,
-            av_distance: 15,
-            score: 60,
-            skip_rate: 23,
-            solana_cli: '2.3.33',
-            vote_account: 'hello world',
-          },
-          {
-            validator_pub_key: 'qXh3G5eogP6NHxFLRzDTrLJwiaNCYULwguZTGaa9Fw',
-            asn: 'AS12424',
-            asn_concentration: 0.34,
-            av_distance: 15,
-            score: 60,
-            skip_rate: 23,
-            solana_cli: '2.3.33',
-            vote_account: 'hello world',
-          },
-        ];
-        setValidators(newValidators);
-        setIsValidatorsLoading(false);
-      }, 3000);
+      loadValidators();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDialogOpen]);
 
   const [selectedValidatorVoteKey, setSelectedValidatorVoteKey] =
@@ -96,18 +152,15 @@ export default function SelectValidatorDialog({
         Delegate to Validator
       </DialogTitle>
       <DialogContent sx={{ textAlign: 'center' }}>
-        <DialogContentText
-          sx={{ fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.7)' }}
-        >
+        <Box sx={{ fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.7)' }}>
           <Typography variant="overline">
             Select the validator you want to delegate to
           </Typography>
           <Grid container spacing={2}>
             {isValidatorsLoading ? (
               [...new Array(12)].map((_, index) => (
-                <Grid item mobile={12} key={index} laptop={6}>
+                <Grid key={index} item mobile={12} laptop={6}>
                   <Skeleton
-                    key={index}
                     variant="rectangular"
                     height={200}
                     width={'100%'}
@@ -144,7 +197,7 @@ export default function SelectValidatorDialog({
               )
             )}
           </Grid>
-        </DialogContentText>
+        </Box>
       </DialogContent>
       <DialogActions>
         <Button variant="outlined" color="primary" onClick={exitDialog}>

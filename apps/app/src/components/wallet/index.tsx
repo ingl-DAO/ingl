@@ -9,11 +9,13 @@ import {
   TableRow,
   Typography,
 } from '@mui/material';
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { PublicKey } from '@solana/web3.js';
 import Scrollbars from 'rc-scrollbars';
 import { useEffect, useState } from 'react';
 import ErrorMessage from '../../common/components/ErrorMessage';
 import useNotification from '../../common/utils/notification';
-import random from '../../common/utils/random';
+import { claimInglRewards, loadRewards } from '../../services/nft.service';
 import theme from '../../theme/theme';
 import SectionTitle from '../layout/SectionTitle';
 import ActionDialog from '../nftDisplay/ActionDialog';
@@ -21,11 +23,11 @@ import FinanceLine from './FinanceLine';
 import NftRow from './NftRow';
 import WalletTableHead from './TableHead';
 
-interface Gem {
+export interface Gem {
   nft_id: string;
   image_ref: string;
   rewards: number;
-  validator_pub_key: string;
+  vote_account_id: string;
 }
 
 const maxClaimableNft = 100;
@@ -36,131 +38,76 @@ export default function Wallet() {
 
   const [nfts, setNfts] = useState<Gem[]>([]);
   const [isNftsLoading, setIsNftsLoading] = useState<boolean>(true);
+
+  const wallet = useWallet();
+  const { connection } = useConnection();
+  const notif = new useNotification();
+
+  const loadNftRewards = (payerKey: PublicKey) => {
+    setIsNftsLoading(true);
+    loadRewards(payerKey, connection)
+      .then((nfts) => {
+        setNfts(nfts);
+        setIsNftsLoading(false);
+      })
+      .catch((error) => {
+        notif.update({
+          type: 'ERROR',
+          autoClose: 5,
+          render: error,
+          icon: () => <ReportRounded fontSize="large" color="error" />,
+        });
+        setIsNftsLoading(false);
+      });
+  };
   useEffect(() => {
-    //TODO: LOAD NFTS HERE
-    setTimeout(() => {
-      setNfts([
-        {
-          image_ref:
-            'https://brand.zesty.io/zesty-io-logo-horizontal-light-color.svg',
-          validator_pub_key: 'Hello worlds',
-          rewards: 1000,
-          nft_id: 's',
-        },
-        {
-          image_ref:
-            'https://brand.zesty.io/zesty-io-logo-horizontal-light-color.svg',
-          validator_pub_key: 'Hello worldd',
-          rewards: 100,
-          nft_id: 'd',
-        },
-        {
-          image_ref:
-            'https://brand.zesty.io/zesty-io-logo-horizontal-light-color.svg',
-          validator_pub_key: 'Hello worldf',
-          rewards: 10,
-          nft_id: 'f',
-        },
-        {
-          image_ref:
-            'https://brand.zesty.io/zesty-io-logo-horizontal-light-color.svg',
-          validator_pub_key: 'Hello worldg',
-          rewards: 10000,
-          nft_id: 'a',
-        },
-        {
-          image_ref:
-            'https://brand.zesty.io/zesty-io-logo-horizontal-light-color.svg',
-          validator_pub_key: 'Hello worldh',
-          rewards: 100000,
-          nft_id: 'e',
-        },
-        {
-          image_ref:
-            'https://brand.zesty.io/zesty-io-logo-horizontal-light-color.svg',
-          validator_pub_key: 'Hello worldh',
-          rewards: 100000,
-          nft_id: 'e',
-        },
-        {
-          image_ref:
-            'https://brand.zesty.io/zesty-io-logo-horizontal-light-color.svg',
-          validator_pub_key: 'Hello worldh',
-          rewards: 100000,
-          nft_id: 'e',
-        },
-        {
-          image_ref:
-            'https://brand.zesty.io/zesty-io-logo-horizontal-light-color.svg',
-          validator_pub_key: 'Hello worldh',
-          rewards: 100000,
-          nft_id: 'e',
-        },
-        {
-          image_ref:
-            'https://brand.zesty.io/zesty-io-logo-horizontal-light-color.svg',
-          validator_pub_key: 'Hello worldh',
-          rewards: 100000,
-          nft_id: 'e',
-        },
-        {
-          image_ref:
-            'https://brand.zesty.io/zesty-io-logo-horizontal-light-color.svg',
-          validator_pub_key: 'Hello worldh',
-          rewards: 100000,
-          nft_id: 'e',
-        },
-        {
-          image_ref:
-            'https://brand.zesty.io/zesty-io-logo-horizontal-light-color.svg',
-          validator_pub_key: 'Hello worldh',
-          rewards: 100000,
-          nft_id: 'e',
-        },
-      ]);
-      setIsNftsLoading(false);
-    }, 3000);
-  }, []);
+    if (wallet.publicKey) loadNftRewards(wallet.publicKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wallet?.publicKey]);
 
   const [notifs, setNotifs] = useState<useNotification[]>();
   const claimRewards = () => {
     setIsClaimDialogOpen(false);
-    //TODO: CALL API TO CLAIM REWARDS HERE
     if (
       selectedGems.length > 0 &&
       selectedGems.reduce((total, item) => item.rewards + total, 0) > 0
     ) {
       if (notifs) notifs.map((publishedNotif) => publishedNotif.dismiss());
-      const notif = new useNotification();
       if (notifs) setNotifs([...notifs, notif]);
       else setNotifs([notif]);
       notif.notify({ render: 'Claiming Rewards' });
-      setIsClaimingRewards(true);
-
-      setTimeout(() => {
-        if (random() > 5) {
-          // TODO CALL API HERE TO  REVEAL NFT ID and after success, load the nfts again. without which you have to update the list of claimed nfts to 0 rewards
+      claimInglRewards(
+        { connection, wallet },
+        selectedGems.map(({ vote_account_id, nft_id }) => ({
+          tokenMint: new PublicKey(nft_id),
+          voteMint: new PublicKey(vote_account_id),
+        }))
+      )
+        .then(() => {
           notif.update({
             render: 'Successfully claimed rewards',
           });
           setSelectedGems([]);
-        } else {
+          setIsClaimingRewards(true);
+          if (wallet.publicKey) loadNftRewards(wallet.publicKey);
+        })
+        .catch((error) => {
           notif.update({
             type: 'ERROR',
             render: (
               <ErrorMessage
                 retryFunction={claimRewards}
                 notification={notif}
-                //TODO: this message is that coming from the backend
-                message="There was a problem claiming your rewards. Please try again"
+                message={
+                  error?.message ||
+                  'There was a problem claiming your rewards. Please try again'
+                }
               />
             ),
             autoClose: false,
             icon: () => <ReportRounded fontSize="large" color="error" />,
           });
-        }
-        setIsClaimingRewards(false);
-      }, 3000);
+        });
     } else {
       const notif = new useNotification();
       notif.notify({ render: 'Claiming your rewards' });
@@ -278,14 +225,27 @@ export default function Wallet() {
                         textAlign: 'center',
                       }}
                     >
-                      <Typography>You have no delegated gems</Typography>
+                      {isNftsLoading ? (
+                        <Typography
+                          sx={{
+                            textAlign: 'center',
+                            color: theme.palette.secondary.main,
+                            fontStyle: 'italic',
+                          }}
+                        >
+                          Loading delegated gems...
+                        </Typography>
+                      ) : (
+                        <Typography>You have no delegated gems</Typography>
+                      )}
                     </TableCell>
                   </TableRow>
                 ) : (
                   nfts
                     .sort((el1, el2) => (el1.rewards > el2.rewards ? -1 : 1))
-                    .map((nft) => (
+                    .map((nft, index) => (
                       <NftRow
+                        key={index}
                         isChecked={
                           selectedGems.find(
                             (gem) => gem.nft_id === nft.nft_id

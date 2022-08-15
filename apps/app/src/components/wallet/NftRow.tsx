@@ -6,13 +6,13 @@ export default function NftRow({
   selectNft,
   isClaimingDialog,
   isNftsLoading,
-  rowData: { image_ref, validator_pub_key, rewards },
+  rowData: { image_ref, vote_account_id, rewards },
 }: {
   isChecked: boolean;
   selectNft: () => void;
   isClaimingDialog: boolean;
   isNftsLoading: boolean;
-  rowData: { image_ref: string; validator_pub_key: string; rewards: number };
+  rowData: { image_ref: string; vote_account_id: string; rewards: number };
 }) {
   return (
     <TableRow sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
@@ -54,7 +54,7 @@ export default function NftRow({
           borderBottomWidth: '2.5px',
         }}
       >
-        {validator_pub_key}
+        {vote_account_id}
       </TableCell>
       <TableCell
         align="right"

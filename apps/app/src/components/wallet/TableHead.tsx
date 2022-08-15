@@ -16,7 +16,7 @@ const WalletTableHead = ({
   onSelectAllClick: () => void;
 }) => {
   const theme = useTheme();
-  const tableColumns = ['Ingl Gem', 'Validator Pub Key', 'Rewards (SOL)'];
+  const tableColumns = ['Ingl Gem', 'Vote Account Pub Key', 'Rewards (SOL)'];
   return (
     <TableHead>
       <TableRow>

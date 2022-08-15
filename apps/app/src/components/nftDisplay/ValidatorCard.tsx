@@ -30,18 +30,26 @@ export default function ValidatorCard({
     { title: 'Vote Account', value: `${vote_account}`, canCopy: true },
     {
       title: 'ASN ( Concentration )',
-      value: `${asn} ( ${asn_concentration}% )`,
+      value: `${asn === undefined ? '' : asn}  
+        ${
+          asn_concentration === undefined || asn_concentration === null
+            ? ''
+            : `( ${asn_concentration} ) %`
+        } `,
     },
-    { title: 'Solana CLI', value: `v${solana_cli}` },
+    {
+      title: 'Solana CLI',
+      value: solana_cli === undefined ? '' : `v${solana_cli}`,
+    },
     { title: 'Skip Rate', value: `${skip_rate}%` },
-    { title: 'Av. Distance', value: `${av_distance}km` },
-    { title: 'Score', value: `${score}%` },
+    { title: 'Av. Distance', value: av_distance ? `${av_distance}km` : '' },
+    { title: 'Score', value: score === undefined ? '' : `${score}%` },
   ];
   return (
     <Grid item mobile={12} laptop={6}>
       <Box
         sx={{
-          backgroundColor: theme.palette.primary.main,
+          backgroundColor: theme.palette.primary.dark,
           position: 'relative',
           padding: theme.spacing(2),
           borderRadius: '9px',

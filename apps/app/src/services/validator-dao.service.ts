@@ -2,7 +2,6 @@ import {
   INGL_PROGRAM_ID,
   GLOBAL_GEM_KEY,
   GEM_ACCOUNT_CONST,
-  decodeInglData,
   GlobalGems,
   PROPOSAL_KEY,
   ValidatorProposal,
@@ -81,20 +80,20 @@ export const getGlobalGemData = async (connection: Connection) => {
   const globalGemAccountInfo = await connection.getAccountInfo(
     global_gem_pubkey
   );
-  const decodedData = await decodeInglData(
+  const decodedData = deserializeUnchecked(
     GlobalGems,
     globalGemAccountInfo?.data as Buffer
   );
 
   return {
-    counter: decodedData['counter'],
-    total_raised: Number(decodedData['total_raised']) / LAMPORTS_PER_SOL,
-    pd_pool_total: Number(decodedData['pd_pool_total']) / LAMPORTS_PER_SOL,
-    delegated_total: Number(decodedData['delegated_total']) / LAMPORTS_PER_SOL,
-    dealloced_total: Number(decodedData['dealloced_total']) / LAMPORTS_PER_SOL,
-    proposal_numeration: decodedData['proposal_numeration'],
-    is_proposal_ongoing: decodedData['is_proposal_ongoing'],
-    validator_list: decodedData['validator_list'],
+    counter: decodedData.counter,
+    total_raised: Number(decodedData.total_raised) / LAMPORTS_PER_SOL,
+    pd_pool_total: Number(decodedData.pd_pool_total) / LAMPORTS_PER_SOL,
+    delegated_total: Number(decodedData.delegated_total) / LAMPORTS_PER_SOL,
+    dealloced_total: Number(decodedData.dealloced_total) / LAMPORTS_PER_SOL,
+    proposal_numeration: decodedData.proposal_numeration,
+    is_proposal_ongoing: decodedData.is_proposal_ongoing,
+    validator_list: decodedData.validator_list,
   };
 };
 
