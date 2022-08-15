@@ -15,6 +15,7 @@ export default function Question({
         border: `1px solid ${theme.palette.secondary.main}`,
         padding: '11px 30px',
         borderRadius: '20px',
+        marginBottom: theme.spacing(2)
       }}
     >
       <Box

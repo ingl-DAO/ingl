@@ -50,3 +50,6 @@ keypair.json
 python/ingl
 ingl_cli.egg-info/
 _pycache__/
+
+# Env
+.env

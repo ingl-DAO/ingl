@@ -13,7 +13,7 @@ export default function DaoSection() {
         position: 'relative',
       }}
     >
-      <Box sx={{width: {laptop: 'initial', mobile: '100%'}}}>
+      <Box sx={{ width: { laptop: 'initial', mobile: '100%' } }}>
         <img
           src={BG}
           alt="dao over world"
@@ -22,33 +22,28 @@ export default function DaoSection() {
             top: -330,
             left: -75,
             zIndex: -1,
-            width: 'inherit'
+            width: 'inherit',
           }}
         />
       </Box>
       <SectionTitle title="dao powered community" center />
       <Typography sx={{ mx: { laptop: 25, mobile: 0 } }}>
-        Lorem ipsum s simply dummy text of the printing and typesetting
-        industry. Lo Lorem Ipsum has been the industry's standard dummy text
-        ever since the 1500s, when an unknown printer took a galley of type and
-        scrambled it to make a type specimen book. It has survived not only five
-        centuries, but also the leap into electronic typesetting, remaining
-        essentially unchanged. It was popularised in the 1960s with the release
-        of Letraset sheets containing Lorem Ipsum passages, and more recently
-        with desktop publishing software like Aldus PageMaker including versions
-        of Lorem Ipsum.
+        ingl DAO is a fully decentralised and DAO controlled protocol.
+        Everything ranging from program upgrade to onboarded validators is a
+        communal decision. The base governance units are ingl gems and the
+        council is made up of onboarded validators.
       </Typography>
       <Button
         variant="contained"
         color="secondary"
         size="large"
         component="a"
-        href='https://app.ingl.io/mint'
+        href="https://app.ingl.io/"
         rel="noreferrer"
-        target="_blank"  
+        target="_blank"
         sx={{ borderRadius: '90px', marginTop: theme.spacing(11) }}
       >
-        Join now
+        Join
       </Button>
     </Box>
   );

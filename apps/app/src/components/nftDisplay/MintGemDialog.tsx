@@ -12,8 +12,8 @@ import {
 } from '@mui/material';
 import { TransitionProps } from '@mui/material/transitions';
 import { forwardRef, useState } from 'react';
-import { NftClass } from '.';
 import useNotification from '../../common/utils/notification';
+import { NftClass } from '../../services/state';
 import theme from '../../theme/theme';
 
 const Transition = forwardRef(function Transition(
@@ -35,17 +35,17 @@ export default function MintGemDialog({
   closeDialog: () => void;
   onValidate: (mintClass: NftClass) => void;
 }) {
-  const [selectedMintClass, setSelectedMintClass] = useState<NftClass>(NftClass.Benitoite);
-  const [NftClasses, setNftClasses] = useState<
-    { price: number, value: NftClass; label: string }[]
-  >([
+  const [selectedMintClass, setSelectedMintClass] = useState<NftClass>(
+    NftClass.Benitoite
+  );
+  const NftClasses: { price: number; value: NftClass; label: string }[] = [
     { price: 1, label: 'Benitoite', value: NftClass.Benitoite },
     { price: 100, label: 'Diamond', value: NftClass.Diamond },
     { price: 10, label: 'Emerald', value: NftClass.Emerald },
     { price: 500, label: 'Ruby', value: NftClass.Ruby },
     { price: 50, label: 'Sapphire', value: NftClass.Sapphire },
     { price: 5, label: 'Serendibite', value: NftClass.Serendibite },
-  ]);
+  ];
   return (
     <Dialog
       open={isDialogOpen}
@@ -76,9 +76,12 @@ export default function MintGemDialog({
               borderColor: 'white',
             },
           }}
-          onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-            setSelectedMintClass(NftClasses[Number(event.target.value)].value)
-          }
+          onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+            const nftClass = NftClasses.find(
+              (_) => _.value === Number(event.target.value)
+            );
+            if (nftClass) setSelectedMintClass(nftClass.value);
+          }}
         >
           {NftClasses.map((nftClass, index) => (
             <MenuItem
