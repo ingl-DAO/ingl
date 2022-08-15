@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from borsh_construct import *
 from solana.publickey import PublicKey
 import json
@@ -80,4 +81,5 @@ InglVoteAccountData = CStruct(
 )
 
 def private_key_from_json(filepath):
+>>>>>>> 9dc6769b87722096280c10d673c04541299106e4
     return base58.b58encode(keypair_from_json(filepath).secret_key).decode()
