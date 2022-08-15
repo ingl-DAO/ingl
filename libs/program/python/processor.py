@@ -19,7 +19,7 @@ def create_collection(payer_keypair, client):
     global_gem_pubkey, _global_gem_bump = PublicKey.find_program_address([bytes(ingl_constants.GLOBAL_GEM_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     council_mint_authority_pubkey, _mint_authority_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.COUNCIL_MINT_AUTHORITY_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     council_mint_pubkey, _collection_mint_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.COUNCIL_MINT_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
-
+    print("Collection Key: ", mint_pubkey)
     payer_account_meta = AccountMeta(payer_keypair.public_key, True, True)
     collection_holder_meta = AccountMeta(collection_holder_pubkey, False, True) #This might be the cause of a Writable escalated permission error.
     mint_account_meta = AccountMeta(mint_pubkey, False, True)
@@ -76,9 +76,6 @@ def mint_nft(payer_keypair, mint_keypair, mint_class, client):
     mint_edition_pda, _mint_edition_bump = PublicKey.find_program_address([b"metadata", bytes(metaplex_program_id), bytes(mint_keypair.public_key), b"edition"], metaplex_program_id)
     collection_account_pda, _collection_account_bump = PublicKey.find_program_address([b"metadata", bytes(metaplex_program_id), bytes(collection_mint_pubkey)], metaplex_program_id)
     gem_account_pubkey, _gem_account_bump = PublicKey.find_program_address([bytes(ingl_constants.GEM_ACCOUNT_CONST, 'UTF-8'), bytes(mint_keypair.public_key)], ingl_constants.INGL_PROGRAM_ID)
-
-    
-    # print(mint_keypair.public_key)
 
     payer_account_meta = AccountMeta(payer_keypair.public_key, True, True)
     mint_account_meta = AccountMeta(mint_keypair.public_key, True, True)
@@ -148,7 +145,6 @@ def allocate_sol(payer_keypair, mint_pubkey, client):
     global_gem_meta = AccountMeta(global_gem_pubkey, False, True)
     pd_pool_meta = AccountMeta(pd_pool_pubkey, False, True)
     minting_pool_meta = AccountMeta(minting_pool_pubkey, False, True)
-    # sysvar_clock_meta = AccountMeta(solana.sysvar.SYSVAR_CLOCK_PUBKEY, False, False)
     system_program_meta = AccountMeta(system_program.SYS_PROGRAM_ID, False, False)
 
 
@@ -537,7 +533,7 @@ def finalize_rebalance(payer_keypair, vote_account_pubkey, client):
     t_withdraw_key, _t_withdraw_bump = PublicKey.find_program_address([bytes(ingl_constants.T_WITHDRAW_KEY, 'UTF-8'), bytes(expected_vote_pubkey)], ingl_constants.INGL_PROGRAM_ID)
     pd_pool_pubkey, _pd_pool_bump = PublicKey.find_program_address([bytes(ingl_constants.PD_POOL_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     
-    validator_id = InglVoteAccountData.parse(base64.urlsafe_b64decode(client.get_account_info(expected_vote_data_pubkey)['result']['value']['data'][0])).validator_id
+    validator_id = PublicKey(InglVoteAccountData.parse(base64.urlsafe_b64decode(client.get_account_info(expected_vote_data_pubkey)['result']['value']['data'][0])).validator_id)
     print(f"Validator_Id: {validator_id}")
 
     payer_account_meta = AccountMeta(payer_keypair.public_key, True, True)
@@ -651,10 +647,9 @@ def nft_withdraw(payer_keypair, mints, vote_account_id, client):
     accounts.append(sys_program_meta)
     # print(accounts)
     data = InstructionEnum.build(InstructionEnum.enum.NFTWithdraw(len(mints)))
-    print(data)
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, data))
-    # return client.send_transaction(transaction, payer_keypair)
+    return client.send_transaction(transaction, payer_keypair)
 
 def inject_testing_data(payer_keypair, mints, vote_account_id, client):
     expected_vote_data_pubkey, _expected_vote_data_bump = PublicKey.find_program_address([bytes(ingl_constants.VOTE_DATA_ACCOUNT_KEY, 'UTF-8'), bytes(vote_account_id)], ingl_constants.INGL_PROGRAM_ID)
