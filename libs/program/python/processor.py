@@ -249,7 +249,7 @@ def create_validator_proposal(payer_keypair, proposal_numeration, client):
     global_gem_meta = AccountMeta(global_gem_pubkey, False, True)
     proposal_meta = AccountMeta(proposal_pubkey, False, True)
     system_program_meta = AccountMeta(system_program.SYS_PROGRAM_ID, False, False)
-
+    print(f"Proposal_id: {proposal_pubkey}")
     accounts = [
         payer_account_meta,
         global_gem_meta,
@@ -651,9 +651,10 @@ def nft_withdraw(payer_keypair, mints, vote_account_id, client):
     accounts.append(sys_program_meta)
     # print(accounts)
     data = InstructionEnum.build(InstructionEnum.enum.NFTWithdraw(len(mints)))
+    print(data)
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, data))
-    return client.send_transaction(transaction, payer_keypair)
+    # return client.send_transaction(transaction, payer_keypair)
 
 def inject_testing_data(payer_keypair, mints, vote_account_id, client):
     expected_vote_data_pubkey, _expected_vote_data_bump = PublicKey.find_program_address([bytes(ingl_constants.VOTE_DATA_ACCOUNT_KEY, 'UTF-8'), bytes(vote_account_id)], ingl_constants.INGL_PROGRAM_ID)

@@ -26,7 +26,7 @@ use solana_program::{
     rent::Rent,
     system_instruction, system_program,
     sysvar::{self, Sysvar},
-    hash::hash,
+    hash::hashv,
     stake::{state::{Authorized, Lockup, StakeState}, self},
 };
 use spl_associated_token_account::{get_associated_token_address, *};
@@ -1426,7 +1426,7 @@ pub fn imprint_rarity(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
     let mut gem_data = GemAccountV0_0_1::validate(GemAccountVersions::decode_unchecked(&gem_account_info.data.borrow())?)?;
     let now = Clock::get()?;
     msg!(
-        "now: {}, sedd_time: {}",
+        "now: {}, seed_time: {}",
         now.unix_timestamp,
         gem_data.rarity_seed_time.unwrap()
     );
@@ -1473,18 +1473,15 @@ pub fn imprint_rarity(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
         .unwrap();
     let bnb_price = bnb_value.mantissa * 10.pow(bnb_value.scale) as i128;
 
-    let mut string_to_hash = btc_price.to_string();
-    string_to_hash.push_str(sol_price.to_string().as_ref() as &str);
-    string_to_hash.push_str(eth_price.to_string().as_ref() as &str);
-    string_to_hash.push_str(bnb_price.to_string().as_ref() as &str);
-    let rarity_hash_string = hash(string_to_hash.as_bytes());
+    let rarity_hash_string = hashv(&[&btc_price.to_be_bytes(), &sol_price.to_be_bytes(), &eth_price.to_be_bytes(), &bnb_price.to_be_bytes(), &mint_account_info.key.to_bytes(), &program_id.to_bytes()]);
     let rarity_hash_bytes = rarity_hash_string.to_bytes();
 
-    let mut byte_product: u64 = 0;
+    let mut byte_sum: u64 = 0;
     for byte in rarity_hash_bytes {
-        byte_product = byte_product + byte as u64;
+        byte_sum = byte_sum + (byte as u64).pow(2);
     }
-    let random_value = byte_product * 9999 / (255 * 32) as u64;
+    
+    let random_value = byte_sum*10%10000;
     msg!("Bytes product: {:?}", random_value);
     gem_data.rarity = gem_data.class.get_rarity(random_value);
 
@@ -1953,6 +1950,7 @@ pub fn process_rewards(program_id: &Pubkey, accounts: &[AccountInfo]) -> Program
 }
 
 pub fn nft_withdraw(program_id: &Pubkey, accounts: &[AccountInfo], cnt: usize) -> ProgramResult {
+    msg!("cnt: {:?}, Accounts: {:?}",cnt,  accounts);
     let account_info_iter = &mut accounts.iter();
     let payer_account_info = next_account_info(account_info_iter)?;
     let vote_account_info = next_account_info(account_info_iter)?;
@@ -2022,7 +2020,7 @@ pub fn nft_withdraw(program_id: &Pubkey, accounts: &[AccountInfo], cnt: usize) -
         let mut total_reward: u64 = 0;
         for i in interested_index..ingl_vote_account_data.vote_rewards.len(){
             let epoch_reward = ingl_vote_account_data.vote_rewards[i];
-            msg!("epoch_reward: {:?}", epoch_reward);
+            // msg!("epoch_reward: {:?}", epoch_reward);
             total_reward = total_reward.checked_add((gem_account_data.class.get_class_lamports() as f64 * NFTS_SHARE as f64 * epoch_reward.total_reward as f64 / (100.0 * epoch_reward.total_stake as f64))as u64).unwrap();
         }
         gem_account_data.last_withdrawal_epoch = Some(Clock::get()?.epoch);
@@ -2030,6 +2028,7 @@ pub fn nft_withdraw(program_id: &Pubkey, accounts: &[AccountInfo], cnt: usize) -
         general_rewards = general_rewards.checked_add(total_reward).unwrap();
         gem_account_data.serialize(&mut &mut gem_account_data_info.data.borrow_mut()[..])?;
     }
+    msg!("right before Invocation");
     invoke_signed(
         &system_instruction::transfer(authorized_withdrawer_info.key, payer_account_info.key, general_rewards),
         &[authorized_withdrawer_info.clone(), payer_account_info.clone()],

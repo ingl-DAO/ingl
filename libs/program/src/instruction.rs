@@ -25,7 +25,7 @@ pub enum InstructionEnum {
     VoteValidatorProposal{num_nfts: u8, validator_index: u32},
     FinalizeProposal,
     ValidatorWithdraw,
-    NFTWithdraw{cnt: u32},
+    NFTWithdraw{cnt: u32}, //To be changed to U8
     ProcessRewards,
     CloseProposal,
     InitRebalance,

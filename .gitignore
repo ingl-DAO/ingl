@@ -45,3 +45,8 @@ Cargo.lock
 arweave-key.json
 keypair.json
 /deploy
+
+#python
+python/ingl
+ingl_cli.egg-info/
+_pycache__/
