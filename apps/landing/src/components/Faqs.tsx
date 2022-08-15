@@ -13,7 +13,7 @@ export default function Faqs() {
     {
       question: 'who can onboard a computing unit?',
       answer:
-        'Anyone, provided they mean the minimum solana validator requirements',
+        'Anyone, provided they meet the minimum solana validator requirements',
     },
     {
       question: 'How are yields generated ?',
