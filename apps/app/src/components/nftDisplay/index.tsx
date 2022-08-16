@@ -36,6 +36,7 @@ export interface inglGem {
   rarity?: Rarity;
   gemClass?: string;
   allocation_date?: number;
+  redeemable_date?: number;
   is_allocated: boolean;
   is_delegated: boolean;
   has_loan: boolean;
@@ -408,7 +409,6 @@ export default function NftDisplay() {
 
   const displayGems = sortNft(gems, selectedAttribute.attName);
   const [isMintDialogOpen, setIsMintDialogOpen] = useState<boolean>(false);
-
   return (
     <Box>
       <Box

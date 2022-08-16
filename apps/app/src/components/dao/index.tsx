@@ -189,6 +189,7 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
       setIsLoadingProposalData(true);
       getValidatorsDetail(selectedProposal.validator_ids)
         .then((validators) => {
+          console.log(validators);
           const validatorStats = validators.map((validator, index) => {
             return {
               validator_index: index,
