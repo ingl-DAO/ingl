@@ -18,7 +18,7 @@ const NAV_LINKS: { name: string; link: string; isExternal: boolean }[] = [
   { name: 'Wallet', link: '/wallet', isExternal: false },
   {
     name: 'Onboard Validator',
-    link: 'https://onboarding.ingl.io',
+    link: 'https://whitepaper.ingl.io/components/onboarding-a-validator',
     isExternal: true,
   },
 ];
