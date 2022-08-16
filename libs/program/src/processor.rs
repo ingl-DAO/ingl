@@ -237,6 +237,16 @@ pub fn register_validator_id(program_id: &Pubkey, accounts: &[AccountInfo]) -> P
     let global_gem_account_info = next_account_info(account_info_iter)?;
     let mint_authority_account_info = next_account_info(account_info_iter)?;
     let validator_info = next_account_info(account_info_iter)?; //Remove this and change it back to payer only after hackathon.
+    let dup_prevention_account = next_account_info(account_info_iter)?;
+
+    let (expected_dup_key, expected_dup_bump) = Pubkey::find_program_address(&[DUPKEYBYTES, validator_info.key.as_ref()], program_id);
+    assert_pubkeys_exactitude(&expected_dup_key, dup_prevention_account.key)?;
+
+    invoke_signed(
+        &system_instruction::create_account(payer_account_info.key, &expected_dup_key, Rent::get()?.minimum_balance(1), 1,program_id),
+        &[payer_account_info.clone(), dup_prevention_account.clone()],
+        &[&[DUPKEYBYTES, validator_info.key.as_ref(), &[expected_dup_bump]]]
+    )?;
 
     let (global_gem_pubkey, _global_gem_bump) =
     Pubkey::find_program_address(&[GLOBAL_GEM_KEY.as_ref()], program_id);
@@ -2124,7 +2134,6 @@ pub fn process_rewards(program_id: &Pubkey, accounts: &[AccountInfo]) -> Program
 }
 
 pub fn nft_withdraw(program_id: &Pubkey, accounts: &[AccountInfo], cnt: usize) -> ProgramResult {
-    msg!("cnt: {:?}, Accounts: {:?}",cnt,  accounts);
     let account_info_iter = &mut accounts.iter();
     let payer_account_info = next_account_info(account_info_iter)?;
     let vote_account_info = next_account_info(account_info_iter)?;
@@ -2211,7 +2220,7 @@ pub fn nft_withdraw(program_id: &Pubkey, accounts: &[AccountInfo], cnt: usize) -
         general_rewards = general_rewards.checked_add(total_reward).unwrap();
         gem_account_data.serialize(&mut &mut gem_account_data_info.data.borrow_mut()[..])?;
     }
-    msg!("right before Invocation");
+    // msg!("right before Invocation");
     invoke_signed(
         &system_instruction::transfer(
             authorized_withdrawer_info.key,
@@ -2644,6 +2653,7 @@ pub fn inject_testing_data(program_id: &Pubkey, accounts: &[AccountInfo], num_mi
     ingl_vote_account_data.vote_rewards.push(VoteRewards{validation_phrase: VOTE_REWARDS_VAL_PHRASE, epoch_number: chosen_epoch-1, total_stake: ingl_vote_account_data.total_delegated, total_reward: 1 * LAMPORTS_PER_SOL });
     ingl_vote_account_data.vote_rewards.push(VoteRewards{validation_phrase: VOTE_REWARDS_VAL_PHRASE, epoch_number: chosen_epoch, total_stake: ingl_vote_account_data.total_delegated, total_reward: 2*LAMPORTS_PER_SOL });
     ingl_vote_account_data.last_withdraw_epoch = chosen_epoch-1;
+    // ingl_vote_account_data.pending_validator_rewards = Some(1*LAMPORTS_PER_SOL);
 
 
 

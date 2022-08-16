@@ -42,6 +42,7 @@ pub mod constants {
     pub const TREASURY_ACCOUNT_KEY: &str = "Treasury_account_key";
     pub const T_STAKE_ACCOUNT_KEY: &str = "Temporary_stake_account_key";
     pub const T_WITHDRAW_KEY: &str = "Temporary_withdraw";
+    pub const DUPKEYBYTES: &[u8] = b"dupkey";
 
     pub const VALIDATOR_ID_SHARE: u64 = 15;
     pub const TREASURY_SHARE: u64 = 13;

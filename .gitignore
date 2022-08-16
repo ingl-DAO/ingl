@@ -49,7 +49,7 @@ keypair.json
 #python
 python/ingl
 ingl_cli.egg-info/
-_pycache__/
+__pycache__/
 
 # Env
 .env
