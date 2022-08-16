@@ -218,6 +218,7 @@ export default function VoteDialog({
                     .sort((a, b) => b.numeration - a.numeration)
                     .map((nft, index) => {
                       const { nft_id, last_voted_proposal_id } = nft;
+                      console.log(last_voted_proposal_id, proposal_id);
                       return (
                         <DaoGem
                           key={index}

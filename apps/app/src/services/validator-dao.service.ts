@@ -127,7 +127,7 @@ export const getValidatorsDetail = async (validator_ids: string[]) => {
     pubkey: value,
     details: {} as any,
   }));
-  let allValidators: any[] = await (
+  const allValidators: any[] = await (
     await fetch('https://www.validators.app/api/v1/validators/testnet.json', {
       headers: {
         token: token as string,
@@ -135,9 +135,7 @@ export const getValidatorsDetail = async (validator_ids: string[]) => {
       mode: 'cors',
     })
   ).json();
-  allValidators = allValidators.filter(({ account }) =>
-    validator_ids.includes(account as string)
-  );
+
   if (allValidators.length > 0) {
     for (let i = 0; i < allValidators.length; i++) {
       const validatorDetail = allValidators[i];
@@ -194,15 +192,17 @@ export const getValidatorsDetail = async (validator_ids: string[]) => {
     };
     for (let i = 0; i < validatorsWithDetails.length; i++) {
       const validator: any = validatorsWithDetails[i];
-      let copyAllValidators = allValidators.map((validatorDetail: any) => ({
-        ...validatorDetail,
-        distance: getDistanceFromLatLonInKm(
-          Number(validator.details?.latitude),
-          Number(validator.details?.longitude),
-          Number(validatorDetail?.latitude),
-          Number(validatorDetail?.longitude)
-        ),
-      }));
+      let copyAllValidators = allValidators.map((validatorDetail: any) => {
+        return {
+          ...validatorDetail,
+          distance: getDistanceFromLatLonInKm(
+            Number(validator.details?.latitude),
+            Number(validator.details?.longitude),
+            Number(validatorDetail?.latitude),
+            Number(validatorDetail?.longitude)
+          ),
+        };
+      });
       copyAllValidators = copyAllValidators.sort((valA: any, valB: any) => {
         return new Date(valA?.distance) > new Date(valB?.distance) ? -1 : 1;
       });
