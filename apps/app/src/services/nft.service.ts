@@ -633,6 +633,7 @@ const getInglGemFromNft = async (
       date_allocated,
       last_voted_proposal,
       rarity_seed_time,
+      numeration,
     } = deserializeUnchecked(GemAccountV0_0_1, accountInfo?.data as Buffer);
     return {
       image_ref: image,
@@ -653,6 +654,7 @@ const getInglGemFromNft = async (
       last_voted_proposal_id: last_voted_proposal
         ? last_voted_proposal.toString()
         : '',
+      numeration: numeration,
     };
   }
   throw new Error('No json fields was found on metadata');
@@ -1300,8 +1302,9 @@ export async function loadRewards(
               total_stake: BN;
             }[];
             const comp = last_delegation_epoch?.cmp(
-              last_withdrawal_epoch as BN
+              (last_withdrawal_epoch ?? 0) as BN
             );
+            console.log(comp);
             const interestedEpoch =
               comp === 0
                 ? last_delegation_epoch

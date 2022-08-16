@@ -33,6 +33,7 @@ export default function Gem({
     is_delegated,
     has_loan,
     allocation_date,
+    numeration,
   },
   setGems,
   isDialogOpen,
@@ -290,24 +291,52 @@ export default function Gem({
           <Box
             sx={{
               position: 'absolute',
-              top: theme.spacing(0.5),
-              left: theme.spacing(0.5),
+              top: 0,
+              left: 0,
               backgroundColor: theme.palette.primary.dark,
               padding: '5px 7px',
-              height: { mobile: '10px', laptop: '30px' },
-              width: { mobile: '10px', laptop: '30px' },
-              borderRadius: '30px',
+              borderBottomRightRadius: theme.spacing(2.5),
+              borderTopLeftRadius: theme.spacing(2.5),
             }}
           >
             <Typography
-              variant="h1"
+              variant="h3"
+              sx={{ fontSize: { laptop: 'initial', mobile: '0.80rem' } }}
+            >
+              {`Gen ${generation}`}
+            </Typography>
+          </Box>
+          <Box
+            style={{
+              width: '100%',
+              height: '100%',
+              position: 'absolute',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <Box
               sx={{
-                fontSize: { laptop: '1.5rem', mobile: '0.80rem' },
-                textAlign: 'center',
+                position: 'absolute',
+                backgroundColor: theme.palette.primary.dark,
+                padding: '5px 7px',
+                borderRadius: '30px',
+                bottom: 0,
+                margin: 'auto',
               }}
             >
-              {`G${generation}`}
-            </Typography>
+              <Typography
+                variant="h1"
+                sx={{
+                  fontSize: { laptop: 'initial', mobile: '0.80rem' },
+                  textAlign: 'center',
+                  color: theme.palette.secondary.main,
+                }}
+              >
+                {`#${numeration}`}
+              </Typography>
+            </Box>
           </Box>
           <video
             src={video_ref}

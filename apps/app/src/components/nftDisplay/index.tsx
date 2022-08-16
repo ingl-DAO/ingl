@@ -40,7 +40,8 @@ export interface inglGem {
   is_delegated: boolean;
   has_loan: boolean;
   rarity_reveal_date?: number;
-  last_voted_proposal_id?: string
+  last_voted_proposal_id?: string;
+  numeration: number;
 }
 
 export interface dialogContent {
@@ -311,7 +312,6 @@ export default function NftDisplay() {
         );
       },
       undelegate: async () => {
-        console.log('start');
         await undelegateNft({ connection, wallet }, tokenMint);
       },
     };
@@ -575,20 +575,22 @@ export default function NftDisplay() {
             </Box>
           )
         ) : (
-          displayGems.map((gem, index) => (
-            <Gem
-              gem={gem}
-              key={index}
-              setGems={setGems}
-              activateDialog={activateDialog}
-              openDelegationDialog={openDelegationDialog}
-              isDialogOpen={
-                isGemDialogOpen ||
-                actionNotifs?.find(({ nft_id }) => nft_id === gem.nft_id) !==
-                  undefined
-              }
-            />
-          ))
+          displayGems
+            .sort((a: inglGem, b: inglGem) => b.numeration - a.numeration)
+            .map((gem, index) => (
+              <Gem
+                gem={gem}
+                key={index}
+                setGems={setGems}
+                activateDialog={activateDialog}
+                openDelegationDialog={openDelegationDialog}
+                isDialogOpen={
+                  isGemDialogOpen ||
+                  actionNotifs?.find(({ nft_id }) => nft_id === gem.nft_id) !==
+                    undefined
+                }
+              />
+            ))
         )}
         {activeGemDialogContent !== undefined ? (
           <ActionDialog

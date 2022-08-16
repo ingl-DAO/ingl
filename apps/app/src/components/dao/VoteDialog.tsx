@@ -44,6 +44,7 @@ export interface inglGem {
     | 'Sapphire'
     | 'Serendibite';
   last_voted_proposal_id: string;
+  numeration: number;
 }
 
 const gemPrice: Record<
@@ -213,30 +214,34 @@ export default function VoteDialog({
                     You cannot participate in this vote as you have not gems
                   </Typography>
                 ) : (
-                  userGems.map((nft, index) => {
-                    const { nft_id, last_voted_proposal_id, image_ref } = nft;
-                    return (
-                      <DaoGem
-                        key={index}
-                        image={image_ref}
-                        isSelected={
-                          selectedGems.find(
-                            (selectedGem) => selectedGem.nft_id === nft_id
-                          ) !== undefined
-                        }
-                        isUnusable={last_voted_proposal_id === proposal_id}
-                        selectGem={() => {
-                          if (selectedGems.find((nft) => nft.nft_id === nft_id))
-                            setSelectedGems(
-                              selectedGems.filter(
-                                (nft) => nft.nft_id !== nft_id
-                              )
-                            );
-                          else setSelectedGems([...selectedGems, nft]);
-                        }}
-                      />
-                    );
-                  })
+                  userGems
+                    .sort((a, b) => b.numeration - a.numeration)
+                    .map((nft, index) => {
+                      const { nft_id, last_voted_proposal_id } = nft;
+                      return (
+                        <DaoGem
+                          key={index}
+                          nft={nft}
+                          isSelected={
+                            selectedGems.find(
+                              (selectedGem) => selectedGem.nft_id === nft_id
+                            ) !== undefined
+                          }
+                          isUnusable={last_voted_proposal_id === proposal_id}
+                          selectGem={() => {
+                            if (
+                              selectedGems.find((nft) => nft.nft_id === nft_id)
+                            )
+                              setSelectedGems(
+                                selectedGems.filter(
+                                  (nft) => nft.nft_id !== nft_id
+                                )
+                              );
+                            else setSelectedGems([...selectedGems, nft]);
+                          }}
+                        />
+                      );
+                    })
                 )}
               </Box>
             </Scrollbars>
