@@ -12,11 +12,12 @@ import {
   Typography,
 } from '@mui/material';
 import { TransitionProps } from '@mui/material/transitions';
-import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { useConnection } from '@solana/wallet-adapter-react';
 import { forwardRef, useEffect, useState } from 'react';
 import ErrorMessage from '../../common/components/ErrorMessage';
 import useNotification from '../../common/utils/notification';
 import { getVoteAccounts } from '../../services/nft.service';
+import { getValidatorsDetail } from '../../services/validator-dao.service';
 import { Validator } from '../dao';
 import ValidatorCard from './ValidatorCard';
 
@@ -43,55 +44,62 @@ export default function SelectValidatorDialog({
   const [isValidatorsLoading, setIsValidatorsLoading] =
     useState<boolean>(false);
 
-  const wallet = useWallet();
   const { connection } = useConnection();
 
   const notif = new useNotification();
 
   const loadValidators = () => {
     setIsValidatorsLoading(true);
-    // TODO: CALL API HERE TO LOAD VALIDATORS
-    let newValidators: Validator[] = [
-      {
-        validator_pub_key: 'qXh3G5eogP6NHx5FLRzDTrLJwiaNCYULwguZTGaa9Fw',
-        asn: 'AS12424',
-        asn_concentration: 0.34,
-        av_distance: 15,
-        score: 60,
-        skip_rate: 23,
-        solana_cli: '2.3.33',
-        vote_account: 'hello wold',
-      },
-      {
-        validator_pub_key: 'qXh3G5eogP6NHxFLRzDTrLJwiaNCYULwguZTGaa9Fw',
-        asn: 'AS12424',
-        asn_concentration: 0.34,
-        av_distance: 15,
-        score: 60,
-        skip_rate: 23,
-        solana_cli: '2.3.33',
-        vote_account: 'hello world',
-      },
-    ];
-    //adding votes accounts ids to corresponding validators
+
     getVoteAccounts(connection)
       .then((voteAccounts) => {
-        newValidators = newValidators.map((validator) => {
-          const vote = voteAccounts.find(
-            (voteAccount) =>
-              voteAccount.validator_id.toString() ===
-              validator.validator_pub_key
-          );
-          return vote
-            ? {
-                ...validator,
-                vote_account: vote.vote_account.toString(),
-                validator_pub_key: vote.validator_id.toString() as string,
-              }
-            : validator;
-        });
-        setValidators(newValidators);
-        setIsValidatorsLoading(false);
+        getValidatorsDetail(
+          voteAccounts.map((voteAccount) => voteAccount.validator_id.toString())
+        )
+          .then((_validators) => {
+            const newValidators: Validator[] = [];
+            _validators.forEach((validator, index) => {
+              newValidators.push({
+                vote_account: voteAccounts[index].vote_account.toString(),
+                validator_index: index,
+                validator_pub_key: validator.pubkey,
+                asn: validator.details?.autonomous_system_number,
+                asn_concentration: validator.details?.autonomous_system_number
+                  ? validator.details?.asn_concentration.toFixed(3)
+                  : null,
+                av_distance: Number(
+                  (validator.details?.average_distance / 1000).toFixed(3)
+                ),
+                score: validator.details?.total_score,
+                skip_rate: Number(
+                  (
+                    Number(validator.details?.skipped_slot_percent ?? 0) * 100
+                  ).toFixed(3)
+                ),
+                solana_cli: validator.details?.software_version,
+              });
+            });
+
+            setValidators(newValidators);
+            setIsValidatorsLoading(false);
+          })
+          .catch((error) => {
+            notif.update({
+              type: 'ERROR',
+              render: (
+                <ErrorMessage
+                  retryFunction={() => null}
+                  notification={notif}
+                  message={
+                    error?.message || 'There was a problem loading validators'
+                  }
+                />
+              ),
+              autoClose: false,
+              icon: () => <ReportRounded fontSize="large" color="error" />,
+            });
+            setIsValidatorsLoading(false);
+          });
       })
       .catch((error) => {
         notif.update({
@@ -109,6 +117,7 @@ export default function SelectValidatorDialog({
           autoClose: false,
           icon: () => <ReportRounded fontSize="large" color="error" />,
         });
+        setIsValidatorsLoading(false);
       });
   };
 
@@ -150,7 +159,7 @@ export default function SelectValidatorDialog({
           <Grid container spacing={2}>
             {isValidatorsLoading ? (
               [...new Array(12)].map((_, index) => (
-                <Grid item mobile={12} laptop={6}>
+                <Grid key={index} item mobile={12} laptop={6}>
                   <Skeleton
                     variant="rectangular"
                     height={200}

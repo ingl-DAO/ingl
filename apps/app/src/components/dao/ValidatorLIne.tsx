@@ -100,6 +100,16 @@ export default function ValidatorLIne({
           ''
         )}
       </Grid>
+      <Grid item desktop={1} sx={{ display: 'grid', justifyItems: 'center' }}>
+        {score && (
+          <Typography
+            variant="caption"
+            sx={{
+              color: is_winner ? theme.palette.secondary.main : 'white',
+            }}
+          >{`${score}`}</Typography>
+        )}
+      </Grid>
       <Grid item desktop={2} sx={{ display: 'grid', justifyItems: 'center' }}>
         {asn && (
           <Typography
@@ -111,22 +121,17 @@ export default function ValidatorLIne({
         )}
       </Grid>
       <Grid item desktop={1} sx={{ display: 'grid', justifyItems: 'center' }}>
-        {score && (
-          <Typography
-            variant="caption"
-            sx={{
-              color: is_winner ? theme.palette.secondary.main : 'white',
-            }}
-          >{`${score}`}</Typography>
-        )}
-      </Grid>
-      <Grid item desktop={1} sx={{ display: 'grid', justifyItems: 'center' }}>
         {isProposalOngoing ? (
           <Button
             variant="contained"
             size="small"
             disabled={isSubmittingVote}
             onClick={() => onVote(validator)}
+            sx={{
+              borderRadius: '30px',
+              fontSize: '0.75rem',
+              padding: theme.spacing(1, 2.5),
+            }}
           >
             Vote
           </Button>

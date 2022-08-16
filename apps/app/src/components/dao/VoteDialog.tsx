@@ -120,7 +120,9 @@ export default function VoteDialog({
       TransitionComponent={Transition}
       keepMounted
       onClose={closeDialog}
-      sx={{ '& .MuiPaper-root': { backgroundColor: 'black' } }}
+      sx={{
+        '& .MuiPaper-root': { backgroundColor: 'black', maxWidth: '800px' },
+      }}
     >
       <DialogTitle
         sx={{ color: 'white', textAlign: 'center', fontSize: '2.5rem' }}
@@ -256,6 +258,11 @@ export default function VoteDialog({
               submitVote(selectedGems);
               closeDialog();
             }}
+            sx={{
+              zIndex: 1,
+              borderRadius: '30px',
+              fontSize: { mobile: '0.55rem', laptop: 'initial' },
+            }}
           >
             Vote
           </Button>
@@ -266,6 +273,11 @@ export default function VoteDialog({
           onClick={() => {
             setSelectedGems([]);
             closeDialog();
+          }}
+          sx={{
+            zIndex: 1,
+            borderRadius: '30px',
+            fontSize: { mobile: '0.55rem', laptop: 'initial' },
           }}
         >
           Cancel

@@ -15,7 +15,6 @@ pub mod constants {
     use solana_program::{declare_id, native_token::LAMPORTS_PER_SOL};
     declare_id!("41z2kpMac1RpH5XnBoKnY6vjmJwdbwc1aHRQszCgbyDv");
 
-
     pub const INGL_TREASURY_ACCOUNT_KEY: &str = "ingl_treasury_account_key";
     pub const INGL_NFT_COLLECTION_KEY: &str = "ingl_nft_collection_newer";
     pub const INGL_MINT_AUTHORITY_KEY: &str = "mint_authority";
@@ -54,10 +53,9 @@ pub mod constants {
     pub const VALIDATOR_VOTE_VAL_PHRASE: u32 = 214_648_321;
     pub const INGL_VOTE_ACCOUNT_DATA_VAL_PHRASE: u32 = 842_154_348;
     pub const GEM_ACCOUNT_VAL_PHRASE: u32 = 516_248_961;
-    pub const VOTE_REWARDS_VAL_PHRASE:u32 = 584_625_418;
+    pub const VOTE_REWARDS_VAL_PHRASE: u32 = 584_625_418;
 
-
-    pub mod spl_program{
+    pub mod spl_program {
         use solana_program::declare_id;
         declare_id!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
     }
@@ -129,7 +127,7 @@ pub struct GlobalGems {
     pub proposal_numeration: u32,
     pub pending_delegation_total: u64,
     pub validator_list: Vec<Pubkey>, //This is not the validator list to display for proposals check instead the ValidatorProposal Struct.
-    // pub winners_list: Vec<u32>, // To include next so as to
+                                     // pub winners_list: Vec<u32>, // To include next so as to
 }
 impl GlobalGems {
     pub fn validate(self) -> Result<Self, ProgramError> {
@@ -241,8 +239,8 @@ impl ValidatorProposal {
     }
 }
 
-#[derive(BorshDeserialize, Copy, Debug, Clone, BorshSerialize)]
-pub struct VoteRewards{
+#[derive(BorshDeserialize, Copy, Clone, BorshSerialize)]
+pub struct VoteRewards {
     pub validation_phrase: u32,
     pub epoch_number: u64,
     pub total_reward: u64,
@@ -260,8 +258,8 @@ impl VoteRewards {
         a.validate()
     }
 }
-#[derive(BorshDeserialize, Debug, BorshSerialize)]
-pub struct InglVoteAccountData{
+#[derive(BorshDeserialize, BorshSerialize)]
+pub struct InglVoteAccountData {
     pub validation_phrase: u32,
     pub total_delegated: u64,
     pub last_withdraw_epoch: u64,

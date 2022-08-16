@@ -51,30 +51,12 @@ export enum Instruction {
   CreateValidatorSelectionProposal,
   VoteValidatorProposal,
   FinalizeProposal,
-}
-
-class GemAccountVersions {}
-@variant(1)
-export class GemAccountV0_0_1_Version extends GemAccountVersions {}
-@variant(0)
-export class BlanckCase_Version extends GemAccountVersions {}
-
-class FundsLocation {}
-@variant(0)
-export class MintingPoolFundLocation extends FundsLocation {}
-
-@variant(1)
-export class PDPoolFundLocation extends FundsLocation {}
-
-@variant(2)
-export class VoteAccountFundLocation extends FundsLocation {
-  @field({ type: fixedArray('u8', 32) })
-  vote_account_id!: PublicKey;
-
-  constructor(vote_account_id: PublicKey) {
-    super();
-    this.vote_account_id = vote_account_id;
-  }
+  ValidatorWithdraw,
+  NFTWithdraw,
+  ProcessRewards,
+  CloseProposal,
+  InitRebalance,
+  FinalizeRebalance,
 }
 
 export const BTC_HISTORY_BUFFER_KEY = new PublicKey(
@@ -122,175 +104,27 @@ export const STAKE_ACCOUNT_KEY = 'staking_account_key';
 export const VOTE_DATA_ACCOUNT_KEY = 'InglVoteData';
 export const NFTS_SHARE = 60;
 
-export class VoteInit {
-  @field({ type: vec(fixedArray('u8', 32)) })
-  public node_pubkey!: PublicKey;
+class GemAccountVersions {}
+@variant(1)
+export class GemAccountV0_0_1_Version extends GemAccountVersions {}
+@variant(0)
+export class BlanckCase_Version extends GemAccountVersions {}
 
-  @field({ type: vec(fixedArray('u8', 32)) })
-  public authorized_voter!: PublicKey;
+class FundsLocation {}
+@variant(0)
+export class MintingPoolFundLocation extends FundsLocation {}
 
-  @field({ type: vec(fixedArray('u8', 32)) })
-  public authorized_withdrawer!: PublicKey;
+@variant(1)
+export class PDPoolFundLocation extends FundsLocation {}
 
-  @field({ type: 'u8' })
-  public commission!: number;
-
-  constructor(properties: {
-    node_pubkey: PublicKey;
-    authorized_voter: PublicKey;
-    authorized_withdrawer: PublicKey;
-    commission: number;
-  }) {
-    if (properties) {
-      this.node_pubkey = properties.node_pubkey;
-      this.authorized_voter = properties.authorized_voter;
-      this.authorized_withdrawer = properties.authorized_withdrawer;
-      this.commission = properties.commission;
-    }
-  }
-}
-
-export class VoteRewards {
-  @field({ type: 'u32' })
-  public validation_phrase!: number;
-
-  @field({ type: 'u64' })
-  public epoch_number!: BN;
-
-  @field({ type: 'u64' })
-  public total_reward!: BN;
-
-  @field({ type: 'u64' })
-  public total_stake!: BN;
-
-  constructor(properties?: {
-    validator_phrase: number;
-    epoch_number: BN;
-    total_reward: BN;
-    total_stake: BN;
-  }) {
-    if (properties) {
-      this.validation_phrase = properties.validator_phrase;
-      this.epoch_number = properties.epoch_number;
-      this.total_reward = properties.total_reward;
-      this.total_stake = properties.total_stake;
-    }
-  }
-}
-
-export class GlobalGems {
-  @field({ type: 'u32' })
-  public validation_phrase!: number;
-
-  @field({ type: 'u32' })
-  public counter!: number;
-
-  @field({ type: 'u64' })
-  public total_raised!: BN;
-
-  @field({ type: 'u64' })
-  public pd_pool_total!: BN;
-
-  @field({ type: 'u64' })
-  public delegated_total!: BN;
-
-  @field({ type: 'u64' })
-  public dealloced_total!: BN;
-
-  @field({ type: 'bool' })
-  public is_proposal_ongoing!: boolean;
-
-  @field({ type: 'u32' })
-  public proposal_numeration!: number;
-
-  @field({ type: 'u64' })
-  public pending_delegation_total!: BN;
-
-  @field({ type: vec(fixedArray('u8', 32)) })
-  public validator_list!: PublicKey[];
-
-  constructor(properties: {
-    validation_phrase: number;
-    counter: number;
-    total_raised: BN;
-    pd_pool_total: BN;
-    delegated_total: BN;
-    dealloced_total: BN;
-    is_proposal_ongoing: boolean;
-    proposal_numeration: number;
-    pending_delegation_total: BN;
-    validator_list: PublicKey[];
-  }) {
-    if (properties) {
-      this.validation_phrase = properties.validation_phrase;
-      this.counter = properties.counter;
-      this.total_raised = properties.total_raised;
-      this.pd_pool_total = properties.pd_pool_total;
-      this.delegated_total = properties.delegated_total;
-      this.dealloced_total = properties.dealloced_total;
-      this.is_proposal_ongoing = properties.is_proposal_ongoing;
-      this.proposal_numeration = properties.proposal_numeration;
-      this.pending_delegation_total = properties.pending_delegation_total;
-      this.validator_list = properties.validator_list;
-    }
-  }
-}
-
-export class InglVoteAccountData {
-  @field({ type: 'u32' })
-  public validation_phrase!: number;
-
-  @field({ type: 'u64' })
-  public total_delegated!: BN;
-
-  @field({ type: 'u64' })
-  public last_withdraw_epoch!: BN;
-
-  @field({ type: 'u64' })
-  public dealloced!: BN;
-
-  @field({ type: option('u64') })
-  public pending_validator_rewards?: BN;
-
+@variant(2)
+export class VoteAccountFundLocation extends FundsLocation {
   @field({ type: fixedArray('u8', 32) })
-  public validator_id!: PublicKey;
+  vote_account_id!: number;
 
-  @field({ type: 'u64' })
-  public last_total_staked!: BN;
-
-  @field({ type: 'bool' })
-  public is_t_stake_initialized!: boolean;
-
-  @field({ type: 'u64' })
-  public pending_delegation_total!: BN;
-
-  @field({ type: vec(VoteRewards) })
-  public vote_rewards!: VoteRewards[];
-
-  constructor(properties?: {
-    validation_phrase: number;
-    total_delegated: BN;
-    last_withdraw_epoch: BN;
-    dealloced: BN;
-    pending_validator_rewards?: BN;
-    validator_id: PublicKey;
-    last_total_staked: BN;
-    is_t_stake_initialized: boolean;
-    pending_delegation_total: BN;
-    vote_rewards: VoteRewards[];
-  }) {
-    if (properties) {
-      this.validation_phrase = properties.validation_phrase;
-      this.total_delegated = properties.total_delegated;
-      this.last_withdraw_epoch = properties.last_withdraw_epoch;
-      this.dealloced = properties.dealloced;
-      this.pending_validator_rewards = properties.pending_validator_rewards;
-      this.validator_id = properties.validator_id;
-      this.last_total_staked = properties.last_total_staked;
-      this.is_t_stake_initialized = properties.is_t_stake_initialized;
-      this.pending_delegation_total = properties.pending_delegation_total;
-      this.vote_rewards = properties.vote_rewards;
-    }
+  constructor(vote_account_id: number) {
+    super();
+    this.vote_account_id = vote_account_id;
   }
 }
 
@@ -390,13 +224,13 @@ export class GemAccountV0_0_1 {
   public last_voted_proposal?: PublicKey;
 
   @field({ type: option('u64') })
-  public last_withdrawal_epoch?: BN;
+  public last_withdrawal_epoch!: undefined | BN;
 
   @field({ type: option('u64') })
-  public last_delegation_epoch?: BN;
+  public last_delegation_epoch!: undefined | BN;
 
-  @field({ type: vec(fixedArray('u8', 32)) })
-  public all_withdraws!: PublicKey[];
+  @field({ type: vec('u64') })
+  public all_withdraws!: BN[];
 
   @field({ type: vec(ValidatorVote) })
   public all_votes!: ValidatorVote[];
@@ -410,12 +244,12 @@ export class GemAccountV0_0_1 {
     numeration: number;
     rarity: number;
     funds_location: FundsLocation;
-    rarity_seed_time: number;
-    date_allocated: number;
-    last_voted_proposal: PublicKey;
-    last_withdrawal_epoch: BN;
-    last_delegation_epoch: BN;
-    all_withdraws: PublicKey[];
+    rarity_seed_time: undefined | number;
+    date_allocated: undefined | number;
+    last_voted_proposal: undefined | PublicKey;
+    last_withdrawal_epoch: undefined | BN;
+    last_delegation_epoch: undefined | BN;
+    all_withdraws: BN[];
     all_votes: ValidatorVote[];
   }) {
     if (properties) {
@@ -434,6 +268,178 @@ export class GemAccountV0_0_1 {
       this.last_delegation_epoch = properties.last_delegation_epoch;
       this.all_withdraws = properties.all_withdraws;
       this.all_votes = properties.all_votes;
+    }
+  }
+}
+
+export class GlobalGems {
+  @field({ type: 'u32' })
+  public validation_phrase!: number;
+
+  @field({ type: 'u32' })
+  public counter!: number;
+
+  @field({ type: 'u64' })
+  public total_raised!: BN;
+
+  @field({ type: 'u64' })
+  public pd_pool_total!: BN;
+
+  @field({ type: 'u64' })
+  public delegated_total!: BN;
+
+  @field({ type: 'u64' })
+  public dealloced_total!: BN;
+
+  @field({ type: 'u8' })
+  public is_proposal_ongoing!: number;
+
+  @field({ type: 'u32' })
+  public proposal_numeration!: number;
+
+  @field({ type: 'u64' })
+  public pending_delegation_total!: BN;
+
+  @field({ type: vec(fixedArray('u8', 32)) })
+  public validator_list!: PublicKey[];
+
+  constructor(properties?: {
+    validation_phrase: number;
+    counter: number;
+    total_raised: BN;
+    pd_pool_total: BN;
+    delegated_total: BN;
+    dealloced_total: BN;
+    is_proposal_ongoing: number;
+    proposal_numeration: number;
+    pending_delegation_total: BN;
+    validator_list: PublicKey[];
+  }) {
+    if (properties) {
+      this.validation_phrase = properties.validation_phrase;
+      this.counter = properties.counter;
+      this.total_raised = properties.total_raised;
+      this.pd_pool_total = properties.pd_pool_total;
+      this.delegated_total = properties.delegated_total;
+      this.dealloced_total = properties.dealloced_total;
+      this.is_proposal_ongoing = properties.is_proposal_ongoing;
+      this.proposal_numeration = properties.proposal_numeration;
+      this.pending_delegation_total = properties.pending_delegation_total;
+      this.validator_list = properties.validator_list;
+    }
+  }
+}
+
+export class VoteRewards {
+  @field({ type: 'u32' })
+  public validation_phrase!: number;
+
+  @field({ type: 'u64' })
+  public epoch_number!: BN;
+
+  @field({ type: 'u64' })
+  public total_reward!: BN;
+
+  @field({ type: 'u64' })
+  public total_stake!: BN;
+
+  constructor(properties?: {
+    validation_phrase: number;
+    epoch_number: BN;
+    total_reward: BN;
+    total_stake: BN;
+  }) {
+    if (properties) {
+      this.validation_phrase = properties.validation_phrase;
+      this.epoch_number = properties.epoch_number;
+      this.total_reward = properties.total_reward;
+      this.total_stake = properties.total_stake;
+    }
+  }
+}
+
+export class VoteInit {
+  @field({ type: fixedArray('u8', 32) })
+  public node_pubkey!: PublicKey;
+
+  @field({ type: fixedArray('u8', 32) })
+  public authorized_voter!: PublicKey;
+
+  @field({ type: fixedArray('u8', 32) })
+  public authorized_withdrawer!: PublicKey;
+
+  @field({ type: fixedArray('u8', 32) })
+  public commission!: PublicKey;
+
+  constructor(properties?: {
+    node_pubkey: PublicKey;
+    authorized_voter: PublicKey;
+    authorized_withdrawer: PublicKey;
+    commission: PublicKey;
+  }) {
+    if (properties) {
+      this.node_pubkey = properties.node_pubkey;
+      this.authorized_voter = properties.authorized_voter;
+      this.authorized_withdrawer = properties.authorized_withdrawer;
+      this.commission = properties.commission;
+    }
+  }
+}
+
+export class InglVoteAccountData {
+  @field({ type: 'u32' })
+  public validation_phrase!: number;
+
+  @field({ type: 'u64' })
+  public total_delegated!: BN;
+
+  @field({ type: 'u64' })
+  public last_withdraw_epoch!: BN;
+
+  @field({ type: 'u64' })
+  public dealloced!: BN;
+
+  @field({ type: option('u64') })
+  public pending_validator_rewards!: BN | undefined;
+
+  @field({ type: fixedArray('u8', 32) })
+  public validator_id!: PublicKey;
+
+  @field({ type: 'u64' })
+  public last_total_staked!: BN;
+
+  @field({ type: 'u8' })
+  public is_t_stake_initialized!: boolean;
+
+  @field({ type: 'u64' })
+  public pending_delegation_total!: BN;
+
+  @field({ type: vec(VoteRewards) })
+  public vote_rewards!: VoteRewards[];
+
+  constructor(properties?: {
+    validation_phrase: number;
+    total_delegated: BN;
+    last_withdraw_epoch: BN;
+    dealloced: BN;
+    pending_validator_rewards: BN;
+    validator_id: PublicKey;
+    last_total_staked: BN;
+    is_t_stake_initialized: boolean;
+    pending_delegation_total: BN;
+    vote_rewards: VoteRewards[];
+  }) {
+    if (properties) {
+      this.validation_phrase = properties.validation_phrase;
+      this.total_delegated = properties.total_delegated;
+      this.last_withdraw_epoch = properties.last_withdraw_epoch;
+      this.dealloced = properties.dealloced;
+      this.pending_validator_rewards = properties.pending_validator_rewards;
+      this.validator_id = properties.validator_id;
+      this.last_total_staked = properties.last_total_staked;
+      this.is_t_stake_initialized = properties.is_t_stake_initialized;
+      this.pending_delegation_total = properties.pending_delegation_total;
+      this.vote_rewards = properties.vote_rewards;
     }
   }
 }

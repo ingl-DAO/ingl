@@ -10,10 +10,10 @@ export default function Footer() {
         gridTemplateColumns: 'auto 1fr auto',
         justifyItems: 'center',
         alignItems: 'center',
-        backgroundColor: 'black',
+        backgroundColor: 'transparent',
         padding: '3px',
-        width:'100%',
-        maxWidth:theme.spacing(190),
+        width: '100%',
+        maxWidth: theme.spacing(190),
         px: { laptop: theme.spacing(8), mobile: '10px' },
       }}
     >

@@ -121,6 +121,7 @@ export default function SectionCard() {
                   sx={{
                     marginBottom:
                       index + 1 === paragraphs.length ? 0 : theme.spacing(2.5),
+                    fontSize: '14px',
                   }}
                 >
                   {text.map(({ value, ref }, pIndex) =>
@@ -136,7 +137,11 @@ export default function SectionCard() {
                         {value}
                       </Typography>
                     ) : (
-                      <Typography component="span" key={pIndex}>
+                      <Typography
+                        component="span"
+                        key={pIndex}
+                        style={{ fontWeight: '400' }}
+                      >
                         {value}
                       </Typography>
                     )
@@ -150,7 +155,11 @@ export default function SectionCard() {
                 component="a"
                 href={buttonLink}
                 rel="noreferrer"
-                sx={{ borderRadius: '90px', marginTop: theme.spacing(7.125) }}
+                sx={{
+                  borderRadius: '90px',
+                  marginTop: theme.spacing(7.125),
+                  padding: theme.spacing(1.25, 6),
+                }}
               >
                 {buttonText}
               </Button>
