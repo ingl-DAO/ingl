@@ -71,10 +71,12 @@ export default function Gem({
     {
       title: 'redeem',
       condition:
-        ((!has_loan && !is_allocated) ||
-          (allocation_date !== undefined &&
-            moment().diff(moment(allocation_date), 'years', true) >= 2)) &&
-        !is_delegated,
+        rarity_reveal_date !== undefined && rarity === undefined
+          ? false
+          : ((!has_loan && !is_allocated) ||
+              (allocation_date !== undefined &&
+                moment().diff(moment(allocation_date), 'years', true) >= 2)) &&
+            !is_delegated,
       onClick: () => {
         activateDialog('redeem', nft_id);
         closeMenu();
