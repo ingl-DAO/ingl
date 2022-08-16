@@ -634,6 +634,7 @@ const getInglGemFromNft = async (
       last_voted_proposal,
       rarity_seed_time,
       numeration,
+      redeemable_date,
     } = deserializeUnchecked(GemAccountV0_0_1, accountInfo?.data as Buffer);
     return {
       image_ref: image,
@@ -649,12 +650,13 @@ const getInglGemFromNft = async (
       rarity: rarity,
       is_allocated: funds_location instanceof PDPoolFundLocation,
       is_delegated: funds_location instanceof VoteAccountFundLocation,
-      allocation_date: date_allocated,
+      allocation_date: date_allocated ? date_allocated * 1000 : undefined,
       rarity_reveal_date: rarity_seed_time,
       last_voted_proposal_id: last_voted_proposal
-        ? last_voted_proposal.toString()
+        ? new PublicKey(last_voted_proposal).toString()
         : '',
       numeration: numeration,
+      redeemable_date: redeemable_date,
     };
   }
   throw new Error('No json fields was found on metadata');

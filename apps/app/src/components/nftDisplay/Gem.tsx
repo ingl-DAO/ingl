@@ -34,6 +34,7 @@ export default function Gem({
     has_loan,
     allocation_date,
     numeration,
+    redeemable_date,
   },
   setGems,
   isDialogOpen,
@@ -101,7 +102,7 @@ export default function Gem({
         !is_delegated &&
         is_allocated &&
         allocation_date !== undefined &&
-        moment().diff(moment(allocation_date), 'years', true) >= 2,
+        moment() > moment(redeemable_date),
       onClick: () => {
         activateDialog('deallocate', nft_id);
         closeMenu();

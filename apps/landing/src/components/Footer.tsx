@@ -10,11 +10,10 @@ export default function Footer() {
         gridTemplateColumns: 'auto 1fr auto',
         justifyItems: 'center',
         alignItems: 'center',
-        backgroundColor: 'transparent',
-        padding: '3px',
-        width: '100%',
+        backgroundColor: 'black',
+        padding: '10px 4px',
+        width: 'calc( 100% - 8px )',
         maxWidth: theme.spacing(190),
-        px: { laptop: theme.spacing(8), mobile: '10px' },
       }}
     >
       <Typography variant="h1" sx={{ fontSize: '1.125rem' }} color="secondary">

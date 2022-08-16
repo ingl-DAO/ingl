@@ -4,6 +4,7 @@ import {
   Connection,
   Keypair,
   PublicKey,
+  sendAndConfirmRawTransaction,
   Transaction,
   TransactionInstruction,
 } from '@solana/web3.js';
@@ -47,10 +48,16 @@ export const signAndConfirmTransaction = async (
   const signedTransaction = signTransaction
     ? await signTransaction(transaction)
     : null;
+  const txn = signedTransaction?.serialize();
 
-  const signature = await sendTransaction(
-    signedTransaction as Transaction,
-    connection
+  const transactionId = await sendAndConfirmRawTransaction(
+    connection,
+    txn as Buffer
   );
-  await connection.confirmTransaction({ ...blockhashObj, signature });
+  // const signature = await sendTransaction(
+  //   signedTransaction as Transaction,
+  //   connection
+  // );
+  // await connection.confirmTransaction({ ...blockhashObj, signature });
+  console.log(transactionId);
 };
