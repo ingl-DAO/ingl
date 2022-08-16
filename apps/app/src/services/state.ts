@@ -72,7 +72,7 @@ export const BNB_HISTORY_BUFFER_KEY = new PublicKey(
   'DR6PqK15tD21MEGSLmDpXwLA7Fw47kwtdZeUMdT7vd7L'
 );
 export const INGL_PROGRAM_ID = new PublicKey(
-  '3W19xiZqXeUgqgomY9aNTKnbucxQA99c6rDjv4SCdzFH'
+  '9dSZN479QxPdogZTwjaBRiTfFAvhq3kNF1GEwUWW7es6'
 );
 export const STAKE_PROGRAM_ID = new PublicKey(
   'Stake11111111111111111111111111111111111111'

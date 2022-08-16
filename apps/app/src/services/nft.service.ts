@@ -656,7 +656,7 @@ const getInglGemFromNft = async (
         ? new PublicKey(last_voted_proposal).toString()
         : '',
       numeration: numeration,
-      redeemable_date: redeemable_date,
+      redeemable_date: redeemable_date ? redeemable_date * 1000 : undefined,
     };
   }
   throw new Error('No json fields was found on metadata');
