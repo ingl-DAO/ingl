@@ -21,7 +21,7 @@ import {
   redeemInglGem,
   undelegateNft,
 } from '../../services/nft.service';
-import { NftClass, Rarity } from '../../services/state';
+import { inglGemSol, NftClass, Rarity } from '../../services/state';
 import theme from '../../theme/theme';
 import ActionDialog from './ActionDialog';
 import Gem from './Gem';
@@ -306,7 +306,6 @@ export default function NftDisplay() {
       deallocate: async () =>
         await deallocatedSol({ connection, wallet }, tokenMint),
       delegate: async () => {
-        console.log(selectedVoteAccount);
         await delegateNft(
           { connection, wallet },
           { tokenMint, voteMint: new PublicKey(selectedVoteAccount as string) }
