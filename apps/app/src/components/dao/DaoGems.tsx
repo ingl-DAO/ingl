@@ -1,14 +1,15 @@
 import { Box, Typography, useTheme } from '@mui/material';
+import { inglGem } from './VoteDialog';
 
 export default function DaoGem({
   isSelected,
   isUnusable,
-  image,
+  nft,
   selectGem,
 }: {
   isSelected: boolean;
   isUnusable: boolean;
-  image: string;
+  nft: inglGem;
   selectGem: () => void;
 }) {
   const theme = useTheme();
@@ -23,7 +24,7 @@ export default function DaoGem({
       }}
     >
       <img
-        src={image}
+        src={nft.image_ref}
         height="200px"
         alt="nft"
         width="200px"
@@ -48,6 +49,26 @@ export default function DaoGem({
           <Typography>
             {isUnusable ? 'Already used' : isSelected ? 'Selected' : null}
           </Typography>
+          <Box
+            sx={{
+              position: 'absolute',
+              backgroundColor: theme.palette.primary.dark,
+              padding: '5px 7px',
+              borderRadius: '30px',
+              bottom: 0,
+            }}
+          >
+            <Typography
+              variant="h1"
+              sx={{
+                fontSize: { laptop: 'initial', mobile: '0.80rem' },
+                textAlign: 'center',
+                color: theme.palette.secondary.main,
+              }}
+            >
+              {`#${nft.numeration}`}
+            </Typography>
+          </Box>
         </Box>
       )}
     </Box>
