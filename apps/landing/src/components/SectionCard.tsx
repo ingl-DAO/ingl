@@ -108,7 +108,7 @@ export default function SectionCard() {
         />
       ),
       buttonText: 'Onboard PC Now',
-      buttonLink: 'https://app.ingl.io/onboard',
+      buttonLink: 'https://whitepaper.ingl.io/components/onboarding-a-validator',
     },
   ];
   return (
