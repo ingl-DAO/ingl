@@ -198,7 +198,7 @@ export default function NftDisplay() {
       allocate: {
         title: 'Allocate Gem',
         content:
-          "Are you sure you want to allocate this gem? Note that this action will reveal the gem's rarity and will lock your gem from redemption for a period of at least 2 (two) years. Are you want to continue?",
+          "Are you sure you want to allocate this gem? Note that will prevent you from fully redeeming for a certain period of time. Are you want to continue?",
         agreeText: 'Allocate',
         agreeFunction: () => executeAction(action, nft_id),
       },
