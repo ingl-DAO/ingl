@@ -33,6 +33,8 @@ export default function Gem({
     is_delegated,
     has_loan,
     allocation_date,
+    numeration,
+    redeemable_date,
   },
   setGems,
   isDialogOpen,
@@ -69,10 +71,12 @@ export default function Gem({
     {
       title: 'redeem',
       condition:
-        ((!has_loan && !is_allocated) ||
-          (allocation_date !== undefined &&
-            moment().diff(moment(allocation_date), 'years', true) >= 2)) &&
-        !is_delegated,
+        rarity_reveal_date !== undefined && rarity === undefined
+          ? false
+          : ((!has_loan && !is_allocated) ||
+              (allocation_date !== undefined &&
+                moment().diff(moment(allocation_date), 'years', true) >= 2)) &&
+            !is_delegated,
       onClick: () => {
         activateDialog('redeem', nft_id);
         closeMenu();
@@ -100,7 +104,7 @@ export default function Gem({
         !is_delegated &&
         is_allocated &&
         allocation_date !== undefined &&
-        moment().diff(moment(allocation_date), 'years', true) >= 2,
+        moment() > moment(redeemable_date),
       onClick: () => {
         activateDialog('deallocate', nft_id);
         closeMenu();
@@ -290,24 +294,52 @@ export default function Gem({
           <Box
             sx={{
               position: 'absolute',
-              top: theme.spacing(0.5),
-              left: theme.spacing(0.5),
+              top: 0,
+              left: 0,
               backgroundColor: theme.palette.primary.dark,
               padding: '5px 7px',
-              height: { mobile: '10px', laptop: '30px' },
-              width: { mobile: '10px', laptop: '30px' },
-              borderRadius: '30px',
+              borderBottomRightRadius: theme.spacing(2.5),
+              borderTopLeftRadius: theme.spacing(2.5),
             }}
           >
             <Typography
-              variant="h1"
+              variant="h3"
+              sx={{ fontSize: { laptop: 'initial', mobile: '0.80rem' } }}
+            >
+              {`Gen ${generation}`}
+            </Typography>
+          </Box>
+          <Box
+            style={{
+              width: '100%',
+              height: '100%',
+              position: 'absolute',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <Box
               sx={{
-                fontSize: { laptop: '1.5rem', mobile: '0.80rem' },
-                textAlign: 'center',
+                position: 'absolute',
+                backgroundColor: theme.palette.primary.dark,
+                padding: '5px 7px',
+                borderRadius: '30px',
+                bottom: 0,
+                margin: 'auto',
               }}
             >
-              {`G${generation}`}
-            </Typography>
+              <Typography
+                variant="h1"
+                sx={{
+                  fontSize: { laptop: 'initial', mobile: '0.80rem' },
+                  textAlign: 'center',
+                  color: theme.palette.secondary.main,
+                }}
+              >
+                {`#${numeration}`}
+              </Typography>
+            </Box>
           </Box>
           <video
             src={video_ref}
@@ -360,7 +392,7 @@ export default function Gem({
           // ...activeGemDialogContent,
           title: 'Reveal gem rarity',
           content:
-            "Are you sure you want to reveal this gem's rarity? Not that this will prevent you from redeeming the total value of your gem for at least a year should you want to redeem in that period",
+            "Are you sure you want to reveal this gem's rarity? Note that this will prevent you from redeeming the total value of your gem for a certain period of time should you want to redeem in that period",
           agreeText: 'Reveal',
           agreeFunction: revealRarity,
         }}

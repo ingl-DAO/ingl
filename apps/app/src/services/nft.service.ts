@@ -53,6 +53,7 @@ import { getGlobalGemData } from './validator-dao.service';
 import BN from 'bn.js';
 import { deserializeUnchecked } from '@dao-xyz/borsh';
 import { inglGem } from '../components/nftDisplay';
+import { signAndConfirmTransaction, toBytesInt32 } from './utils';
 
 const [minting_pool_key] = PublicKey.findProgramAddressSync(
   [Buffer.from(INGL_MINTING_POOL_KEY)],
@@ -90,43 +91,6 @@ const [authorized_withdrawer_key] = PublicKey.findProgramAddressSync(
   [Buffer.from(AUTHORIZED_WITHDRAWER_KEY)],
   INGL_PROGRAM_ID
 );
-
-const signAndConfirmTransaction = async (
-  walletConnection: { connection: Connection; wallet: WalletContextState },
-  instruction: TransactionInstruction,
-  signingKeypair?: Keypair,
-  additionalUnits?: number
-) => {
-  const {
-    connection,
-    wallet: { publicKey: payerKey, signTransaction, sendTransaction },
-  } = walletConnection;
-
-  const transaction = new Transaction();
-  if (additionalUnits) {
-    const additionalComputeBudgetInstruction =
-      ComputeBudgetProgram.requestUnits({
-        units: additionalUnits,
-        additionalFee: 0,
-      });
-    transaction.add(additionalComputeBudgetInstruction);
-  }
-  transaction.add(instruction).feePayer = payerKey as PublicKey;
-
-  const blockhashObj = await connection.getLatestBlockhash();
-  transaction.recentBlockhash = blockhashObj.blockhash;
-
-  if (signingKeypair) transaction.sign(...[signingKeypair]);
-  const signedTransaction = signTransaction
-    ? await signTransaction(transaction)
-    : null;
-
-  const signature = await sendTransaction(
-    signedTransaction as Transaction,
-    connection
-  );
-  await connection.confirmTransaction({ ...blockhashObj, signature });
-};
 
 export async function mintInglGem(
   walletConnection: { connection: Connection; wallet: WalletContextState },
@@ -437,7 +401,6 @@ export async function imprintRarity(
     isSigner: false,
     isWritable: false,
   };
-  console.log(gemAccountData);
   const initRarityImprintIntrustion = new TransactionInstruction({
     programId: INGL_PROGRAM_ID,
     data: Buffer.from([Instruction.InitRarityImprint]),
@@ -498,7 +461,7 @@ export async function imprintRarity(
     } catch (error) {
       throw new Error('Failed to imprint rarity with error ' + error);
     }
-  } else if (gemAccountData.rarity === undefined) {
+  } else if (gemAccountData.rarity_seed_time && !gemAccountData.rarity) {
     try {
       const transactionId = await signAndConfirmTransaction(
         walletConnection,
@@ -669,6 +632,8 @@ const getInglGemFromNft = async (
       date_allocated,
       last_voted_proposal,
       rarity_seed_time,
+      numeration,
+      redeemable_date,
     } = deserializeUnchecked(GemAccountV0_0_1, accountInfo?.data as Buffer);
     return {
       image_ref: image,
@@ -684,11 +649,15 @@ const getInglGemFromNft = async (
       rarity: rarity,
       is_allocated: funds_location instanceof PDPoolFundLocation,
       is_delegated: funds_location instanceof VoteAccountFundLocation,
-      allocation_date: date_allocated,
-      rarity_reveal_date: rarity_seed_time,
+      allocation_date: date_allocated ? date_allocated * 1000 : undefined,
+      rarity_reveal_date: rarity_seed_time
+        ? rarity_seed_time * 1000
+        : rarity_seed_time,
       last_voted_proposal_id: last_voted_proposal
-        ? last_voted_proposal.toString()
+        ? new PublicKey(last_voted_proposal).toString()
         : '',
+      numeration: numeration,
+      redeemable_date: redeemable_date ? redeemable_date * 1000 : undefined,
     };
   }
   throw new Error('No json fields was found on metadata');
@@ -1102,11 +1071,11 @@ export async function getVoteAccounts(connection: Connection) {
     let proposalNumeration = (await getGlobalGemData(connection))
       .proposal_numeration;
     const votesIds: { vote_account: PublicKey; validator_id: PublicKey }[] = [];
-    while (proposalNumeration-- > 0) {
+    while (proposalNumeration > 0) {
       const [vote_account_key] = PublicKey.findProgramAddressSync(
         [
           Buffer.from(VOTE_ACCOUNT_KEY),
-          Buffer.from(uint32.getBytesBigEndian(proposalNumeration)),
+          Buffer.from(toBytesInt32(--proposalNumeration)),
         ],
         INGL_PROGRAM_ID
       );
@@ -1336,8 +1305,9 @@ export async function loadRewards(
               total_stake: BN;
             }[];
             const comp = last_delegation_epoch?.cmp(
-              last_withdrawal_epoch as BN
+              (last_withdrawal_epoch ?? 0) as BN
             );
+            console.log(comp);
             const interestedEpoch =
               comp === 0
                 ? last_delegation_epoch

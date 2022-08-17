@@ -685,4 +685,3 @@ def inject_testing_data(payer_keypair, mints, vote_account_id, client):
     data = InstructionEnum.build(InstructionEnum.enum.InjectTestingData(len(mints)))
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, data))
-    return client.send_transaction(transaction, payer_keypair)

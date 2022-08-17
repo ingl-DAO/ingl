@@ -1,5 +1,6 @@
 import { WalletContextState } from '@solana/wallet-adapter-react';
 import {
+  ComputeBudgetProgram,
   Connection,
   Keypair,
   PublicKey,
@@ -20,14 +21,23 @@ export const toBytesInt32 = (num: number) => {
 export const signAndConfirmTransaction = async (
   walletConnection: { connection: Connection; wallet: WalletContextState },
   instruction: TransactionInstruction,
-  signingKeypair?: Keypair
+  signingKeypair?: Keypair,
+  additionalUnits?: number
 ) => {
   const {
     connection,
-    wallet: { publicKey: payerKey, sendTransaction, signTransaction },
+    wallet: { publicKey: payerKey, signTransaction, sendTransaction },
   } = walletConnection;
 
   const transaction = new Transaction();
+  if (additionalUnits) {
+    const additionalComputeBudgetInstruction =
+      ComputeBudgetProgram.requestUnits({
+        units: additionalUnits,
+        additionalFee: 0,
+      });
+    transaction.add(additionalComputeBudgetInstruction);
+  }
   transaction.add(instruction).feePayer = payerKey as PublicKey;
 
   const blockhashObj = await connection.getLatestBlockhash();

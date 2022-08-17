@@ -72,7 +72,7 @@ export const BNB_HISTORY_BUFFER_KEY = new PublicKey(
   'DR6PqK15tD21MEGSLmDpXwLA7Fw47kwtdZeUMdT7vd7L'
 );
 export const INGL_PROGRAM_ID = new PublicKey(
-  '41z2kpMac1RpH5XnBoKnY6vjmJwdbwc1aHRQszCgbyDv'
+  '9dSZN479QxPdogZTwjaBRiTfFAvhq3kNF1GEwUWW7es6'
 );
 export const STAKE_PROGRAM_ID = new PublicKey(
   'Stake11111111111111111111111111111111111111'
@@ -224,10 +224,10 @@ export class GemAccountV0_0_1 {
   public last_voted_proposal?: PublicKey;
 
   @field({ type: option('u64') })
-  public last_withdrawal_epoch!: undefined | BN;
+  public last_withdrawal_epoch?: BN;
 
   @field({ type: option('u64') })
-  public last_delegation_epoch!: undefined | BN;
+  public last_delegation_epoch?: BN;
 
   @field({ type: vec('u64') })
   public all_withdraws!: BN[];
@@ -244,11 +244,11 @@ export class GemAccountV0_0_1 {
     numeration: number;
     rarity: number;
     funds_location: FundsLocation;
-    rarity_seed_time: undefined | number;
-    date_allocated: undefined | number;
-    last_voted_proposal: undefined | PublicKey;
-    last_withdrawal_epoch: undefined | BN;
-    last_delegation_epoch: undefined | BN;
+    rarity_seed_time?: number;
+    date_allocated?: number;
+    last_voted_proposal?: PublicKey;
+    last_withdrawal_epoch?: BN;
+    last_delegation_epoch?: BN;
     all_withdraws: BN[];
     all_votes: ValidatorVote[];
   }) {

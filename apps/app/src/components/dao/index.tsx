@@ -187,9 +187,8 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
     if (selectedProposal) {
       const notif = new useNotification();
       setIsLoadingProposalData(true);
-      getValidatorsDetail(selectedProposal.validator_ids)
+      getValidatorsDetail(selectedProposal.validator_ids ?? [])
         .then((validators) => {
-          console.log(validators);
           const validatorStats = validators.map((validator, index) => {
             return {
               validator_index: index,
@@ -232,7 +231,12 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
             icon: () => <ReportRounded fontSize="large" color="error" />,
           });
           setIsLoadingProposalData(false);
+          setValidators([]);
         });
+    } else if (isProposalsLoading) {
+      setIsLoadingProposalData(false);
+      setIsProposalsLoading(false);
+      setValidators([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProposal]);

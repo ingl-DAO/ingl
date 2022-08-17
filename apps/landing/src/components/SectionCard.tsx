@@ -1,5 +1,4 @@
 import { Button, Grid, Typography } from '@mui/material';
-import DSOLER_CARD from '../assets/dsoler_card.png';
 import Validator from '../assets/validator.png';
 import theme from '../theme/theme';
 import SectionTitle from './SectionTitle';
@@ -8,7 +7,7 @@ export default function SectionCard() {
   const sections: {
     title: string;
     paragraphs: { text: { value: string; ref?: string }[] }[];
-    image: string;
+    image: JSX.Element;
     buttonText: string;
     buttonLink: string;
   }[] = [
@@ -47,7 +46,22 @@ export default function SectionCard() {
           ],
         },
       ],
-      image: DSOLER_CARD,
+      image: (
+        <video
+          src="https://arweave.net/kQOmP4xqmSWvLH-fix07KEBIpQ9PWT6L7o5VVW0FwCY"
+          playsInline
+          autoPlay
+          muted
+          loop
+          style={{
+            objectFit: 'cover',
+            height: '400px',
+            width: '120%',
+            borderRadius: theme.spacing(2.5),
+          }}
+          poster="https://arweave.net/uE9ubUPptA_EffzrruL9gh7bmVeLtbwAeT3kIxpEgGk"
+        />
+      ),
       buttonText: 'Start Minting Now',
       buttonLink: 'https://app.ingl.io/',
     },
@@ -86,9 +100,15 @@ export default function SectionCard() {
           ],
         },
       ],
-      image: Validator,
+      image: (
+        <img
+          src={Validator}
+          alt={`Validators description`}
+          style={{ width: '100%' }}
+        />
+      ),
       buttonText: 'Onboard PC Now',
-      buttonLink: 'https://app.ingl.io/onboard',
+      buttonLink: 'https://whitepaper.ingl.io/components/onboarding-a-validator',
     },
   ];
   return (
@@ -107,11 +127,7 @@ export default function SectionCard() {
               laptop={3.8}
               sx={{ display: { mobile: 'none', laptop: 'inherit' } }}
             >
-              <img
-                src={image}
-                alt={`${title} description`}
-                style={{ width: '100%' }}
-              />
+              {image}
             </Grid>
             <Grid item mobile={12} laptop={8.2}>
               <SectionTitle title={title} />

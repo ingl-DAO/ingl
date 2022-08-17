@@ -21,7 +21,7 @@ import {
   redeemInglGem,
   undelegateNft,
 } from '../../services/nft.service';
-import { NftClass, Rarity } from '../../services/state';
+import { inglGemSol, NftClass, Rarity } from '../../services/state';
 import theme from '../../theme/theme';
 import ActionDialog from './ActionDialog';
 import Gem from './Gem';
@@ -36,11 +36,13 @@ export interface inglGem {
   rarity?: Rarity;
   gemClass?: string;
   allocation_date?: number;
+  redeemable_date?: number;
   is_allocated: boolean;
   is_delegated: boolean;
   has_loan: boolean;
   rarity_reveal_date?: number;
-  last_voted_proposal_id?: string
+  last_voted_proposal_id?: string;
+  numeration: number;
 }
 
 export interface dialogContent {
@@ -197,7 +199,7 @@ export default function NftDisplay() {
       allocate: {
         title: 'Allocate Gem',
         content:
-          "Are you sure you want to allocate this gem? Note that this action will reveal the gem's rarity and will lock your gem from redemption for a period of at least 2 (two) years. Are you want to continue?",
+          "Are you sure you want to allocate this gem? Note that will prevent you from fully redeeming for a certain period of time. Are you want to continue?",
         agreeText: 'Allocate',
         agreeFunction: () => executeAction(action, nft_id),
       },
@@ -304,14 +306,12 @@ export default function NftDisplay() {
       deallocate: async () =>
         await deallocatedSol({ connection, wallet }, tokenMint),
       delegate: async () => {
-        console.log(selectedVoteAccount);
         await delegateNft(
           { connection, wallet },
           { tokenMint, voteMint: new PublicKey(selectedVoteAccount as string) }
         );
       },
       undelegate: async () => {
-        console.log('start');
         await undelegateNft({ connection, wallet }, tokenMint);
       },
     };
@@ -408,7 +408,6 @@ export default function NftDisplay() {
 
   const displayGems = sortNft(gems, selectedAttribute.attName);
   const [isMintDialogOpen, setIsMintDialogOpen] = useState<boolean>(false);
-
   return (
     <Box>
       <Box
@@ -575,20 +574,22 @@ export default function NftDisplay() {
             </Box>
           )
         ) : (
-          displayGems.map((gem, index) => (
-            <Gem
-              gem={gem}
-              key={index}
-              setGems={setGems}
-              activateDialog={activateDialog}
-              openDelegationDialog={openDelegationDialog}
-              isDialogOpen={
-                isGemDialogOpen ||
-                actionNotifs?.find(({ nft_id }) => nft_id === gem.nft_id) !==
-                  undefined
-              }
-            />
-          ))
+          displayGems
+            .sort((a: inglGem, b: inglGem) => b.numeration - a.numeration)
+            .map((gem, index) => (
+              <Gem
+                gem={gem}
+                key={index}
+                setGems={setGems}
+                activateDialog={activateDialog}
+                openDelegationDialog={openDelegationDialog}
+                isDialogOpen={
+                  isGemDialogOpen ||
+                  actionNotifs?.find(({ nft_id }) => nft_id === gem.nft_id) !==
+                    undefined
+                }
+              />
+            ))
         )}
         {activeGemDialogContent !== undefined ? (
           <ActionDialog
