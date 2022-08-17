@@ -42,7 +42,7 @@ def mint_nft_command(gem_class, keypair):
         payer_keypair = keypair_from_json(f"./{keypair}")
         mint_keypair = Keypair()
         print("Mint_Id: ", mint_keypair.public_key)
-        print("Transaction ID: " + mint_nft(payer_keypair, mint_keypair, ret_class, client)['result'])
+        print("Transaction ID: ", mint_nft(payer_keypair, mint_keypair, ret_class, client)['result'])
 
 
 @click.command(name="create_validator_proposal")
@@ -64,7 +64,7 @@ def finalize_validator_proposal(keypair):
 
     global_gems = GlobalGems.parse(base64.urlsafe_b64decode(client.get_account_info(global_gem_pubkey)['result']['value']['data'][0]))
     numeration = global_gems.proposal_numeration
-    print("Transaction ID: " + finalize_proposal(payer_keypair, numeration-1, client)['result'])
+    print("Transaction ID: ", finalize_proposal(payer_keypair, numeration-1, client)['result'])
 
 @click.command(name='register_validator')
 @click.option('--keypair', default = 'keypair.json')
@@ -74,7 +74,7 @@ def reg_validator(validator_keypair, keypair):
     payer_keypair = keypair_from_json(f"./{keypair}")
     validator_keypair = keypair_from_json(f"{validator_keypair}")
     print("Validator Key: ", validator_keypair.public_key)
-    print("Transaction ID: " + register_validator_id(payer_keypair, validator_keypair.public_key, client)['result'])
+    print("Transaction ID: ", register_validator_id(payer_keypair, validator_keypair.public_key, client)['result'])
 
 @click.command(name="init_rebalance")
 @click.argument('vote_key')
@@ -83,7 +83,7 @@ def initialize_rebalancing(vote_key, keypair):
     print("Client is connected" if client.is_connected() else "Client is Disconnected")
     payer_keypair = keypair_from_json(f"./{keypair}")
     vote_account_id = PublicKey(vote_key)
-    print("Transaction ID: " + init_rebalance(payer_keypair, vote_account_id, client)['result'])
+    print("Transaction ID: ", init_rebalance(payer_keypair, vote_account_id, client)['result'])
 
 @click.command(name="finalize_rebalance")
 @click.argument('vote_key')
@@ -92,14 +92,14 @@ def finalize_rebalancing(vote_key, keypair):
     print("Client is connected" if client.is_connected() else "Client is Disconnected")
     payer_keypair = keypair_from_json(f"./{keypair}")
     vote_account_id = PublicKey(vote_key)
-    print("Transaction ID: " + finalize_rebalance(payer_keypair, vote_account_id, client)['result'])
+    print("Transaction ID: ", finalize_rebalance(payer_keypair, vote_account_id, client)['result'])
 
 @click.command(name="create_collection")
 @click.option('--keypair', default = 'keypair.json')
 def create_new_collection(keypair):
     print("Client is connected" if client.is_connected() else "Client is Disconnected")
     payer_keypair = keypair_from_json(f"./{keypair}")
-    print("Transaction ID: " + create_collection(payer_keypair, client)['result'])
+    print("Transaction ID: ", create_collection(payer_keypair, client)['result'])
 
 @click.command(name="close_proposal")
 @click.option('--keypair', default = 'keypair.json')
@@ -108,7 +108,7 @@ def close_val_proposal(keypair):
     payer_keypair = keypair_from_json(f"./{keypair}")
     global_gem_pubkey, _global_gem_bump = PublicKey.find_program_address([bytes(ingl_constants.GLOBAL_GEM_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     numeration = GlobalGems.parse(base64.urlsafe_b64decode(client.get_account_info(global_gem_pubkey)['result']['value']['data'][0])).proposal_numeration
-    print("Transaction ID: " + close_proposal(payer_keypair, numeration-1, client)['result'])
+    print("Transaction ID: ", close_proposal(payer_keypair, numeration-1, client)['result'])
 
 @click.command(name="process_rewards")
 @click.option('--keypair', default = 'keypair.json')
@@ -117,7 +117,7 @@ def process_vote_account_rewards(keypair, vote_key):
     print("Client is connected" if client.is_connected() else "Client is Disconnected")
     payer_keypair = keypair_from_json(f"./{keypair}") 
     vote_account_id = PublicKey(vote_key)
-    print("Transaction ID: " + process_rewards(payer_keypair, vote_account_id, client)['result'])
+    print("Transaction ID: ", process_rewards(payer_keypair, vote_account_id, client)['result'])
 
 @click.command(name='create_vote_account')
 @click.argument('val_keypair')

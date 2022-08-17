@@ -263,7 +263,7 @@ pub fn create_validator_selection_proposal(
         validator_ids: global_gem_data.clone().validator_list, // Vec([id1, id2, id3, id4, id5])
         date_created: Clock::get()?.unix_timestamp as u32,
         date_finalized: None,
-        votes: [0, global_gem_data.clone().validator_list.len() as u32].to_vec(), //Vec([2, 3, 5, 2, 1]) The total Sol backing the NFTs used to vote.
+        votes: vec![0; global_gem_data.clone().validator_list.len()], //Vec([2, 3, 5, 2, 1]) The total Sol backing the NFTs used to vote.
         winner: None,
     };
 
@@ -1863,9 +1863,9 @@ pub fn redeem_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResul
                 .class
                 .get_class_lamports()
                 .checked_sub(redeem_fees)
-                .ok_or(Err(
+                .ok_or(
                     InglError::BeyondBounds.utilize(Some("overflow or underflow"))
-                )?)
+                )
                 .unwrap(),
         ),
         &[
@@ -2031,6 +2031,17 @@ pub fn delegate_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramRes
     ingl_vote_account_data
         .serialize(&mut &mut ingl_vote_data_account_info.data.borrow_mut()[..])?;
 
+    // let new_accounts = &[
+    //     payer_account_info.clone(),
+    //     vote_account_info.clone(),
+    //     validator_account_info.clone(),
+    //     ingl_vote_data_account_info.clone(),
+    //     authorized_withdrawer_info.clone(),
+
+    //     system_program_info.clone()
+    // ];
+    // nft_withdraw(program_id, new_accounts, 1)?;
+
     Ok(())
 }
 
@@ -2089,6 +2100,7 @@ pub fn undelegate_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
     let mut gem_account_data: GemAccountV0_0_1 = GemAccountV0_0_1::validate(
         GemAccountVersions::decode_unchecked(&gem_account_data_info.data.borrow())?,
     )?;
+    msg!("gem_data: {:?}", gem_account_data);
     let mut global_gem_account_data = GlobalGems::decode(global_gem_account_info)?;
     global_gem_account_data.pd_pool_total = global_gem_account_data
         .pd_pool_total

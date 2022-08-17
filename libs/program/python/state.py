@@ -8,7 +8,7 @@ class Constants:
     INGL_MINT_AUTHORITY_KEY = "mint_authority"
     INGL_MINTING_POOL_KEY = "minting_pool"
     COLLECTION_HOLDER_KEY = "collection_holder"
-    INGL_PROGRAM_ID = PublicKey("41z2kpMac1RpH5XnBoKnY6vjmJwdbwc1aHRQszCgbyDv")
+    INGL_PROGRAM_ID = PublicKey("9dSZN479QxPdogZTwjaBRiTfFAvhq3kNF1GEwUWW7es6")
     STAKE_PROGRAM_ID = PublicKey("Stake11111111111111111111111111111111111111")
     GLOBAL_GEM_KEY = "global_gem_account"
     GEM_ACCOUNT_CONST = "gem_account"
@@ -25,6 +25,7 @@ class Constants:
     VOTE_PROGRAM_ID = PublicKey("Vote111111111111111111111111111111111111111")
     T_STAKE_ACCOUNT_KEY = "Temporary_stake_account_key"
     T_WITHDRAW_KEY = "Temporary_withdraw"
+    DUPKEYBYTES = b"dupkey"
 
     VALIDATOR_ID_SHARE = 15
     TREASURY_SHARE = 13
