@@ -13,7 +13,11 @@
     "lib": ["es2017", "dom"],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
-    "baseUrl": "."
+    "baseUrl": ".",
+    "paths": {
+      "@ingl/dialect-sdk": ["libs/dialect-sdk/src/index.ts"],
+      "@ingl/state": ["libs/client-state/src/index.ts"]
+    }
   },
   "exclude": ["node_modules", "tmp"]
 }
