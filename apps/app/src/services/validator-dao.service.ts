@@ -6,7 +6,7 @@ import {
   PROPOSAL_KEY,
   ValidatorProposal,
   Instruction,
-} from './state';
+} from '@ingl/state';
 import { getAssociatedTokenAddress } from '@solana/spl-token';
 import {
   AccountMeta,

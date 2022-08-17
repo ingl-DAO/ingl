@@ -15,7 +15,7 @@ import {
 } from '@solana/wallet-adapter-react';
 import { useMemo } from 'react';
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
-import { clusterApiUrl } from '@solana/web3.js';
+import { clusterApiUrl} from '@solana/web3.js';
 import {
   createDefaultAuthorizationResultCache,
   SolanaMobileWalletAdapter,
@@ -28,6 +28,7 @@ import {
   SolflareWalletAdapter,
   TorusWalletAdapter,
 } from '@solana/wallet-adapter-wallets';
+
 // Default styles that can be overridden by your app
 require('@solana/wallet-adapter-react-ui/styles.css');
 
@@ -67,6 +68,7 @@ export function App() {
     <ConnectionProvider endpoint={endpoint}>
       <WalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>
+          {/* <DialectProviders> */}
           <IntlProvider
             messages={activeMessage}
             locale={activeLanguage}
@@ -86,6 +88,7 @@ export function App() {
               {routing}
             </ThemeProvider>
           </IntlProvider>
+          {/* </DialectProviders> */}
         </WalletModalProvider>
       </WalletProvider>
     </ConnectionProvider>

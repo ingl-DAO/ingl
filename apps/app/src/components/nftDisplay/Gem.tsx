@@ -18,7 +18,7 @@ import ActionDialog from './ActionDialog';
 import { imprintRarity, loadGem } from '../../services/nft.service';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
-import { Rarity } from '../../services/state';
+import { Rarity } from '@ingl/state';
 
 export default function Gem({
   gem: {
@@ -152,8 +152,8 @@ export default function Gem({
           render: 'successfully revealed ingl gem rarity',
         });
         const newGem = await loadGem(connection, new PublicKey(nft_id));
-        setGems((gems: any) =>
-          gems.map((gem: any) => {
+        setGems((gems) =>
+          gems.map((gem) => {
             return nft_id === gem.nft_id ? newGem : gem;
           })
         );

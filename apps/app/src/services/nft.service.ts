@@ -24,7 +24,7 @@ import {
   NftClassToString,
   NFTS_SHARE,
   inglGemSol,
-} from './state';
+} from '@ingl/state';
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   getAssociatedTokenAddress,
