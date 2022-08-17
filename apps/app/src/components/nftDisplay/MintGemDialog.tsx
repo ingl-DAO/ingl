@@ -95,7 +95,7 @@ export default function MintGemDialog({
         </TextField>
       </DialogContent>
       <DialogActions>
-        <Button variant="outlined" color="primary" onClick={closeDialog}>
+        <Button variant="outlined" color="secondary" onClick={closeDialog}>
           Cancel
         </Button>
         <Button
