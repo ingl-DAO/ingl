@@ -202,7 +202,7 @@ export default function SelectValidatorDialog({
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button variant="outlined" color="primary" onClick={exitDialog}>
+        <Button variant="outlined" color="secondary" onClick={exitDialog}>
           Cancel
         </Button>
         <Button

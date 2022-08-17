@@ -392,7 +392,7 @@ export default function Gem({
           // ...activeGemDialogContent,
           title: 'Reveal gem rarity',
           content:
-            "Are you sure you want to reveal this gem's rarity? Not that this will prevent you from redeeming the total value of your gem for at least a year should you want to redeem in that period",
+            "Are you sure you want to reveal this gem's rarity? Note that this will prevent you from redeeming the total value of your gem for a certain period of time should you want to redeem in that period",
           agreeText: 'Reveal',
           agreeFunction: revealRarity,
         }}
