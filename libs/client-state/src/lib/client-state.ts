@@ -103,6 +103,7 @@ export const TREASURY_ACCOUNT_KEY = 'Treasury_account_key';
 export const STAKE_ACCOUNT_KEY = 'staking_account_key';
 export const VOTE_DATA_ACCOUNT_KEY = 'InglVoteData';
 export const NFTS_SHARE = 60;
+export const CONNECTION_URL = 'https://api.devnet.solana.com';
 
 class GemAccountVersions {}
 @variant(1)
