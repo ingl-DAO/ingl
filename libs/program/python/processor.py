@@ -62,7 +62,7 @@ def create_collection(payer_keypair, client):
     data = build_instruction(InstructionEnum.enum.MintNewCollection())
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, data))
-    return client.send_transaction(transaction, payer_keypair)['result']
+    return client.send_transaction(transaction, payer_keypair)
 
 def mint_nft(payer_keypair, mint_keypair, mint_class, client):
     mint_authority_pubkey, _mint_authority_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.INGL_MINT_AUTHORITY_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
@@ -208,10 +208,10 @@ def deallocate_sol(payer_keypair, mint_pubkey, client):
 
 
 def register_validator_id(payer_keypair, validator_pubkey, client):
-    
     mint_authority_pubkey, _mint_authority_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.INGL_MINT_AUTHORITY_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     global_gem_pubkey, _global_gem_bump = PublicKey.find_program_address([bytes(ingl_constants.GLOBAL_GEM_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
 
+    dupkey, dup_bump = PublicKey.find_program_address([ingl_constants.DUPKEYBYTES, bytes(validator_pubkey)], ingl_constants.INGL_PROGRAM_ID);
 
     
     payer_account_meta = AccountMeta(payer_keypair.public_key, True, True)
@@ -219,13 +219,16 @@ def register_validator_id(payer_keypair, validator_pubkey, client):
     system_program_meta = AccountMeta(system_program.SYS_PROGRAM_ID, False, False)
     mint_authority_meta = AccountMeta(mint_authority_pubkey, False, True)
     validator_meta = AccountMeta(validator_pubkey, False, False)
+    dup_meta = AccountMeta(dupkey, False, True)
 
     accounts = [
         payer_account_meta,
         global_gem_meta,
         mint_authority_meta,
         validator_meta,
+        dup_meta,
 
+        system_program_meta,
         system_program_meta,
     ]
 
@@ -682,4 +685,3 @@ def inject_testing_data(payer_keypair, mints, vote_account_id, client):
     data = InstructionEnum.build(InstructionEnum.enum.InjectTestingData(len(mints)))
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, data))
-    return client.send_transaction(transaction, payer_keypair)
