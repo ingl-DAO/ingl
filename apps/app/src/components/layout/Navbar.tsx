@@ -7,7 +7,8 @@ import NavItem, { ExternalNavItem } from './NavItem';
 import { MenuRounded } from '@mui/icons-material';
 import ConnectButton from './ConnectButton';
 import { Link } from 'react-router-dom';
-
+import { NotificationsButton } from '@dialectlabs/react-ui';
+import './dialect.css';
 const NAV_LINKS: { name: string; link: string; isExternal: boolean }[] = [
   {
     name: 'NFTS',
@@ -112,7 +113,16 @@ export default function Navbar() {
             )
           )}
         </Box>
-        <ConnectButton />
+        <Box style={{ display: 'flex', alignItems: 'center' }}>
+          <NotificationsButton
+            dialectId="dialect-notifications"
+            notifications={[]}
+            pollingInterval={15000}
+            channels={['web3', 'email', 'sms', 'telegram']}
+          />
+          &nbsp; &nbsp; &nbsp;
+          <ConnectButton />
+        </Box>
         <IconButton
           onClick={toggleDrawer}
           sx={{ display: { laptop: 'none', mobile: 'initial' } }}
