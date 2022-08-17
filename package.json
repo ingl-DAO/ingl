@@ -9,7 +9,9 @@
   },
   "private": true,
   "dependencies": {
+    "@cardinal/namespaces-components": "^4.1.18",
     "@dao-xyz/borsh": "^2.1.5",
+    "@dialectlabs/react-ui": "^1.0.0-alpha.47",
     "@emotion/react": "^11.9.3",
     "@emotion/styled": "^11.9.3",
     "@metaplex-foundation/js": "^0.13.3",
