@@ -21,7 +21,7 @@ import {
   redeemInglGem,
   undelegateNft,
 } from '../../services/nft.service';
-import { inglGemSol, NftClass, Rarity } from '../../services/state';
+import { NftClass, Rarity } from '../../services/state';
 import theme from '../../theme/theme';
 import ActionDialog from './ActionDialog';
 import Gem from './Gem';
@@ -199,7 +199,7 @@ export default function NftDisplay() {
       allocate: {
         title: 'Allocate Gem',
         content:
-          "Are you sure you want to allocate this gem? Note that will prevent you from fully redeeming for a certain period of time. Are you want to continue?",
+          "Are you sure you want to allocate this gem? Note that will prevent you from fully redeeming for a certain period of time. Do you still want to continue?",
         agreeText: 'Allocate',
         agreeFunction: () => executeAction(action, nft_id),
       },

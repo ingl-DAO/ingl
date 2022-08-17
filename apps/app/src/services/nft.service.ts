@@ -1006,7 +1006,6 @@ export async function delegateNft(
   const {
     wallet: { publicKey: payerKey },
   } = walletConnection;
-  console.log(voteMint, tokenMint);
   const delegateSolInstruction = new TransactionInstruction({
     programId: INGL_PROGRAM_ID,
     data: Buffer.from([Instruction.DelegateSol]),
@@ -1307,7 +1306,6 @@ export async function loadRewards(
             const comp = last_delegation_epoch?.cmp(
               (last_withdrawal_epoch ?? 0) as BN
             );
-            console.log(comp);
             const interestedEpoch =
               comp === 0
                 ? last_delegation_epoch

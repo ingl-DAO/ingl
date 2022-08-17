@@ -55,7 +55,7 @@ export default function ActionDialog({
       <DialogActions>
         <Button
           variant="outlined"
-          color="primary"
+          color="secondary"
           onClick={closeDialog}
           sx={{
             zIndex: 1,
