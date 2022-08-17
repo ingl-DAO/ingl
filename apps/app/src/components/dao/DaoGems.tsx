@@ -12,7 +12,6 @@ export default function DaoGem({
   nft: inglGem;
   selectGem: () => void;
 }) {
-  console.log(nft.rarity, isSelected, isUnusable);
   const theme = useTheme();
   return (
     <Box
