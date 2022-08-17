@@ -1,7 +1,7 @@
 import { GitHub, Twitter, Telegram } from '@mui/icons-material';
 import { Box, Tooltip, Typography } from '@mui/material';
 import theme from '../../theme/theme';
-import Discord from '../assets/discord.png';
+import Discord from '../../assets/discord.png';
 
 export default function Links() {
   const LINKS: { tooltip: string; link: string; icon: JSX.Element }[] = [
