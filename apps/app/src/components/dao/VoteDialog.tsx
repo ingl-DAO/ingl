@@ -275,7 +275,7 @@ export default function VoteDialog({
         )}
         <Button
           variant="outlined"
-          color="primary"
+          color="secondary"
           onClick={() => {
             setSelectedGems([]);
             closeDialog();
