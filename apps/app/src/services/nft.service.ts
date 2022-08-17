@@ -401,7 +401,6 @@ export async function imprintRarity(
     isSigner: false,
     isWritable: false,
   };
-  console.log(gemAccountData);
   const initRarityImprintIntrustion = new TransactionInstruction({
     programId: INGL_PROGRAM_ID,
     data: Buffer.from([Instruction.InitRarityImprint]),
@@ -462,7 +461,7 @@ export async function imprintRarity(
     } catch (error) {
       throw new Error('Failed to imprint rarity with error ' + error);
     }
-  } else if (gemAccountData.rarity === undefined) {
+  } else if (gemAccountData.rarity_seed_time && !gemAccountData.rarity) {
     try {
       const transactionId = await signAndConfirmTransaction(
         walletConnection,
@@ -651,7 +650,9 @@ const getInglGemFromNft = async (
       is_allocated: funds_location instanceof PDPoolFundLocation,
       is_delegated: funds_location instanceof VoteAccountFundLocation,
       allocation_date: date_allocated ? date_allocated * 1000 : undefined,
-      rarity_reveal_date: rarity_seed_time,
+      rarity_reveal_date: rarity_seed_time
+        ? rarity_seed_time * 1000
+        : rarity_seed_time,
       last_voted_proposal_id: last_voted_proposal
         ? new PublicKey(last_voted_proposal).toString()
         : '',
@@ -1005,7 +1006,6 @@ export async function delegateNft(
   const {
     wallet: { publicKey: payerKey },
   } = walletConnection;
-  console.log(voteMint, tokenMint);
   const delegateSolInstruction = new TransactionInstruction({
     programId: INGL_PROGRAM_ID,
     data: Buffer.from([Instruction.DelegateSol]),
@@ -1306,7 +1306,6 @@ export async function loadRewards(
             const comp = last_delegation_epoch?.cmp(
               (last_withdrawal_epoch ?? 0) as BN
             );
-            console.log(comp);
             const interestedEpoch =
               comp === 0
                 ? last_delegation_epoch

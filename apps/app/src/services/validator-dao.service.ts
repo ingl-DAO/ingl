@@ -18,6 +18,7 @@ import {
 import { WalletContextState } from '@solana/wallet-adapter-react';
 import { deserializeUnchecked } from '@dao-xyz/borsh';
 import { signAndConfirmTransaction, toBytesInt32 } from './utils';
+import validatorData from './validators.json';
 import BN from 'bn.js';
 
 async function promiseAll<T>(promiseData: Promise<T>[]) {
@@ -120,21 +121,22 @@ export const getProposalsData = async (connection: Connection) => {
 };
 
 export const getValidatorsDetail = async (validator_ids: string[]) => {
-  const token = process.env['NX_VALIDATOR_APP_TOKEN'];
+  // const token = process.env['NX_VALIDATOR_APP_TOKEN'];
   const ASNFrequency: { [key: string]: any } = {};
 
   let validatorsWithDetails = validator_ids.map((value) => ({
     pubkey: value,
     details: {} as any,
   }));
-  const allValidators: any[] = await (
-    await fetch('https://www.validators.app/api/v1/validators/testnet.json', {
-      headers: {
-        token: token as string,
-      },
-      mode: 'cors',
-    })
-  ).json();
+  // const allValidators: any[] = await (
+  //   await fetch('https://www.validators.app/api/v1/validators/testnet.json', {
+  //     headers: {
+  //       token: token as string,
+  //     },
+  //     mode: 'cors',
+  //   })
+  // ).json();
+  const allValidators: any = validatorData;
 
   if (allValidators.length > 0) {
     for (let i = 0; i < allValidators.length; i++) {
