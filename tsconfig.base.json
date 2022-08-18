@@ -16,6 +16,7 @@
     "baseUrl": ".",
     "resolveJsonModule": true,
     "paths": {
+      "@ingl/dialect-sdk": ["libs/dialect-sdk/src/index.ts"],
       "@ingl/state": ["libs/client-state/src/index.ts"]
     }
   },
