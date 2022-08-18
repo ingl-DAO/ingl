@@ -48,18 +48,18 @@ export default function SectionCard() {
       ],
       image: (
         <video
-          src="https://arweave.net/gtfLeGHfK-V5EmmZkRDcM3PPu6U-D5cMR7Qamtendv4"
+          src="https://arweave.net/kQOmP4xqmSWvLH-fix07KEBIpQ9PWT6L7o5VVW0FwCY"
           playsInline
           autoPlay
           muted
           loop
           style={{
             objectFit: 'cover',
-            height: '300px',
-            width: '100%',
+            height: '400px',
+            width: '120%',
             borderRadius: theme.spacing(2.5),
           }}
-          poster="https://arweave.net/dvaBfS8vuzCzBgxGDHncB67o82dwVc6jlsr9fJ8BY_M"
+          poster="https://arweave.net/cn9eRaMDkGsqupRSYdXGO50R-QMgO6bTdCfCWUidxws"
         />
       ),
       buttonText: 'Start Minting Now',
@@ -108,7 +108,7 @@ export default function SectionCard() {
         />
       ),
       buttonText: 'Onboard PC Now',
-      buttonLink: 'https://app.ingl.io/onboard',
+      buttonLink: 'https://whitepaper.ingl.io/components/onboarding-a-validator',
     },
   ];
   return (

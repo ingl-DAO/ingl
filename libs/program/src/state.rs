@@ -13,7 +13,7 @@ use solana_program::{
 use self::constants::*;
 pub mod constants {
     use solana_program::{declare_id, native_token::LAMPORTS_PER_SOL};
-    declare_id!("41z2kpMac1RpH5XnBoKnY6vjmJwdbwc1aHRQszCgbyDv");
+    declare_id!("9dSZN479QxPdogZTwjaBRiTfFAvhq3kNF1GEwUWW7es6");
 
     pub const INGL_TREASURY_ACCOUNT_KEY: &str = "ingl_treasury_account_key";
     pub const INGL_NFT_COLLECTION_KEY: &str = "ingl_nft_collection_newer";
@@ -41,6 +41,7 @@ pub mod constants {
     pub const TREASURY_ACCOUNT_KEY: &str = "Treasury_account_key";
     pub const T_STAKE_ACCOUNT_KEY: &str = "Temporary_stake_account_key";
     pub const T_WITHDRAW_KEY: &str = "Temporary_withdraw";
+    pub const DUPKEYBYTES: &[u8] = b"dupkey";
 
     pub const VALIDATOR_ID_SHARE: u64 = 15;
     pub const TREASURY_SHARE: u64 = 13;
@@ -81,7 +82,7 @@ pub struct VoteInit {
     pub commission: u8,
 }
 
-#[derive(BorshSerialize, Copy, Clone, BorshDeserialize)]
+#[derive(BorshSerialize, Copy, Debug,  Clone, BorshDeserialize)]
 pub enum Class {
     Ruby,
     Diamond,
@@ -105,7 +106,7 @@ impl Class {
     }
 }
 
-#[derive(BorshDeserialize, BorshSerialize, Clone)]
+#[derive(BorshDeserialize, Debug, BorshSerialize, Clone)]
 pub enum Rarity {
     Common,
     Uncommon,
@@ -141,14 +142,14 @@ impl GlobalGems {
     }
 }
 
-#[derive(BorshDeserialize, BorshSerialize)]
+#[derive(BorshDeserialize,  Debug, BorshSerialize)]
 pub enum FundsLocation {
     MintingPool,
     PDPool,
     VoteAccount { vote_account_id: Pubkey },
 }
 
-#[derive(BorshDeserialize, BorshSerialize)]
+#[derive(BorshDeserialize,  Debug, BorshSerialize)]
 pub struct ValidatorVote {
     pub validation_phrase: u32,
     pub proposal_id: Pubkey,
@@ -167,7 +168,7 @@ impl ValidatorVote {
     }
 }
 
-#[derive(BorshDeserialize, BorshSerialize)]
+#[derive(BorshDeserialize, Debug, BorshSerialize)]
 pub struct GemAccountV0_0_1 {
     pub struct_id: GemAccountVersions,
     pub validation_phrase: u32,
@@ -194,7 +195,7 @@ impl GemAccountV0_0_1 {
     }
 }
 
-#[derive(BorshDeserialize, BorshSerialize)]
+#[derive(BorshDeserialize, Debug,  BorshSerialize)]
 pub enum GemAccountVersions {
     GemAccountV0_0_1,
     BlanckCase,

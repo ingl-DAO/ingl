@@ -34,6 +34,7 @@ export default function Gem({
     has_loan,
     allocation_date,
     numeration,
+    redeemable_date,
   },
   setGems,
   isDialogOpen,
@@ -70,10 +71,12 @@ export default function Gem({
     {
       title: 'redeem',
       condition:
-        ((!has_loan && !is_allocated) ||
-          (allocation_date !== undefined &&
-            moment().diff(moment(allocation_date), 'years', true) >= 2)) &&
-        !is_delegated,
+        rarity_reveal_date !== undefined && rarity === undefined
+          ? false
+          : ((!has_loan && !is_allocated) ||
+              (allocation_date !== undefined &&
+                moment().diff(moment(allocation_date), 'years', true) >= 2)) &&
+            !is_delegated,
       onClick: () => {
         activateDialog('redeem', nft_id);
         closeMenu();
@@ -101,7 +104,7 @@ export default function Gem({
         !is_delegated &&
         is_allocated &&
         allocation_date !== undefined &&
-        moment().diff(moment(allocation_date), 'years', true) >= 2,
+        moment() > moment(redeemable_date),
       onClick: () => {
         activateDialog('deallocate', nft_id);
         closeMenu();
@@ -389,7 +392,7 @@ export default function Gem({
           // ...activeGemDialogContent,
           title: 'Reveal gem rarity',
           content:
-            "Are you sure you want to reveal this gem's rarity? Not that this will prevent you from redeeming the total value of your gem for at least a year should you want to redeem in that period",
+            "Are you sure you want to reveal this gem's rarity? Note that this will prevent you from redeeming the total value of your gem for a certain period of time should you want to redeem in that period",
           agreeText: 'Reveal',
           agreeFunction: revealRarity,
         }}

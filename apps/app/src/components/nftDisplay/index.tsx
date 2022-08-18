@@ -36,6 +36,7 @@ export interface inglGem {
   rarity?: Rarity;
   gemClass?: string;
   allocation_date?: number;
+  redeemable_date?: number;
   is_allocated: boolean;
   is_delegated: boolean;
   has_loan: boolean;
@@ -198,7 +199,7 @@ export default function NftDisplay() {
       allocate: {
         title: 'Allocate Gem',
         content:
-          "Are you sure you want to allocate this gem? Note that this action will reveal the gem's rarity and will lock your gem from redemption for a period of at least 2 (two) years. Are you want to continue?",
+          "Are you sure you want to allocate this gem? Note that will prevent you from fully redeeming for a certain period of time. Do you still want to continue?",
         agreeText: 'Allocate',
         agreeFunction: () => executeAction(action, nft_id),
       },
@@ -305,7 +306,6 @@ export default function NftDisplay() {
       deallocate: async () =>
         await deallocatedSol({ connection, wallet }, tokenMint),
       delegate: async () => {
-        console.log(selectedVoteAccount);
         await delegateNft(
           { connection, wallet },
           { tokenMint, voteMint: new PublicKey(selectedVoteAccount as string) }
@@ -408,7 +408,6 @@ export default function NftDisplay() {
 
   const displayGems = sortNft(gems, selectedAttribute.attName);
   const [isMintDialogOpen, setIsMintDialogOpen] = useState<boolean>(false);
-
   return (
     <Box>
       <Box

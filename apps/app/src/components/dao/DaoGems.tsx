@@ -21,6 +21,9 @@ export default function DaoGem({
         height: '200px',
         width: '200px',
         cursor: 'pointer',
+        display: 'flex',
+        alignContent: 'center',
+        justifyContent: 'center',
       }}
     >
       <img
@@ -49,28 +52,28 @@ export default function DaoGem({
           <Typography>
             {isUnusable ? 'Already used' : isSelected ? 'Selected' : null}
           </Typography>
-          <Box
-            sx={{
-              position: 'absolute',
-              backgroundColor: theme.palette.primary.dark,
-              padding: '5px 7px',
-              borderRadius: '30px',
-              bottom: 0,
-            }}
-          >
-            <Typography
-              variant="h1"
-              sx={{
-                fontSize: { laptop: 'initial', mobile: '0.80rem' },
-                textAlign: 'center',
-                color: theme.palette.secondary.main,
-              }}
-            >
-              {`#${nft.numeration}`}
-            </Typography>
-          </Box>
         </Box>
       )}
+      <Box
+        sx={{
+          position: 'absolute',
+          backgroundColor: theme.palette.primary.dark,
+          padding: '5px 7px',
+          borderRadius: '30px',
+          bottom: 0,
+        }}
+      >
+        <Typography
+          variant="h1"
+          sx={{
+            fontSize: { laptop: 'initial', mobile: '0.80rem' },
+            textAlign: 'center',
+            color: theme.palette.secondary.main,
+          }}
+        >
+          {`#${nft.numeration}`}
+        </Typography>
+      </Box>
     </Box>
   );
 }
