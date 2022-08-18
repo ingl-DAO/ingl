@@ -72,7 +72,7 @@ export const BNB_HISTORY_BUFFER_KEY = new PublicKey(
   'DR6PqK15tD21MEGSLmDpXwLA7Fw47kwtdZeUMdT7vd7L'
 );
 export const INGL_PROGRAM_ID = new PublicKey(
-  '41z2kpMac1RpH5XnBoKnY6vjmJwdbwc1aHRQszCgbyDv'
+  '9dSZN479QxPdogZTwjaBRiTfFAvhq3kNF1GEwUWW7es6'
 );
 export const STAKE_PROGRAM_ID = new PublicKey(
   'Stake11111111111111111111111111111111111111'
@@ -140,7 +140,7 @@ export class ValidatorProposal {
   public date_created!: number;
 
   @field({ type: option('u32') })
-  public date_finalized?: number;
+  public date_finalized: number;
 
   @field({ type: vec('u32') })
   public votes!: number[];

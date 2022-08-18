@@ -37,8 +37,7 @@ export class AppService {
   @Cron(CronExpression.EVERY_5_SECONDS)
   async broadcast() {
     try {
-      // this.logger.log('Ingl Event Broadcasting...');
-
+      this.logger.log('Broadcasting....');
       const [global_gem_pubkey] = PublicKey.findProgramAddressSync(
         [Buffer.from(GLOBAL_GEM_KEY)],
         INGL_PROGRAM_ID
@@ -48,48 +47,66 @@ export class AppService {
         global_gem_pubkey
       );
 
-      const globalGemsData = deserializeUnchecked(
-        GlobalGems,
-        globalGemAccountInfo?.data as Buffer
-      );
+      const { proposal_numeration: current_proposal_numeration } =
+        deserializeUnchecked(GlobalGems, globalGemAccountInfo?.data as Buffer);
 
-      const globalGemString = fs.readFileSync('./data.json');
-      const oldGlobalGemsData: GlobalGems = JSON.parse(
-        globalGemString.toString()
+      const [vote_account_key] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from(VOTE_ACCOUNT_KEY),
+          Buffer.from(toBytesInt32(current_proposal_numeration - 1)),
+        ],
+        INGL_PROGRAM_ID
       );
-      
+      const [ingl_vote_data_key] = PublicKey.findProgramAddressSync(
+        [Buffer.from(VOTE_DATA_ACCOUNT_KEY), vote_account_key.toBuffer()],
+        INGL_PROGRAM_ID
+      );
+      const inglVoteDataAccount = await this.connection.getAccountInfo(
+        ingl_vote_data_key
+      );
+      const dataString = fs.readFileSync('data.json');
+      const oldData: {
+        vote_account_key: string;
+        proposal_numeration: number;
+        date_finalized: number;
+      } = JSON.parse(dataString.toString());
       if (
-        oldGlobalGemsData.proposal_numeration <
-        globalGemsData.proposal_numeration
+        inglVoteDataAccount?.owner.toString() === INGL_PROGRAM_ID.toString() &&
+        oldData.vote_account_key !== vote_account_key.toString()
       ) {
-        const [vote_account_key] = PublicKey.findProgramAddressSync(
-          [
-            Buffer.from(VOTE_ACCOUNT_KEY),
-            Buffer.from(toBytesInt32(oldGlobalGemsData.proposal_numeration)),
-          ],
-          INGL_PROGRAM_ID
+        this.logger.log('New Vote Account');
+        await broadcastEvent(
+          'New Ingl Vote Account Created',
+          `A new vote account has been created. Please delegate your NFT and receive voting rewards.  https://app.ingl.io/nft`
         );
-        const [ingl_vote_data_account_key] = PublicKey.findProgramAddressSync(
-          [Buffer.from(VOTE_DATA_ACCOUNT_KEY), vote_account_key.toBuffer()],
-          INGL_PROGRAM_ID
+        fs.writeFileSync(
+          './data.json',
+          JSON.stringify({
+            ...oldData,
+            vote_account_key: vote_account_key.toString(),
+          })
         );
-        const inglVoteAccount = await this.connection.getAccountInfo(
-          ingl_vote_data_account_key
+      }
+
+      if (current_proposal_numeration > oldData.proposal_numeration) {
+        this.logger.log('New Proposal');
+        await broadcastEvent(
+          'New Validator Selection Proposal',
+          `A new validator selection proposal has been created. Please vote on the best suited validator at https://app.ingl.io/dao`
         );
-        if (inglVoteAccount) {
-          this.logger.log('New Vote Account');
-          await broadcastEvent(
-            'New Vote Account',
-            `Hey guys, a new vote accunt has been created. Go vote on app.ingl.io/dao`
-          );
-          fs.writeFileSync('./data.json', JSON.stringify(globalGemsData));
-        }
+        fs.writeFileSync(
+          './data.json',
+          JSON.stringify({
+            ...oldData,
+            proposal_numeration: current_proposal_numeration,
+          })
+        );
       }
 
       const [proposal_pubkey] = PublicKey.findProgramAddressSync(
         [
           Buffer.from(PROPOSAL_KEY),
-          toBytesInt32(oldGlobalGemsData.proposal_numeration),
+          toBytesInt32(current_proposal_numeration - 1),
         ],
         INGL_PROGRAM_ID
       );
@@ -97,39 +114,27 @@ export class AppService {
         proposal_pubkey
       );
       if (proposalAccountInfo) {
-        const { date_created, date_finalized } = deserializeUnchecked(
+        const { date_finalized } = deserializeUnchecked(
           ValidatorProposal,
           proposalAccountInfo.data
         );
-        const five_second_ago =
-          new Date().setSeconds(new Date().getSeconds() - 5) / 1000;
-        const five_second_after =
-          new Date().setSeconds(new Date().getSeconds() + 5) / 1000;
-
-        if (
-          five_second_ago < date_created &&
-          date_created < five_second_after
-        ) {
-          this.logger.log('New Proposal');
+        if (date_finalized !== oldData.date_finalized) {
+          this.logger.log('Proposal Finalized');
           await broadcastEvent(
-            'New Proposal',
-            `Hey guys, a new proposal has just been created. check it out at app.ingl.io/dao`
+            'Ingl Proposal Finalized',
+            `A proposal has been finalized. Get ready to delegate once a vote account is created. https://app.ingl.io/nft`
           );
-        }
-        if (
-          five_second_ago < date_finalized &&
-          date_finalized < five_second_after
-        ) {
-          this.logger.log('Proposal Finalyze');
-          await broadcastEvent(
-            'Proposal Finalyze',
-            `Hey guys, the ongoing proposal has just been finalyze. Get ready to vote a new one would sone be created`
+          fs.writeFileSync(
+            './data.json',
+            JSON.stringify({
+              ...oldData,
+              date_finalized: date_finalized,
+            })
           );
         }
       }
     } catch (err) {
-      console.log(err);
-      return;
+      this.logger.error(err);
     }
   }
 }
