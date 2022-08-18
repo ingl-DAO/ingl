@@ -10,10 +10,12 @@ import {
   VOTE_ACCOUNT_KEY,
   VOTE_DATA_ACCOUNT_KEY,
 } from '@ingl/state';
+import * as fs from 'fs';
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Connection, PublicKey } from '@solana/web3.js';
-import * as fs from 'fs';
+
+const DATA_PATH = './apps/notifyer/src/app/notifyer-data.json';
 
 export const toBytesInt32 = (num: number) => {
   const arr = new Uint8Array([
@@ -64,7 +66,7 @@ export class AppService {
       const inglVoteDataAccount = await this.connection.getAccountInfo(
         ingl_vote_data_key
       );
-      const dataString = fs.readFileSync('data.json');
+      const dataString = fs.readFileSync(DATA_PATH);
       const oldData: {
         vote_account_key: string;
         proposal_numeration: number;
@@ -80,7 +82,7 @@ export class AppService {
           `A new vote account has been created. Please delegate your NFT and receive voting rewards.  https://app.ingl.io/nft`
         );
         fs.writeFileSync(
-          './data.json',
+          DATA_PATH,
           JSON.stringify({
             ...oldData,
             vote_account_key: vote_account_key.toString(),
@@ -95,7 +97,7 @@ export class AppService {
           `A new validator selection proposal has been created. Please vote on the best suited validator at https://app.ingl.io/dao`
         );
         fs.writeFileSync(
-          './data.json',
+          DATA_PATH,
           JSON.stringify({
             ...oldData,
             proposal_numeration: current_proposal_numeration,
@@ -125,7 +127,7 @@ export class AppService {
             `A proposal has been finalized. Get ready to delegate once a vote account is created. https://app.ingl.io/nft`
           );
           fs.writeFileSync(
-            './data.json',
+            DATA_PATH,
             JSON.stringify({
               ...oldData,
               date_finalized: date_finalized,

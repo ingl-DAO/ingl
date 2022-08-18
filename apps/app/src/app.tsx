@@ -15,7 +15,7 @@ import {
   WalletContextState,
   WalletProvider,
 } from '@solana/wallet-adapter-react';
-import { useEffect, useMemo, useState } from 'react';
+import { FC, useEffect, useMemo, useState } from 'react';
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import { clusterApiUrl, PublicKey } from '@solana/web3.js';
 import {
@@ -73,7 +73,7 @@ const DIALECT_PUBLIC_KEY = new PublicKey(
 const walletToDialectWallet = (
   wallet: WalletContextState
 ): DialectWalletAdapter => ({
-  publicKey: wallet.publicKey!,
+  publicKey: wallet.publicKey as PublicKey,
   connected:
     wallet.connected &&
     !wallet.connecting &&
@@ -93,7 +93,9 @@ const walletToDialectWallet = (
     : undefined,
 });
 
-const DialectProviders = (props: any) => {
+const DialectProviders: FC<{ children: JSX.Element | null }> = ({
+  children,
+}) => {
   const wallet = useWallet();
   // We need to create an adapter for Dialect to support any type of wallet
   // `convertWalletForDialect` is a function that needs to be implemented to convert `WalletContextState` to `DialectWalletAdapter` type.
@@ -127,9 +129,7 @@ const DialectProviders = (props: any) => {
       }
     >
       <DialectThemeProvider theme={'dark'} variables={themeVariables}>
-        <DialectUiManagementProvider>
-          {props.children}
-        </DialectUiManagementProvider>
+        <DialectUiManagementProvider>{children}</DialectUiManagementProvider>
       </DialectThemeProvider>
     </DialectContextProvider>
   );

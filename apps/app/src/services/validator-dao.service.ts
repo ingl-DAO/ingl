@@ -18,11 +18,8 @@ import {
 import { WalletContextState } from '@solana/wallet-adapter-react';
 import { deserializeUnchecked } from '@dao-xyz/borsh';
 import { signAndConfirmTransaction, toBytesInt32 } from './utils';
-import * as fs from 'fs';
+import validatorData from './validators.json'
 import BN from 'bn.js';
-
-const validatorDataString = fs.readFileSync('./validators.json');
-const validatorData = JSON.parse(validatorDataString.toString());
 
 async function promiseAll<T>(promiseData: Promise<T>[]) {
   const filteredPromiseData: T[] = [];
