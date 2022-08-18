@@ -80,5 +80,15 @@ InglVoteAccountData = CStruct(
     "vote_rewards" / Vec(VoteRewards),
 )
 
+
+ValidatorProposal = CStruct(
+    "validation_phrase" / U32,
+    "validator_ids" / Vec(U8[32]),
+    "date_created" / U32,
+    "date_finalized" / Option(U32),
+    "votes" / Vec(U32),
+    "winner" / Option(U8[32]),
+)
+
 def private_key_from_json(filepath):
     return base58.b58encode(keypair_from_json(filepath).secret_key).decode()

@@ -125,7 +125,7 @@ def process_create_vote_account(val_keypair):
     payer_keypair = keypair_from_json(f"./{val_keypair}")
     global_gem_pubkey, _global_gem_bump = PublicKey.find_program_address([bytes(ingl_constants.GLOBAL_GEM_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     numeration = GlobalGems.parse(base64.urlsafe_b64decode(client.get_account_info(global_gem_pubkey)['result']['value']['data'][0])).proposal_numeration
-    create_vote_account(payer_keypair, numeration-1, client)
+    print("Transaction Id: ", create_vote_account(payer_keypair, numeration-1, client)['result'])
 
 @click.command(name="get_vote_pubkey")
 @click.option('--numeration', '-n', default=None)
