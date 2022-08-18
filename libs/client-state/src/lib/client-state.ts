@@ -140,7 +140,7 @@ export class ValidatorProposal {
   public date_created!: number;
 
   @field({ type: option('u32') })
-  public date_finalized: number;
+  public date_finalized?: number;
 
   @field({ type: vec('u32') })
   public votes!: number[];
