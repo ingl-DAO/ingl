@@ -42,8 +42,9 @@ export default function Links() {
           href={link}
           rel="noreferrer"
           sx={{ display: 'grid', alignItems: 'center' }}
+          key={index}
         >
-          <Tooltip arrow title={tooltip} key={index}>
+          <Tooltip arrow title={tooltip}>
             {icon}
           </Tooltip>
         </Typography>
