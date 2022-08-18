@@ -20,7 +20,7 @@ use solana_program::{
     account_info::{next_account_info, AccountInfo},
     clock::Clock,
     entrypoint::ProgramResult,
-    hash::hash,
+    hash::{hash, hashv},
     msg,
     program::{invoke, invoke_signed},
     program_error::ProgramError,
@@ -70,6 +70,7 @@ pub fn process_instruction(
         InstructionEnum::CloseProposal => close_proposal(program_id, accounts)?,
         InstructionEnum::InitRebalance => init_rebalance(program_id, accounts)?,
         InstructionEnum::FinalizeRebalance => finalize_rebalance(program_id, accounts)?,
+        InstructionEnum::InjectTestingData{ num_nfts } => inject_testing_data(program_id, accounts, num_nfts)?,
         _ => Err(ProgramError::InvalidInstructionData)?,
     })
 }
@@ -1640,18 +1641,14 @@ pub fn imprint_rarity(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
         .unwrap();
     let bnb_price = bnb_value.mantissa * 10.pow(bnb_value.scale) as i128;
 
-    let mut string_to_hash = btc_price.to_string();
-    string_to_hash.push_str(sol_price.to_string().as_ref() as &str);
-    string_to_hash.push_str(eth_price.to_string().as_ref() as &str);
-    string_to_hash.push_str(bnb_price.to_string().as_ref() as &str);
-    let rarity_hash_string = hash(string_to_hash.as_bytes());
+    let rarity_hash_string = hashv(&[&btc_price.to_be_bytes(), &sol_price.to_be_bytes(), &eth_price.to_be_bytes(), &bnb_price.to_be_bytes(), &mint_account_info.key.to_bytes(), &program_id.to_bytes()]);
     let rarity_hash_bytes = rarity_hash_string.to_bytes();
-
-    let mut byte_product: u64 = 0;
+    let mut byte_sum: u64 = 0;
     for byte in rarity_hash_bytes {
-        byte_product = byte_product + byte as u64;
+        byte_sum = byte_sum + (byte as u64).pow(2);
     }
-    let random_value = byte_product * 9999 / (255 * 32) as u64;
+    
+    let random_value = byte_sum*10%10000;
     msg!("Bytes product: {:?}", random_value);
     gem_data.rarity = gem_data.class.get_rarity(random_value);
 
