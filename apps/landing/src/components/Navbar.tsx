@@ -78,7 +78,7 @@ export default function Navbar() {
             {name}
           </NavItem>
         ) : (
-          <ExternalNavItem key={index} link={{ link, name }} />
+          <ExternalNavItem link={{ link, name }} />
         )
       )}
     </Box>
@@ -122,7 +122,7 @@ export default function Navbar() {
                   {name}
                 </NavItem>
               ) : (
-                <ExternalNavItem key={index} link={{ link, name }} />
+                <ExternalNavItem link={{ link, name }} />
               )
             )}
           </Box>
