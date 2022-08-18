@@ -24,7 +24,7 @@ export default function Team() {
     {
       fullname: 'Marco Kuidja',
       role: 'dev',
-      linkedinRef: 'https://www.linkedin.com/in/marco-kuidja',
+      linkedinRef: 'https://www.linkedin.com/in/kuidja-marco',
       imageRef: marco,
     },
     {
