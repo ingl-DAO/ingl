@@ -545,7 +545,7 @@ export default function NftDisplay() {
         ) : displayGems.length === 0 ? (
           selectedAttribute.attName ? (
             <Typography variant="h5" sx={{ textAlign: 'center' }}>
-              You own now ingl gem that respects this criteria
+              You own no ingl gem that respects this criteria
             </Typography>
           ) : (
             <Box
