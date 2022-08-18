@@ -218,7 +218,7 @@ pub fn create_validator_selection_proposal(program_id: &Pubkey, accounts: &[Acco
         validator_ids : global_gem_data.clone().validator_list, // Vec([id1, id2, id3, id4, id5])
         date_created : Clock::get()?.unix_timestamp as u32,
         date_finalized : None,
-        votes: [0, global_gem_data.clone().validator_list.len() as u32].to_vec(), //Vec([2, 3, 5, 2, 1]) The total Sol backing the NFTs used to vote.
+        votes: vec![0; global_gem_data.clone().validator_list.len()], //Vec([2, 3, 5, 2, 1]) The total Sol backing the NFTs used to vote.
         winner: None
     };
 
@@ -237,6 +237,16 @@ pub fn register_validator_id(program_id: &Pubkey, accounts: &[AccountInfo]) -> P
     let global_gem_account_info = next_account_info(account_info_iter)?;
     let mint_authority_account_info = next_account_info(account_info_iter)?;
     let validator_info = next_account_info(account_info_iter)?; //Remove this and change it back to payer only after hackathon.
+    let dup_prevention_account = next_account_info(account_info_iter)?;
+
+    let (expected_dup_key, expected_dup_bump) = Pubkey::find_program_address(&[DUPKEYBYTES, validator_info.key.as_ref()], program_id);
+    assert_pubkeys_exactitude(&expected_dup_key, dup_prevention_account.key)?;
+
+    invoke_signed(
+        &system_instruction::create_account(payer_account_info.key, &expected_dup_key, Rent::get()?.minimum_balance(1), 1,program_id),
+        &[payer_account_info.clone(), dup_prevention_account.clone()],
+        &[&[DUPKEYBYTES, validator_info.key.as_ref(), &[expected_dup_bump]]]
+    )?;
 
     let (global_gem_pubkey, _global_gem_bump) =
     Pubkey::find_program_address(&[GLOBAL_GEM_KEY.as_ref()], program_id);
@@ -1994,6 +2004,19 @@ pub fn undelegate_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
         .serialize(&mut &mut ingl_vote_data_account_info.data.borrow_mut()[..])?;
     gem_account_data.serialize(&mut &mut gem_account_data_info.data.borrow_mut()[..])?;
 
+
+    // let new_accounts = &[
+    //     payer_account_info.clone(),
+    //     vote_account_info.clone(),
+    //     validator_account_info.clone(),
+    //     ingl_vote_data_account_info.clone(),
+    //     authorized_withdrawer_info.clone(),
+
+    //     system_program_info.clone()
+    // ];
+    // nft_withdraw(program_id, new_accounts, 1)?;
+
+
     Ok(())
 }
 
@@ -2204,7 +2227,7 @@ pub fn nft_withdraw(program_id: &Pubkey, accounts: &[AccountInfo], cnt: usize) -
         for i in interested_index..ingl_vote_account_data.vote_rewards.len() {
             let epoch_reward = ingl_vote_account_data.vote_rewards[i];
             // msg!("epoch_reward: {:?}", epoch_reward);
-            total_reward = total_reward.checked_add((gem_account_data.class.get_class_lamports() as f64 * NFTS_SHARE as f64 * epoch_reward.total_reward as f64 / (100.0 * epoch_reward.total_stake as f64))as u64).unwrap();
+            total_reward = total_reward.checked_add((gem_account_data.class.get_class_lamports() as f64 * NFTS_SHARE as f64 * epoch_reward.total_reward as f64 / (100.0 * epoch_reward.total_stake as f64))as u64).unwrap(); //unsafe Get back to this Cyrial
         }
         gem_account_data.last_withdrawal_epoch = Some(Clock::get()?.epoch);
         gem_account_data.all_withdraws.push(total_reward);
