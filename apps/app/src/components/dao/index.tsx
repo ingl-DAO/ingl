@@ -200,7 +200,7 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
               av_distance: Number(
                 (validator.details?.average_distance / 1000).toFixed(3)
               ),
-              score: validator.details?.total_score,
+              score: (validator.details?.total_score) ?? 0,
               skip_rate: Number(
                 (
                   Number(validator.details?.skipped_slot_percent ?? 0) * 100
