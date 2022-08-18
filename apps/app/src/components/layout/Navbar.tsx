@@ -64,7 +64,7 @@ export default function Navbar() {
             {name}
           </NavItem>
         ) : (
-          <ExternalNavItem link={{ link, name }} />
+          <ExternalNavItem key={index} link={{ link, name }} />
         )
       )}
       <ConnectButton isSideNavElement={true} />
