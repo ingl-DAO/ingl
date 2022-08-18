@@ -59,7 +59,7 @@ export default function SectionCard() {
             width: '120%',
             borderRadius: theme.spacing(2.5),
           }}
-          poster="https://arweave.net/uE9ubUPptA_EffzrruL9gh7bmVeLtbwAeT3kIxpEgGk"
+          poster="https://arweave.net/cn9eRaMDkGsqupRSYdXGO50R-QMgO6bTdCfCWUidxws"
         />
       ),
       buttonText: 'Start Minting Now',
