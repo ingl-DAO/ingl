@@ -564,24 +564,26 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
               </Box>
             ))
           ) : validators.length > 0 ? (
-            validators.map((validator, index) => (
-              <ValidatorLIne
-                key={index}
-                isSubmittingVote={isSubmittingVote}
-                validator={validator}
-                isProposalOngoing={
-                  selectedProposal ? selectedProposal.is_ongoing : false
-                }
-                onVote={(validator: Validator) => {
-                  if (selectedProposal?.is_ongoing && !wallet.connected) {
-                    alert('Connect your wallet to vote');
-                  } else {
-                    setSelectedValidator(validator);
-                    setIsValidatorVoteDialogOpen(true);
+            validators
+              .sort((val1, val2) => (val1.score > val2.score ? -1 : 1))
+              .map((validator, index) => (
+                <ValidatorLIne
+                  key={index}
+                  isSubmittingVote={isSubmittingVote}
+                  validator={validator}
+                  isProposalOngoing={
+                    selectedProposal ? selectedProposal.is_ongoing : false
                   }
-                }}
-              />
-            ))
+                  onVote={(validator: Validator) => {
+                    if (selectedProposal?.is_ongoing && !wallet.connected) {
+                      alert('Connect your wallet to vote');
+                    } else {
+                      setSelectedValidator(validator);
+                      setIsValidatorVoteDialogOpen(true);
+                    }
+                  }}
+                />
+              ))
           ) : (
             <Typography sx={{ textAlign: 'center' }}>
               No Validators in this proposal
