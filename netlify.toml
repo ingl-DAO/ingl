@@ -1,2 +1,2 @@
 [build.environment]
-command = "npm ci -f"
+install = "npm ci -f"
