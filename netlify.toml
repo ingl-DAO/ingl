@@ -1,0 +1,2 @@
+[build.environment]
+NODE_OPTIONS="--optimize_for_size npm ci"
