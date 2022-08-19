@@ -1,3 +1,3 @@
 [build.environment]
 command = "npm ci -f"
-NODE_OPTIONS="--optimize_for_size npm ci"
+NODE_OPTIONS="--npm ci"
