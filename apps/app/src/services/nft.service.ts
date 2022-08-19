@@ -606,7 +606,7 @@ export async function redeemInglGem(
   try {
     await signAndConfirmTransaction(walletConnection, redeemInglGemInstruction);
   } catch (error) {
-    throw new Error('Failed to imprint rarity with error ' + error);
+    throw new Error('Failed to redeem NFT with error ' + error);
   }
 }
 
