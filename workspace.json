@@ -4,8 +4,11 @@
   "projects": {
     "app": "apps/app",
     "app-e2e": "apps/app-e2e",
+    "client-state": "libs/client-state",
+    "dialect-sdk": "libs/dialect-sdk",
     "landing": "apps/landing",
     "landing-e2e": "apps/landing-e2e",
+    "notifyer": "apps/notifyer",
     "program": "libs/program"
   }
 }
