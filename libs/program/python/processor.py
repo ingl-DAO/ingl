@@ -8,7 +8,7 @@ from spl.token import instructions as assoc_instructions
 from instruction import *
 from state import Constants as ingl_constants
 
-def create_collection(payer_keypair, client):
+async def create_collection(payer_keypair, client):
     mint_pubkey, _mint_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.INGL_NFT_COLLECTION_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     mint_authority_pubkey, _mint_authority_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.INGL_MINT_AUTHORITY_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     collection_holder_pubkey, _collection_holder_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.COLLECTION_HOLDER_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
@@ -62,9 +62,12 @@ def create_collection(payer_keypair, client):
     data = build_instruction(InstructionEnum.enum.MintNewCollection())
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, data))
-    return client.send_transaction(transaction, payer_keypair)
+    t_dets = await client.send_transaction(transaction, payer_keypair)
+    await client.confirm_transaction(tx_sig = t_dets['result'], commitment= "finalized", sleep_seconds = 0.4, last_valid_block_height = None)
+    await client.close()
+    return t_dets
 
-def mint_nft(payer_keypair, mint_keypair, mint_class, client):
+async def mint_nft(payer_keypair, mint_keypair, mint_class, client):
     mint_authority_pubkey, _mint_authority_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.INGL_MINT_AUTHORITY_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     collection_mint_pubkey, _collection_mint_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.INGL_NFT_COLLECTION_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     minting_pool_pubkey, _minting_pool_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.INGL_MINTING_POOL_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
@@ -128,9 +131,12 @@ def mint_nft(payer_keypair, mint_keypair, mint_class, client):
     instruction_data = build_instruction(InstructionEnum.enum.MintNft(), mint_class)
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, instruction_data))
-    return client.send_transaction(transaction, payer_keypair, mint_keypair)
+    t_dets = await client.send_transaction(transaction, payer_keypair, mint_keypair)
+    await client.confirm_transaction(tx_sig = t_dets['result'], commitment= "finalized", sleep_seconds = 0.4, last_valid_block_height = None)
+    await client.close()
+    return t_dets
 
-def allocate_sol(payer_keypair, mint_pubkey, client):
+async def allocate_sol(payer_keypair, mint_pubkey, client):
     minting_pool_pubkey, _minting_pool_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.INGL_MINTING_POOL_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     pd_pool_pubkey, _pd_pool_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.PD_POOL_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     gem_account_pubkey, _gem_account_bump = PublicKey.find_program_address([bytes(ingl_constants.GEM_ACCOUNT_CONST, 'UTF-8'), bytes(mint_pubkey)], ingl_constants.INGL_PROGRAM_ID)
@@ -165,9 +171,12 @@ def allocate_sol(payer_keypair, mint_pubkey, client):
     instruction_data = build_instruction(InstructionEnum.enum.AllocateNFT())
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, instruction_data))
-    return client.send_transaction(transaction, payer_keypair)
+    t_dets = await client.send_transaction(transaction, payer_keypair)
+    await client.confirm_transaction(tx_sig = t_dets['result'], commitment= "finalized", sleep_seconds = 0.4, last_valid_block_height = None)
+    await client.close()
+    return t_dets
 
-def deallocate_sol(payer_keypair, mint_pubkey, client):
+async def deallocate_sol(payer_keypair, mint_pubkey, client):
     minting_pool_pubkey, _minting_pool_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.INGL_MINTING_POOL_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     pd_pool_pubkey, _pd_pool_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.PD_POOL_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     gem_account_pubkey, _gem_account_bump = PublicKey.find_program_address([bytes(ingl_constants.GEM_ACCOUNT_CONST, 'UTF-8'), bytes(mint_pubkey)], ingl_constants.INGL_PROGRAM_ID)
@@ -203,11 +212,14 @@ def deallocate_sol(payer_keypair, mint_pubkey, client):
     instruction_data = build_instruction(InstructionEnum.enum.DeAllocateNFT())
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, instruction_data))
-    return client.send_transaction(transaction, payer_keypair)
+    t_dets = await client.send_transaction(transaction, payer_keypair)
+    await client.confirm_transaction(tx_sig = t_dets['result'], commitment= "finalized", sleep_seconds = 0.4, last_valid_block_height = None)
+    await client.close()
+    return t_dets
 
 
 
-def register_validator_id(payer_keypair, validator_pubkey, client):
+async def register_validator_id(payer_keypair, validator_pubkey, client):
     mint_authority_pubkey, _mint_authority_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.INGL_MINT_AUTHORITY_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     global_gem_pubkey, _global_gem_bump = PublicKey.find_program_address([bytes(ingl_constants.GLOBAL_GEM_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
 
@@ -235,10 +247,13 @@ def register_validator_id(payer_keypair, validator_pubkey, client):
     instruction_data = build_instruction(InstructionEnum.enum.RegisterValidatorId())
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, instruction_data))
-    return client.send_transaction(transaction, payer_keypair)
+    t_dets = await client.send_transaction(transaction, payer_keypair)
+    await client.confirm_transaction(tx_sig = t_dets['result'], commitment= "finalized", sleep_seconds = 0.4, last_valid_block_height = None)
+    await client.close()
+    return t_dets
 
 
-def create_validator_proposal(payer_keypair, proposal_numeration, client):
+async def create_validator_proposal(payer_keypair, proposal_numeration, client):
     global_gem_pubkey, _global_gem_bump = PublicKey.find_program_address([bytes(ingl_constants.GLOBAL_GEM_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     proposal_pubkey, _proposal_bump = PublicKey.find_program_address([bytes(ingl_constants.PROPOSAL_KEY, 'UTF-8'), proposal_numeration.to_bytes(4,"big")], ingl_constants.INGL_PROGRAM_ID)
 
@@ -260,10 +275,13 @@ def create_validator_proposal(payer_keypair, proposal_numeration, client):
     instruction_data = build_instruction(InstructionEnum.enum.CreateValidatorSelectionProposal())
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, instruction_data))
-    return client.send_transaction(transaction, payer_keypair)
+    t_dets = await client.send_transaction(transaction, payer_keypair)
+    await client.confirm_transaction(tx_sig = t_dets['result'], commitment= "finalized", sleep_seconds = 0.4, last_valid_block_height = None)
+    await client.close()
+    return t_dets
 
 
-def vote_validator_proposal(payer_keypair, proposal_numeration, mint_pubkeys, val_index, client):
+async def vote_validator_proposal(payer_keypair, proposal_numeration, mint_pubkeys, val_index, client):
     proposal_pubkey, _proposal_bump = PublicKey.find_program_address([bytes(ingl_constants.PROPOSAL_KEY, 'UTF-8'), proposal_numeration.to_bytes(4,"big")], ingl_constants.INGL_PROGRAM_ID)
 
 
@@ -288,10 +306,13 @@ def vote_validator_proposal(payer_keypair, proposal_numeration, mint_pubkeys, va
     instruction_data = build_instruction(InstructionEnum.enum.VoteValidatorProposal(num_nfts = len(mint_pubkeys), validator_index = val_index))
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, instruction_data))
-    return client.send_transaction(transaction, payer_keypair)
+    t_dets = await client.send_transaction(transaction, payer_keypair)
+    await client.confirm_transaction(tx_sig = t_dets['result'], commitment= "finalized", sleep_seconds = 0.4, last_valid_block_height = None)
+    await client.close()
+    return t_dets
 
 
-def finalize_proposal(payer_keypair, proposal_numeration, client):
+async def finalize_proposal(payer_keypair, proposal_numeration, client):
     global_gem_pubkey, _global_gem_bump = PublicKey.find_program_address([bytes(ingl_constants.GLOBAL_GEM_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     proposal_pubkey, _proposal_bump = PublicKey.find_program_address([bytes(ingl_constants.PROPOSAL_KEY, 'UTF-8'), proposal_numeration.to_bytes(4,"big")], ingl_constants.INGL_PROGRAM_ID)
 
@@ -308,9 +329,12 @@ def finalize_proposal(payer_keypair, proposal_numeration, client):
     instruction_data = build_instruction(InstructionEnum.enum.FinalizeProposal())
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, instruction_data))
-    return client.send_transaction(transaction, payer_keypair)
+    t_dets = await client.send_transaction(transaction, payer_keypair)
+    await client.confirm_transaction(tx_sig = t_dets['result'], commitment= "finalized", sleep_seconds = 0.4, last_valid_block_height = None)
+    await client.close()
+    return t_dets
 
-def delegate_nft(payer_keypair, mint_pubkey, expected_vote_pubkey, client):
+async def delegate_nft(payer_keypair, mint_pubkey, expected_vote_pubkey, client):
     gem_account_pubkey, _gem_account_bump = PublicKey.find_program_address([bytes(ingl_constants.GEM_ACCOUNT_CONST, 'UTF-8'), bytes(mint_pubkey)], ingl_constants.INGL_PROGRAM_ID)
     global_gem_pubkey, _global_gem_bump = PublicKey.find_program_address([bytes(ingl_constants.GLOBAL_GEM_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     mint_associated_account_pubkey = assoc_instructions.get_associated_token_address(payer_keypair.public_key, mint_pubkey)
@@ -345,9 +369,12 @@ def delegate_nft(payer_keypair, mint_pubkey, expected_vote_pubkey, client):
     instruction_data = build_instruction(InstructionEnum.enum.DelegateNFT())
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, instruction_data))
-    return client.send_transaction(transaction, payer_keypair)
+    t_dets = await client.send_transaction(transaction, payer_keypair)
+    await client.confirm_transaction(tx_sig = t_dets['result'], commitment= "finalized", sleep_seconds = 0.4, last_valid_block_height = None)
+    await client.close()
+    return t_dets
 
-def undelegate_nft(payer_keypair, mint_pubkey, expected_vote_pubkey, client):
+async def undelegate_nft(payer_keypair, mint_pubkey, expected_vote_pubkey, client):
     pd_pool_pubkey, _pd_pool_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.PD_POOL_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     gem_account_pubkey, _gem_account_bump = PublicKey.find_program_address([bytes(ingl_constants.GEM_ACCOUNT_CONST, 'UTF-8'), bytes(mint_pubkey)], ingl_constants.INGL_PROGRAM_ID)
     global_gem_pubkey, _global_gem_bump = PublicKey.find_program_address([bytes(ingl_constants.GLOBAL_GEM_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
@@ -386,10 +413,13 @@ def undelegate_nft(payer_keypair, mint_pubkey, expected_vote_pubkey, client):
     instruction_data = build_instruction(InstructionEnum.enum.UnDelegateNFT())
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, instruction_data))
-    return client.send_transaction(transaction, payer_keypair)
+    t_dets = await client.send_transaction(transaction, payer_keypair)
+    await client.confirm_transaction(tx_sig = t_dets['result'], commitment= "finalized", sleep_seconds = 0.4, last_valid_block_height = None)
+    await client.close()
+    return t_dets
 
 
-def create_vote_account(validator_keypair, proposal_numeration, client):
+async def create_vote_account(validator_keypair, proposal_numeration, client):
     global_gem_pubkey, _global_gem_bump = PublicKey.find_program_address([bytes(ingl_constants.GLOBAL_GEM_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     proposal_pubkey, _proposal_bump = PublicKey.find_program_address([bytes(ingl_constants.PROPOSAL_KEY, 'UTF-8'), proposal_numeration.to_bytes(4,"big")], ingl_constants.INGL_PROGRAM_ID)
     mint_authority_pubkey, _mint_authority_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.COUNCIL_MINT_AUTHORITY_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
@@ -453,9 +483,12 @@ def create_vote_account(validator_keypair, proposal_numeration, client):
     data = InstructionEnum.build(InstructionEnum.enum.CreateVoteAccount())
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, data))
-    return client.send_transaction(transaction, validator_keypair)
+    t_dets = await client.send_transaction(transaction, validator_keypair)
+    await client.confirm_transaction(tx_sig = t_dets['result'], commitment= "finalized", sleep_seconds = 0.4, last_valid_block_height = None)
+    await client.close()
+    return t_dets
 
-def close_proposal(payer_keypair, proposal_numeration, client):
+async def close_proposal(payer_keypair, proposal_numeration, client):
     global_gem_pubkey, _global_gem_bump = PublicKey.find_program_address([bytes(ingl_constants.GLOBAL_GEM_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     expected_vote_pubkey, _expected_vote_pubkey_nonce = PublicKey.find_program_address([bytes(ingl_constants.VOTE_ACCOUNT_KEY, "UTF-8"), (proposal_numeration).to_bytes(4,"big")], ingl_constants.INGL_PROGRAM_ID)
     expected_vote_data_pubkey, _expected_vote_data_bump = PublicKey.find_program_address([bytes(ingl_constants.VOTE_DATA_ACCOUNT_KEY, 'UTF-8'), bytes(expected_vote_pubkey)], ingl_constants.INGL_PROGRAM_ID)
@@ -473,9 +506,12 @@ def close_proposal(payer_keypair, proposal_numeration, client):
     data = InstructionEnum.build(InstructionEnum.enum.CloseProposal())
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, data))
-    return client.send_transaction(transaction, payer_keypair)
+    t_dets = await client.send_transaction(transaction, payer_keypair)
+    await client.confirm_transaction(tx_sig = t_dets['result'], commitment= "finalized", sleep_seconds = 0.4, last_valid_block_height = None)
+    await client.close()
+    return t_dets
 
-def init_rebalance(payer_keypair, vote_account_pubkey, client):
+async def init_rebalance(payer_keypair, vote_account_pubkey, client):
     global_gem_pubkey, _global_gem_bump = PublicKey.find_program_address([bytes(ingl_constants.GLOBAL_GEM_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     expected_vote_pubkey = vote_account_pubkey
     expected_vote_data_pubkey, _expected_vote_data_bump = PublicKey.find_program_address([bytes(ingl_constants.VOTE_DATA_ACCOUNT_KEY, 'UTF-8'), bytes(expected_vote_pubkey)], ingl_constants.INGL_PROGRAM_ID)
@@ -526,9 +562,12 @@ def init_rebalance(payer_keypair, vote_account_pubkey, client):
     data = InstructionEnum.build(InstructionEnum.enum.InitRebalance())
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, data))
-    return client.send_transaction(transaction, payer_keypair)
+    t_dets = await client.send_transaction(transaction, payer_keypair)
+    await client.confirm_transaction(tx_sig = t_dets['result'], commitment= "finalized", sleep_seconds = 0.4, last_valid_block_height = None)
+    await client.close()
+    return t_dets
 
-def finalize_rebalance(payer_keypair, vote_account_pubkey, client):
+async def finalize_rebalance(payer_keypair, vote_account_pubkey, client):
     expected_vote_pubkey = vote_account_pubkey
     expected_vote_data_pubkey, _expected_vote_data_bump = PublicKey.find_program_address([bytes(ingl_constants.VOTE_DATA_ACCOUNT_KEY, 'UTF-8'), bytes(expected_vote_pubkey)], ingl_constants.INGL_PROGRAM_ID)
     expected_stake_key, _expected_stake_bump = PublicKey.find_program_address([bytes(ingl_constants.STAKE_ACCOUNT_KEY, 'UTF-8'), bytes(expected_vote_pubkey)], ingl_constants.INGL_PROGRAM_ID)
@@ -574,9 +613,12 @@ def finalize_rebalance(payer_keypair, vote_account_pubkey, client):
     data = InstructionEnum.build(InstructionEnum.enum.FinalizeRebalance())
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, data))
-    return client.send_transaction(transaction, payer_keypair)
+    t_dets = await client.send_transaction(transaction, payer_keypair)
+    await client.confirm_transaction(tx_sig = t_dets['result'], commitment= "finalized", sleep_seconds = 0.4, last_valid_block_height = None)
+    await client.close()
+    return t_dets
 
-def process_rewards(payer_keypair, vote_account_id, client):
+async def process_rewards(payer_keypair, vote_account_id, client):
     mint_authority_pubkey, _mint_authority_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.INGL_MINT_AUTHORITY_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     expected_vote_data_pubkey, _expected_vote_data_bump = PublicKey.find_program_address([bytes(ingl_constants.VOTE_DATA_ACCOUNT_KEY, 'UTF-8'), bytes(vote_account_id)], ingl_constants.INGL_PROGRAM_ID)
     validator_id = PublicKey(InglVoteAccountData.parse(base64.urlsafe_b64decode(client.get_account_info(expected_vote_data_pubkey)['result']['value']['data'][0])).validator_id)
@@ -614,9 +656,12 @@ def process_rewards(payer_keypair, vote_account_id, client):
     data = InstructionEnum.build(InstructionEnum.enum.ProcessRewards())
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, data))
-    return client.send_transaction(transaction, payer_keypair)
+    t_dets = await client.send_transaction(transaction, payer_keypair)
+    await client.confirm_transaction(tx_sig = t_dets['result'], commitment= "finalized", sleep_seconds = 0.4, last_valid_block_height = None)
+    await client.close()
+    return t_dets
 
-def nft_withdraw(payer_keypair, mints, vote_account_id, client):
+async def nft_withdraw(payer_keypair, mints, vote_account_id, client):
     expected_vote_data_pubkey, _expected_vote_data_bump = PublicKey.find_program_address([bytes(ingl_constants.VOTE_DATA_ACCOUNT_KEY, 'UTF-8'), bytes(vote_account_id)], ingl_constants.INGL_PROGRAM_ID)
     validator_id = PublicKey(InglVoteAccountData.parse(base64.urlsafe_b64decode(client.get_account_info(expected_vote_data_pubkey)['result']['value']['data'][0])).validator_id)
     authorized_withdrawer_key, _authorized_withdrawer_bump = PublicKey.find_program_address([bytes(ingl_constants.AUTHORIZED_WITHDRAWER_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
@@ -652,9 +697,12 @@ def nft_withdraw(payer_keypair, mints, vote_account_id, client):
     data = InstructionEnum.build(InstructionEnum.enum.NFTWithdraw(len(mints)))
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, data))
-    return client.send_transaction(transaction, payer_keypair)
+    t_dets = await client.send_transaction(transaction, payer_keypair)
+    await client.confirm_transaction(tx_sig = t_dets['result'], commitment= "finalized", sleep_seconds = 0.4, last_valid_block_height = None)
+    await client.close()
+    return t_dets
 
-def inject_testing_data(payer_keypair, mints, vote_account_id, client):
+async def inject_testing_data(payer_keypair, mints, vote_account_id, client):
     expected_vote_data_pubkey, _expected_vote_data_bump = PublicKey.find_program_address([bytes(ingl_constants.VOTE_DATA_ACCOUNT_KEY, 'UTF-8'), bytes(vote_account_id)], ingl_constants.INGL_PROGRAM_ID)
     authorized_withdrawer_key, _authorized_withdrawer_bump = PublicKey.find_program_address([bytes(ingl_constants.AUTHORIZED_WITHDRAWER_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
 
@@ -685,4 +733,7 @@ def inject_testing_data(payer_keypair, mints, vote_account_id, client):
     data = InstructionEnum.build(InstructionEnum.enum.InjectTestingData(len(mints)))
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, data))
-    return client.send_transaction(transaction, payer_keypair)
+    t_dets = await client.send_transaction(transaction, payer_keypair)
+    await client.confirm_transaction(tx_sig = t_dets['result'], commitment= "finalized", sleep_seconds = 0.4, last_valid_block_height = None)
+    await client.close()
+    return t_dets
