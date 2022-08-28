@@ -79,7 +79,7 @@ export default function Navbar() {
           display: 'grid',
           gridTemplateColumns: {
             laptop: 'auto 1fr auto',
-            mobile: '1fr auto',
+            mobile: '1fr auto auto',
           },
           alignItems: 'center',
           px: theme.spacing(8),

@@ -1,5 +1,16 @@
-import { KeyboardArrowDownRounded, ReportRounded } from '@mui/icons-material';
-import { Box, Grid, Skeleton, Typography } from '@mui/material';
+import {
+  KeyboardArrowDownRounded,
+  KeyboardArrowUpRounded,
+  ReportRounded,
+} from '@mui/icons-material';
+import {
+  Box,
+  Button,
+  Collapse,
+  Grid,
+  Skeleton,
+  Typography,
+} from '@mui/material';
 import Scrollbars from 'rc-scrollbars';
 import { useEffect, useState } from 'react';
 import { injectIntl, IntlShape } from 'react-intl';
@@ -200,7 +211,7 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
               av_distance: Number(
                 (validator.details?.average_distance / 1000).toFixed(3)
               ),
-              score: validator.details?.total_score,
+              score: validator.details?.total_score ?? 0,
               skip_rate: Number(
                 (
                   Number(validator.details?.skipped_slot_percent ?? 0) * 100
@@ -299,6 +310,8 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
       });
   };
 
+  const [openInglNumbersCollapse, setOpenInglNumbersCollapse] = useState(false);
+
   return (
     <Box
       sx={{
@@ -309,26 +322,72 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
           : 'auto auto 1fr',
       }}
     >
+      <Box sx={{ display: { laptop: 'initial', mobile: 'none' } }}>
+        <Box
+          sx={{
+            padding: theme.spacing(4),
+            display: 'grid',
+            gridTemplateColumns: {
+              laptop: 'repeat(auto-fit, minmax(290px, 1fr))',
+              mobile: 'repeat(auto-fit, minmax(auto, 1fr))',
+            },
+            columnGap: theme.spacing(5),
+            rowGap: theme.spacing(5),
+          }}
+        >
+          {inglNumbers.map((data, index) => (
+            <InglNumber
+              key={index}
+              data={data}
+              isDataLoading={isInglNumbersLoading}
+            />
+          ))}
+        </Box>
+      </Box>
       <Box
         sx={{
-          padding: theme.spacing(4),
-          display: 'grid',
-          gridTemplateColumns: {
-            laptop: 'repeat(auto-fit, minmax(290px, 1fr))',
-            mobile: 'repeat(auto-fit, minmax(auto, 1fr))',
-          },
-          columnGap: theme.spacing(5),
-          rowGap: theme.spacing(5),
+          marginTop: theme.spacing(0.5),
+          display: { laptop: 'none', mobile: 'initial' },
         }}
       >
-        {inglNumbers.map((data, index) => (
-          <InglNumber
-            key={index}
-            data={data}
-            isDataLoading={isInglNumbersLoading}
-          />
-        ))}
+        <Button
+          variant="outlined"
+          color="secondary"
+          onClick={() => setOpenInglNumbersCollapse(!openInglNumbersCollapse)}
+          endIcon={
+            openInglNumbersCollapse ? (
+              <KeyboardArrowUpRounded fontSize="small" color="secondary" />
+            ) : (
+              <KeyboardArrowDownRounded fontSize="small" color="secondary" />
+            )
+          }
+        >
+          {openInglNumbersCollapse ? 'Hide Stats' : 'Show Stats'}
+        </Button>
+        <Collapse in={openInglNumbersCollapse}>
+          <Box
+            sx={{
+              padding: theme.spacing(4),
+              display: 'grid',
+              gridTemplateColumns: {
+                laptop: 'repeat(auto-fit, minmax(290px, 1fr))',
+                mobile: 'repeat(auto-fit, minmax(auto, 1fr))',
+              },
+              columnGap: theme.spacing(5),
+              rowGap: theme.spacing(5),
+            }}
+          >
+            {inglNumbers.map((data, index) => (
+              <InglNumber
+                key={index}
+                data={data}
+                isDataLoading={isInglNumbersLoading}
+              />
+            ))}
+          </Box>
+        </Collapse>
       </Box>
+
       <Box
         sx={{
           display: 'grid',
@@ -545,7 +604,7 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
             </Grid>
           ))}
         </Grid>
-        <Scrollbars autoHide>
+        <Scrollbars autoHide style={{ minHeight: '200px' }}>
           {isLoadingProposalData ? (
             [...new Array(122)].map((_, index) => (
               <Box
@@ -564,24 +623,26 @@ function Dao({ intl: { formatDate } }: { intl: IntlShape }) {
               </Box>
             ))
           ) : validators.length > 0 ? (
-            validators.map((validator, index) => (
-              <ValidatorLIne
-                key={index}
-                isSubmittingVote={isSubmittingVote}
-                validator={validator}
-                isProposalOngoing={
-                  selectedProposal ? selectedProposal.is_ongoing : false
-                }
-                onVote={(validator: Validator) => {
-                  if (selectedProposal?.is_ongoing && !wallet.connected) {
-                    alert('Connect your wallet to vote');
-                  } else {
-                    setSelectedValidator(validator);
-                    setIsValidatorVoteDialogOpen(true);
+            validators
+              .sort((val1, val2) => (val1.score > val2.score ? -1 : 1))
+              .map((validator, index) => (
+                <ValidatorLIne
+                  key={index}
+                  isSubmittingVote={isSubmittingVote}
+                  validator={validator}
+                  isProposalOngoing={
+                    selectedProposal ? selectedProposal.is_ongoing : false
                   }
-                }}
-              />
-            ))
+                  onVote={(validator: Validator) => {
+                    if (selectedProposal?.is_ongoing && !wallet.connected) {
+                      alert('Connect your wallet to vote');
+                    } else {
+                      setSelectedValidator(validator);
+                      setIsValidatorVoteDialogOpen(true);
+                    }
+                  }}
+                />
+              ))
           ) : (
             <Typography sx={{ textAlign: 'center' }}>
               No Validators in this proposal

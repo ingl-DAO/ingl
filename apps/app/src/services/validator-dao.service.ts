@@ -6,7 +6,7 @@ import {
   PROPOSAL_KEY,
   ValidatorProposal,
   Instruction,
-} from './state';
+} from '@ingl/state';
 import { getAssociatedTokenAddress } from '@solana/spl-token';
 import {
   AccountMeta,
@@ -18,7 +18,7 @@ import {
 import { WalletContextState } from '@solana/wallet-adapter-react';
 import { deserializeUnchecked } from '@dao-xyz/borsh';
 import { signAndConfirmTransaction, toBytesInt32 } from './utils';
-import validatorData from './validators.json';
+import validatorData from './validators.json'
 import BN from 'bn.js';
 
 async function promiseAll<T>(promiseData: Promise<T>[]) {
