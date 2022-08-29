@@ -1,4 +1,4 @@
-use crate::error::InglError;
+use crate::{error::InglError, utils::assert_program_owned};
 use borsh::{BorshDeserialize, BorshSerialize};
 use serde::{Deserialize, Serialize};
 use solana_program::{
@@ -137,6 +137,7 @@ impl GlobalGems {
         Ok(self)
     }
     pub fn decode(account: &AccountInfo) -> Result<Self, ProgramError> {
+        assert_program_owned(account).unwrap();
         let a: Self = try_from_slice_unchecked(&account.data.borrow()).unwrap();
         a.validate()
     }
@@ -163,6 +164,7 @@ impl ValidatorVote {
         Ok(self)
     }
     pub fn decode(account: &AccountInfo) -> Result<Self, ProgramError> {
+        assert_program_owned(account).unwrap();
         let a: Self = try_from_slice_unchecked(&account.data.borrow()).unwrap();
         a.validate()
     }
@@ -201,6 +203,7 @@ pub enum GemAccountVersions {
     BlanckCase,
 }
 impl GemAccountVersions {
+    /// Ensure to use the self.validate function, and also to verify ownership of this account by the program.
     pub fn decode_unchecked<T: BorshDeserialize>(data: &[u8]) -> Result<T, ProgramError> {
         let version: GemAccountVersions = try_from_slice_unchecked(&data[0..1]).unwrap();
         match version {
@@ -234,6 +237,7 @@ impl ValidatorProposal {
         Ok(self)
     }
     pub fn decode(account: &AccountInfo) -> Result<Self, ProgramError> {
+        assert_program_owned(account).unwrap();
         let a: Self = try_from_slice_unchecked(&account.data.borrow()).unwrap();
         a.validate()
     }
@@ -254,6 +258,7 @@ impl VoteRewards {
         Ok(self)
     }
     pub fn decode(account: &AccountInfo) -> Result<Self, ProgramError> {
+        assert_program_owned(account).unwrap();
         let a: Self = try_from_slice_unchecked(&account.data.borrow()).unwrap();
         a.validate()
     }
@@ -279,6 +284,7 @@ impl InglVoteAccountData {
         Ok(self)
     }
     pub fn decode(account: &AccountInfo) -> Result<Self, ProgramError> {
+        assert_program_owned(account).unwrap();
         let a: Self = try_from_slice_unchecked(&account.data.borrow()).unwrap();
         a.validate()
     }
