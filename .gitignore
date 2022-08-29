@@ -24,10 +24,6 @@ node_modules
 !.vscode/launch.json
 !.vscode/extensions.json
 
-# OS
-.DS_Store
-.env
-
 # misc
 /.sass-cache
 /connect.lock
@@ -37,6 +33,11 @@ npm-debug.log
 yarn-error.log
 testem.log
 /typings
+
+# OS
+.DS_Store
+.env
+
 
 # System Files
 .DS_Store
@@ -48,11 +49,13 @@ Thumbs.db
 Cargo.lock
 arweave-key.json
 keypair.json
+validator-keypair.json
 /deploy
 
 #python
 python/ingl
 ingl_cli.egg-info/
+ingl.egg-info/
 __pycache__/
 
 # Env
