@@ -41,25 +41,25 @@ impl InglError{
     pub fn utilize(self, keyword:Option<&str>)->ProgramError{
         match self {
             Self::InvalidStructType => {
-                if let Some(keyword) = keyword{msg!("Error:  keyword={:?} Provided Struct Type does not match expected value.", keyword);}}
+                msg!("Error:  keyword={:?} Provided Struct Type does not match expected value.", if let Some(key) = keyword{key} else {""});}
             Self::AddressMismatch => {msg!("Error:  Provided address do not match expected value");}
             Self::InvalidFundsLocation => {
-                if let Some(keyword) = keyword{msg!("Error:  keyword={:?} Funds Not located in the appropriate pool for this instruction", keyword);}
+                msg!("Error:  keyword={:?} Funds Not located in the appropriate pool for this instruction", if let Some(key) = keyword{key} else {""});
             }
             Self::TooEarly => {
-                if let Some(keyword) = keyword{msg!("Error:  keyword={:?} Executing a process earlier than is allowed", keyword);}
+                msg!("Error:  keyword={:?} Executing a process earlier than is allowed", if let Some(key) = keyword{key} else {""});
             }
             Self::TooLate => {
-                if let Some(keyword) = keyword{msg!("Error:  keyword={:?} Executing a process later than is allowed", keyword);}
+                msg!("Error:  keyword={:?} Executing a process later than is allowed", if let Some(key) = keyword{key} else {""});
             }
             Self::AlreadyVoted =>{ 
-                if let Some(keyword) = keyword{msg!("Error: keyword={:?} Had already voted for this specific proposal", keyword);}
+                msg!("Error: keyword={:?} Had already voted for this specific proposal", if let Some(key) = keyword{key} else {""});
             }
             Self::BeyondBounds => {
-                if let Some(keyword) = keyword{msg!("Error: keyword={:} Value yielded beyond the specified boundaries", keyword);}
+                msg!("Error: keyword={:} Value yielded beyond the specified boundaries", if let Some(key) = keyword{key} else {""});
             }
             Self::InvalidValPhrase => {
-                if let Some(keyword) = keyword{msg!("Error: keyword={:} Validation Phrase Found in the sent account is different from that expected", keyword);}
+                msg!("Error: keyword={:} Validation Phrase Found in the sent account is different from that expected", if let Some(key) = keyword{key} else {""});
             }
         }
         ProgramError::from(self)
