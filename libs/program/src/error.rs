@@ -42,7 +42,7 @@ impl InglError{
         match self {
             Self::InvalidStructType => {
                 msg!("Error:  keyword={:?} Provided Struct Type does not match expected value.", if let Some(key) = keyword{key} else {""});}
-            Self::AddressMismatch => {msg!("Error:  Provided address do not match expected value");}
+            Self::AddressMismatch => {msg!("Error:  Provided address does not match expected value");}
             Self::InvalidFundsLocation => {
                 msg!("Error:  keyword={:?} Funds Not located in the appropriate pool for this instruction", if let Some(key) = keyword{key} else {""});
             }
