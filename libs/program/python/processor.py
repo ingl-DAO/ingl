@@ -380,6 +380,10 @@ async def undelegate_nft(payer_keypair, mint_pubkey, expected_vote_pubkey, clien
     global_gem_pubkey, _global_gem_bump = PublicKey.find_program_address([bytes(ingl_constants.GLOBAL_GEM_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     mint_associated_account_pubkey = assoc_instructions.get_associated_token_address(payer_keypair.public_key, mint_pubkey)
     expected_vote_data_pubkey, _expected_vote_data_bump = PublicKey.find_program_address([bytes(ingl_constants.VOTE_DATA_ACCOUNT_KEY, 'UTF-8'), bytes(expected_vote_pubkey)], ingl_constants.INGL_PROGRAM_ID)
+    authorized_withdrawer_key, _authorized_withdrawer_bump = PublicKey.find_program_address([bytes(ingl_constants.AUTHORIZED_WITHDRAWER_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
+    
+    data = await client.get_account_info(expected_vote_data_pubkey)
+    validator_id = PublicKey(InglVoteAccountData.parse(base64.urlsafe_b64decode(data['result']['value']['data'][0])).validator_id)
 
     
     payer_account_meta = AccountMeta(payer_keypair.public_key, True, True)
@@ -392,6 +396,8 @@ async def undelegate_nft(payer_keypair, mint_pubkey, expected_vote_pubkey, clien
     stake_program_meta  = AccountMeta(ingl_constants.STAKE_PROGRAM_ID, False, False)
     
     vote_account_meta = AccountMeta(expected_vote_pubkey, False, True)
+    authorized_withdrawer_meta = AccountMeta(authorized_withdrawer_key, False, True)
+    validator_account_meta =  AccountMeta(validator_id, False, False)
     system_program_meta = AccountMeta(system_program.SYS_PROGRAM_ID, False, False)
 
 
@@ -404,6 +410,9 @@ async def undelegate_nft(payer_keypair, mint_pubkey, expected_vote_pubkey, clien
         gem_account_meta,
         mint_associated_meta,
         global_gem_meta,
+        validator_account_meta,
+        system_program_meta,
+        authorized_withdrawer_meta,
 
         system_program_meta,
         stake_program_meta,
@@ -519,8 +528,8 @@ async def init_rebalance(payer_keypair, vote_account_pubkey, client):
     t_stake_key, _t_stake_bump = PublicKey.find_program_address([bytes(ingl_constants.T_STAKE_ACCOUNT_KEY, 'UTF-8'), bytes(expected_vote_pubkey)], ingl_constants.INGL_PROGRAM_ID)
     t_withdraw_key, _t_withdraw_bump = PublicKey.find_program_address([bytes(ingl_constants.T_WITHDRAW_KEY, 'UTF-8'), bytes(expected_vote_pubkey)], ingl_constants.INGL_PROGRAM_ID)
     pd_pool_pubkey, _pd_pool_bump = PublicKey.find_program_address([bytes(ingl_constants.PD_POOL_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
-    
-    validator_id = PublicKey(InglVoteAccountData.parse(base64.urlsafe_b64decode(client.get_account_info(expected_vote_data_pubkey)['result']['value']['data'][0])).validator_id)
+    data = await client.get_account_info(expected_vote_data_pubkey)
+    validator_id = PublicKey(InglVoteAccountData.parse(base64.urlsafe_b64decode(data['result']['value']['data'][0])).validator_id)
     print(f"Validator_Id: {validator_id}")
 
     payer_account_meta = AccountMeta(payer_keypair.public_key, True, True)
@@ -574,8 +583,8 @@ async def finalize_rebalance(payer_keypair, vote_account_pubkey, client):
     t_stake_key, _t_stake_bump = PublicKey.find_program_address([bytes(ingl_constants.T_STAKE_ACCOUNT_KEY, 'UTF-8'), bytes(expected_vote_pubkey)], ingl_constants.INGL_PROGRAM_ID)
     t_withdraw_key, _t_withdraw_bump = PublicKey.find_program_address([bytes(ingl_constants.T_WITHDRAW_KEY, 'UTF-8'), bytes(expected_vote_pubkey)], ingl_constants.INGL_PROGRAM_ID)
     pd_pool_pubkey, _pd_pool_bump = PublicKey.find_program_address([bytes(ingl_constants.PD_POOL_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
-    
-    validator_id = PublicKey(InglVoteAccountData.parse(base64.urlsafe_b64decode(client.get_account_info(expected_vote_data_pubkey)['result']['value']['data'][0])).validator_id)
+    data = await client.get_account_info(expected_vote_data_pubkey)
+    validator_id = PublicKey(InglVoteAccountData.parse(base64.urlsafe_b64decode(data['result']['value']['data'][0])).validator_id)
     print(f"Validator_Id: {validator_id}")
 
     payer_account_meta = AccountMeta(payer_keypair.public_key, True, True)
@@ -621,7 +630,8 @@ async def finalize_rebalance(payer_keypair, vote_account_pubkey, client):
 async def process_rewards(payer_keypair, vote_account_id, client):
     mint_authority_pubkey, _mint_authority_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.INGL_MINT_AUTHORITY_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     expected_vote_data_pubkey, _expected_vote_data_bump = PublicKey.find_program_address([bytes(ingl_constants.VOTE_DATA_ACCOUNT_KEY, 'UTF-8'), bytes(vote_account_id)], ingl_constants.INGL_PROGRAM_ID)
-    validator_id = PublicKey(InglVoteAccountData.parse(base64.urlsafe_b64decode(client.get_account_info(expected_vote_data_pubkey)['result']['value']['data'][0])).validator_id)
+    data = await client.get_account_info(expected_vote_data_pubkey)
+    validator_id = PublicKey(InglVoteAccountData.parse(base64.urlsafe_b64decode(data['result']['value']['data'][0])).validator_id)
     authorized_withdrawer_key, _authorized_withdrawer_bump = PublicKey.find_program_address([bytes(ingl_constants.AUTHORIZED_WITHDRAWER_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     treasury_key, _treasury_bump = PublicKey.find_program_address([bytes(ingl_constants.TREASURY_ACCOUNT_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
     print(f"Validator_Id: {validator_id}")
@@ -663,7 +673,8 @@ async def process_rewards(payer_keypair, vote_account_id, client):
 
 async def nft_withdraw(payer_keypair, mints, vote_account_id, client):
     expected_vote_data_pubkey, _expected_vote_data_bump = PublicKey.find_program_address([bytes(ingl_constants.VOTE_DATA_ACCOUNT_KEY, 'UTF-8'), bytes(vote_account_id)], ingl_constants.INGL_PROGRAM_ID)
-    validator_id = PublicKey(InglVoteAccountData.parse(base64.urlsafe_b64decode(client.get_account_info(expected_vote_data_pubkey)['result']['value']['data'][0])).validator_id)
+    data = await client.get_account_info(expected_vote_data_pubkey)
+    validator_id = PublicKey(InglVoteAccountData.parse(base64.urlsafe_b64decode(data['result']['value']['data'][0])).validator_id)
     authorized_withdrawer_key, _authorized_withdrawer_bump = PublicKey.find_program_address([bytes(ingl_constants.AUTHORIZED_WITHDRAWER_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
 
     payer_account_meta = AccountMeta(payer_keypair.public_key, True, True)

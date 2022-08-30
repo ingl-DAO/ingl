@@ -13,7 +13,7 @@ use solana_program::{
 use self::constants::*;
 pub mod constants {
     use solana_program::{declare_id, native_token::LAMPORTS_PER_SOL};
-    declare_id!("9dSZN479QxPdogZTwjaBRiTfFAvhq3kNF1GEwUWW7es6");
+    declare_id!("4LzASGSZoAJecciq81AJNN7gbU8F18BQ4g8ZPjJvJL1m");
 
     pub const INGL_TREASURY_ACCOUNT_KEY: &str = "ingl_treasury_account_key";
     pub const INGL_NFT_COLLECTION_KEY: &str = "ingl_nft_collection_newer";

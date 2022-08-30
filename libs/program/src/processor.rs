@@ -933,7 +933,7 @@ pub fn mint_collection(program_id: &Pubkey, accounts: &[AccountInfo]) -> Program
     let council_mint_account_info = next_account_info(account_info_iter)?;
     let council_mint_authority_info = next_account_info(account_info_iter)?;
 
-    assert_program_owned(global_gem_account_info)?;
+    // assert_program_owned(global_gem_account_info)?;
     assert_pubkeys_exactitude(&system_program::id(), system_program_account_info.key).expect("Error: @system_program_account_info");
     assert_pubkeys_exactitude(&spl_token::id(), spl_token_program_account_info.key).expect("Error: @spl_token_program_account_info");
     assert_pubkeys_exactitude(sysvar_rent_account_info.key, &sysvar::rent::id())?;
