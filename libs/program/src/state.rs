@@ -24,8 +24,9 @@ pub mod constants {
     pub const GEM_ACCOUNT_CONST: &str = "gem_account";
     pub const FEE_MULTIPLYER: u8 = 10;
     pub const PRICE_TIME_INTERVAL: u8 = 20;
-    pub const TREASURY_FEE_MULTIPLYER: u8 = 70;
-    pub const MAXIMUM_DELEGATABLE_STAKE: u64 = 5 * LAMPORTS_PER_SOL;
+    pub const TREASURY_FEE_MULTIPLYER: u8 = 50;
+    pub const MAXIMUM_DELEGATABLE_STAKE: u64 = 5 * LAMPORTS_PER_SOL; //10_000 * LAMPORTS_PER_SOL;
+    pub const ALLOCATE_LOCK_TIME: u32 = /*86400**/1*365*2; //Needs to be changed back to 86400*... before deployment on mainnet. reduced for testing purposes during development
     pub const BTC_FEED_PUBLIC_KEY: &str = "9ATrvi6epR5hVYtwNs7BB7VCiYnd4WM7e8MfafWpfiXC";
     pub const SOL_FEED_PUBLIC_KEY: &str = "7LLvRhMs73FqcLkA8jvEE1AM2mYZXTmqfUv8GAEurymx";
     pub const ETH_FEED_PUBLIC_KEY: &str = "6fhxFvPocWapZ5Wa2miDnrX2jYRFKvFqYnX11GGkBo2f";

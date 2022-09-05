@@ -92,3 +92,17 @@ ValidatorProposal = CStruct(
 
 def private_key_from_json(filepath):
     return base58.b58encode(keypair_from_json(filepath).secret_key).decode()
+
+class rpc_url:
+    DEVNET = "https://api.devnet.solana.com"
+    TESTNET = "https://api.testnet.solana.com"
+    MAINNET = "https://api.mainnet.solana.com"
+    target_network = DEVNET
+    
+    def get_explorer_suffix():
+        if rpc_url.target_network == rpc_url.DEVNET:
+            return "?cluster=devnet"
+        elif rpc_url.target_network == rpc_url.TESTNET:
+            return "?cluster=testnet"
+        else:
+            return ""
