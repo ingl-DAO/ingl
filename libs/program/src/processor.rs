@@ -277,7 +277,6 @@ pub fn create_vote_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
 
     assert_program_owned(global_gem_account_info)?;
     assert_program_owned(proposal_account_info)?;
-    assert_owned_by(mint_associated_token_account, &spl_program::id())?;
     assert_pubkeys_exactitude(sysvar_clock_info.key, &sysvar::clock::id())?;
     assert_pubkeys_exactitude(sysvar_stake_history_info.key, &sysvar::stake_history::id())?;
     assert_pubkeys_exactitude(sysvar_rent_info.key, &sysvar::rent::id())?;
@@ -443,7 +442,7 @@ pub fn allocate_sol(_program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramRe
 
     assert_is_signer(payer_account_info).unwrap();
 
-    let (_gem_account_pubkey, _gem_account_bump) = assert_pda_input(&[GEM_ACCOUNT_CONST.as_ref(), mint_account_info.key.as_ref()], mint_account_info);
+    let (_gem_account_pubkey, _gem_account_bump) = assert_pda_input(&[GEM_ACCOUNT_CONST.as_ref(), mint_account_info.key.as_ref()], gem_account_data_info);
 
     assert_pubkeys_exactitude(
         &get_associated_token_address(payer_account_info.key, mint_account_info.key),
@@ -489,7 +488,7 @@ pub fn allocate_sol(_program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramRe
     let clock = Clock::get()?;
 
     gem_account_data.date_allocated = Some(clock.unix_timestamp as u32);
-    gem_account_data.redeemable_date = clock.unix_timestamp as u32 + /*86400**/1*365*2; //Needs to be changed back to 86400 before deployment on mainnet. reduced for testing purposes during development
+    gem_account_data.redeemable_date = clock.unix_timestamp as u32 + ALLOCATE_LOCK_TIME;
 
     global_gem_account_data.pd_pool_total += mint_cost;
 
@@ -516,7 +515,7 @@ pub fn deallocate_sol(_program_id: &Pubkey, accounts: &[AccountInfo]) -> Program
 
     assert_is_signer(payer_account_info).unwrap();
 
-    let (_gem_account_pubkey, _gem_account_bump) = assert_pda_input(&[GEM_ACCOUNT_CONST.as_ref(), mint_account_info.key.as_ref()], mint_account_info);
+    let (_gem_account_pubkey, _gem_account_bump) = assert_pda_input(&[GEM_ACCOUNT_CONST.as_ref(), mint_account_info.key.as_ref()], gem_account_data_info);
 
     assert_pubkeys_exactitude(
         &get_associated_token_address(payer_account_info.key, mint_account_info.key),
@@ -1744,7 +1743,7 @@ pub fn delegate_nft(_program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramRe
     Ok(())
 }
 
-pub fn undelegate_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+pub fn undelegate_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult { // You can only undelegate in the later epochs than that which you delegated in or once rebalancing is done.
     let account_info_iter = &mut accounts.iter();
     let payer_account_info = next_account_info(account_info_iter)?;
     let pd_pool_account_info = next_account_info(account_info_iter)?;
@@ -1823,6 +1822,25 @@ pub fn undelegate_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
     }
 
 
+    
+    //TODO: The testing for this isn't done yet, so please do not deploy this version of the code until it is thoroughly tested.
+    let new_accounts = &[ 
+        payer_account_info.clone(),
+        vote_account_info.clone(),
+        validator_account_info.clone(),
+        ingl_vote_data_account_info.clone(),
+        authorized_withdrawer_info.clone(),
+
+        associated_token_account_info.clone(),
+        mint_account_info.clone(),
+        gem_account_data_info.clone(),
+
+        system_program_account_info.clone()
+    ];
+    //TODO: Please do not deploy this version of the code until it is thoroughly tested. else the undelegate functionality might not work properly.
+    // IF ALREADY DEPLOYED, PLEASE COMMENT THE LINE BELOW AND REDEPLOY. 
+    nft_withdraw(program_id, new_accounts, 1)?;
+
     match gem_account_data.funds_location {
         FundsLocation::VoteAccount { vote_account_id } => {
             assert_pubkeys_exactitude(&vote_account_id, vote_account_info.key)
@@ -1836,20 +1854,6 @@ pub fn undelegate_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramR
     ingl_vote_account_data
         .serialize(&mut &mut ingl_vote_data_account_info.data.borrow_mut()[..])?;
     gem_account_data.serialize(&mut &mut gem_account_data_info.data.borrow_mut()[..])?;
-
-    //TODO: The testing for this isn't done yet, so please do not deploy this version of the code until it is thoroughly tested.
-    let new_accounts = &[ 
-        payer_account_info.clone(),
-        vote_account_info.clone(),
-        validator_account_info.clone(),
-        ingl_vote_data_account_info.clone(),
-        authorized_withdrawer_info.clone(),
-
-        system_program_account_info.clone()
-    ];
-    //TODO: Please do not deploy this version of the code until it is thoroughly tested. else the undelegate functionality might not work properly.
-    // IF ALREADY DEPLOYED, PLEASE COMMENT THE LINE BELOW AND REDEPLOY. 
-    nft_withdraw(program_id, new_accounts, 1)?;
 
     Ok(())
 }
@@ -2021,7 +2025,7 @@ pub fn nft_withdraw(_program_id: &Pubkey, accounts: &[AccountInfo], cnt: usize) 
         else {
             gem_account_data.last_delegation_epoch.unwrap()
         };
-        let interested_index =1 + ingl_vote_account_data.vote_rewards.iter().position(|x| x.epoch_number == interested_epoch).expect("couldn't find the last withdrawal epoch");
+        let interested_index =1 + ingl_vote_account_data.vote_rewards.iter().position(|x| x.epoch_number == interested_epoch).expect("couldn't find the last withdrawal epoch. One Can only undelegate the epoch after that which they delegated.");
         let mut total_reward: u64 = 0;
         for i in interested_index..ingl_vote_account_data.vote_rewards.len() {
             let epoch_reward = ingl_vote_account_data.vote_rewards[i];
@@ -2167,7 +2171,7 @@ pub fn init_rebalance(_program_id: &Pubkey, accounts: &[AccountInfo]) -> Program
             custodian: *pd_pool_account_info.key,
         };
 
-        // msg!("Initializing stake");
+        msg!("Initializing stake");
         invoke(
             &solana_program::stake::instruction::initialize(
                 t_stake_account_info.key,
@@ -2209,7 +2213,7 @@ pub fn init_rebalance(_program_id: &Pubkey, accounts: &[AccountInfo]) -> Program
             &[t_withdraw_bump],
         ]],
     )?;
-
+    msg!("right before splitting to distribute withdrawals");
     invoke_signed(
         &split(
             stake_account_info.key,
@@ -2381,7 +2385,7 @@ pub fn inject_testing_data(_program_id: &Pubkey, accounts: &[AccountInfo], num_m
         gem_account_data.serialize(&mut &mut gem_account_data_info.data.borrow_mut()[..])?;        
     }
     invoke(
-        &system_instruction::transfer(payer_account_info.key, authorized_withdrawer_info.key, LAMPORTS_PER_SOL.checked_mul(12_000).unwrap().checked_div(10_000).unwrap()),
+        &system_instruction::transfer(payer_account_info.key, authorized_withdrawer_info.key, LAMPORTS_PER_SOL.checked_mul(20_000).unwrap().checked_div(10_000).unwrap()),
         &[payer_account_info.clone(), authorized_withdrawer_info.clone()]
     )?;
     // ingl_vote_account_data.vote_rewards = Vec::new();

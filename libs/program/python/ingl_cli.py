@@ -5,13 +5,12 @@ from solana.keypair import Keypair
 from solana.rpc.api import Client as Uasyncclient
 from solana.publickey import PublicKey
 from borsh_construct import *
-from state import ClassEnum
-from state import Constants as ingl_constants
-from state import GlobalGems
+from state import ClassEnum, GlobalGems, rpc_url, Constants as ingl_constants
+from rich import print
 import base64
 from solana.rpc.async_api import AsyncClient
-client = AsyncClient("https://api.devnet.solana.com")
-uasyncclient = Uasyncclient("https://api.devnet.solana.com")
+client = AsyncClient(rpc_url.target_network)
+uasyncclient = Uasyncclient(rpc_url.target_network)
 
 @click.group()
 def entry():
@@ -31,7 +30,7 @@ async def Benitoite(keypair):
     mint_keypair = Keypair()
     print("Mint_Id: ", mint_keypair.public_key)
     t_dets = await mint_nft(payer_keypair, mint_keypair, ClassEnum.enum.Benitoite(), client)
-    print("Transaction ID: ", t_dets['result'])
+    print(t_dets)
 
 @click.command(name="Serendibite")
 @click.option('--keypair', default = 'keypair.json')
@@ -42,7 +41,7 @@ async def Serendibite(keypair):
     mint_keypair = Keypair()
     print("Mint_Id: ", mint_keypair.public_key)
     t_dets = await mint_nft(payer_keypair, mint_keypair, ClassEnum.enum.Serendibite(), client)
-    print("Transaction ID: ", t_dets['result'])
+    print(t_dets)
 
 @click.command(name="Sapphire")
 @click.option('--keypair', default = 'keypair.json')
@@ -53,7 +52,7 @@ async def Sapphire(keypair):
     mint_keypair = Keypair()
     print("Mint_Id: ", mint_keypair.public_key)
     t_dets = await mint_nft(payer_keypair, mint_keypair, ClassEnum.enum.Sapphire(), client)
-    print("Transaction ID: ", t_dets['result'])
+    print(t_dets)
 
 @click.command(name="Emerald")
 @click.option('--keypair', default = 'keypair.json')
@@ -64,7 +63,7 @@ async def Emerald(keypair):
     mint_keypair = Keypair()
     print("Mint_Id: ", mint_keypair.public_key)
     t_dets = await mint_nft(payer_keypair, mint_keypair, ClassEnum.enum.Emerald(), client)
-    print("Transaction ID: ", t_dets['result'])
+    print(t_dets)
 
 @click.command(name="Diamond")
 @click.option('--keypair', default = 'keypair.json')
@@ -75,7 +74,7 @@ async def Diamond(keypair):
     mint_keypair = Keypair()
     print("Mint_Id: ", mint_keypair.public_key)
     t_dets = await mint_nft(payer_keypair, mint_keypair, ClassEnum.enum.Diamond(), client)
-    print("Transaction ID: ", t_dets['result'])
+    print(t_dets)
 
 @click.command(name="Ruby")
 @click.option('--keypair', default = 'keypair.json')
@@ -86,7 +85,7 @@ async def Ruby(keypair):
     mint_keypair = Keypair()
     print("Mint_Id: ", mint_keypair.public_key)
     t_dets = await mint_nft(payer_keypair, mint_keypair, ClassEnum.enum.Ruby(), client)
-    print("Transaction ID: ", t_dets['result'])
+    print(t_dets)
 
 mint.add_command(Benitoite)
 mint.add_command(Serendibite)
@@ -106,7 +105,7 @@ async def create_val_proposal(keypair):
     gem_info = await client.get_account_info(global_gem_pubkey)
     numeration = GlobalGems.parse(base64.urlsafe_b64decode(gem_info['result']['value']['data'][0])).proposal_numeration
     t_dets = await create_validator_proposal(payer_keypair, numeration, client)
-    print("Transaction ID: ", t_dets['result'])
+    print(t_dets)
 
 @click.command(name="finalize_proposal")
 @click.option('--keypair', default = 'keypair.json')
@@ -120,7 +119,7 @@ async def finalize_validator_proposal(keypair):
     global_gems = GlobalGems.parse(base64.urlsafe_b64decode(gem_info['result']['value']['data'][0]))
     numeration = global_gems.proposal_numeration
     t_dets = await finalize_proposal(payer_keypair, numeration-1, client)
-    print("Transaction ID: ", t_dets['result'])
+    print(t_dets)
 
 @click.command(name='register_validator')
 @click.option('--keypair', default = 'keypair.json')
@@ -132,7 +131,7 @@ async def reg_validator(validator_keypair, keypair):
     validator_keypair = keypair_from_json(f"{validator_keypair}")
     print("Validator Key: ", validator_keypair.public_key)
     t_dets = await register_validator_id(payer_keypair, validator_keypair.public_key, client)
-    print("Transaction ID: ", t_dets['result'])
+    print(t_dets)
 
 @click.command(name="init_rebalance")
 @click.argument('vote_key')
@@ -143,7 +142,7 @@ async def initialize_rebalancing(vote_key, keypair):
     payer_keypair = keypair_from_json(f"./{keypair}")
     vote_account_id = PublicKey(vote_key)
     t_dets = await init_rebalance(payer_keypair, vote_account_id, client)
-    print("Transaction ID: ", t_dets['result'])
+    print(t_dets)
 
 @click.command(name="finalize_rebalance")
 @click.argument('vote_key')
@@ -154,7 +153,7 @@ async def finalize_rebalancing(vote_key, keypair):
     payer_keypair = keypair_from_json(f"./{keypair}")
     vote_account_id = PublicKey(vote_key)
     t_dets = await finalize_rebalance(payer_keypair, vote_account_id, client)
-    print("Transaction ID: ", t_dets['result'])
+    print(t_dets)
 
 @click.command(name="create_collection")
 @click.option('--keypair', default = 'keypair.json')
@@ -163,7 +162,7 @@ async def create_new_collection(keypair):
     print("Client is connected" if client_state else "Client is Disconnected")
     payer_keypair = keypair_from_json(f"./{keypair}")
     t_dets = await create_collection(payer_keypair, client)
-    print("Transaction ID: ", t_dets['result'])
+    print(t_dets)
 
 @click.command(name="close_proposal")
 @click.option('--keypair', default = 'keypair.json')
@@ -175,7 +174,7 @@ async def close_val_proposal(keypair):
     gem_info = await client.get_account_info(global_gem_pubkey)
     numeration = GlobalGems.parse(base64.urlsafe_b64decode(gem_info['result']['value']['data'][0])).proposal_numeration
     t_dets = await close_proposal(payer_keypair, numeration-1, client)
-    print("Transaction ID: ", t_dets['result'])
+    print(t_dets)
 
 @click.command(name="process_rewards")
 @click.option('--keypair', default = 'keypair.json')
@@ -186,7 +185,7 @@ async def process_vote_account_rewards(keypair, vote_key):
     payer_keypair = keypair_from_json(f"./{keypair}") 
     vote_account_id = PublicKey(vote_key)
     t_dets = await process_rewards(payer_keypair, vote_account_id, client)
-    print("Transaction ID: ", t_dets['result'])
+    print(t_dets)
 
 @click.command(name='create_vote_account')
 @click.argument('val_keypair')
@@ -198,7 +197,7 @@ async def process_create_vote_account(val_keypair):
     gem_info = await client.get_account_info(global_gem_pubkey)
     numeration = GlobalGems.parse(base64.urlsafe_b64decode(gem_info['result']['value']['data'][0])).proposal_numeration
     t_dets = await create_vote_account(payer_keypair, numeration-1, client)
-    print("Transaction Id: ", t_dets['result'])
+    print(t_dets)
 
 @click.command(name="get_vote_pubkey")
 @click.option('--numeration', '-n', default=None)
