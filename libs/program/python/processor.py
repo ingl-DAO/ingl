@@ -8,6 +8,7 @@ from spl.token import instructions as assoc_instructions
 from instruction import *
 from state import rpc_url, Constants as ingl_constants
 from solana.rpc.async_api import AsyncClient
+from rich import print
 
 async def create_collection(payer_keypair: Keypair, client: AsyncClient) -> String:
     mint_pubkey, _mint_pubkey_bump = PublicKey.find_program_address([bytes(ingl_constants.INGL_NFT_COLLECTION_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
@@ -339,8 +340,12 @@ async def vote_validator_proposal(payer_keypair: Keypair, proposal_numeration: i
         return(f"Error: {e}")
 
 
-async def finalize_proposal(payer_keypair: Keypair, proposal_numeration: int, client: AsyncClient) -> String:
+async def finalize_proposal(payer_keypair: Keypair, client: AsyncClient) -> String:
     global_gem_pubkey, _global_gem_bump = PublicKey.find_program_address([bytes(ingl_constants.GLOBAL_GEM_KEY, 'UTF-8')], ingl_constants.INGL_PROGRAM_ID)
+    
+    data = await client.get_account_info(global_gem_pubkey)
+    global_gems = GlobalGems.parse(base64.urlsafe_b64decode(data['result']['value']['data'][0]))
+    proposal_numeration = global_gems.proposal_numeration - 1
     proposal_pubkey, _proposal_bump = PublicKey.find_program_address([bytes(ingl_constants.PROPOSAL_KEY, 'UTF-8'), proposal_numeration.to_bytes(4,"big")], ingl_constants.INGL_PROGRAM_ID)
 
     global_gem_meta = AccountMeta(global_gem_pubkey, False, True)
@@ -545,14 +550,22 @@ async def close_proposal(payer_keypair: Keypair, proposal_numeration: int, clien
     expected_vote_pubkey, _expected_vote_pubkey_nonce = PublicKey.find_program_address([bytes(ingl_constants.VOTE_ACCOUNT_KEY, "UTF-8"), (proposal_numeration).to_bytes(4,"big")], ingl_constants.INGL_PROGRAM_ID)
     expected_vote_data_pubkey, _expected_vote_data_bump = PublicKey.find_program_address([bytes(ingl_constants.VOTE_DATA_ACCOUNT_KEY, 'UTF-8'), bytes(expected_vote_pubkey)], ingl_constants.INGL_PROGRAM_ID)
     
+    data = await client.get_account_info(global_gem_pubkey)
+    global_gems = GlobalGems.parse(base64.urlsafe_b64decode(data['result']['value']['data'][0]))
+    proposal_numeration = global_gems.proposal_numeration - 1
+    proposal_pubkey, _proposal_bump = PublicKey.find_program_address([bytes(ingl_constants.PROPOSAL_KEY, 'UTF-8'), proposal_numeration.to_bytes(4,"big")], ingl_constants.INGL_PROGRAM_ID)
+
+
     payer_account_meta = AccountMeta(payer_keypair.public_key, True, True)
     global_gem_meta = AccountMeta(global_gem_pubkey, False, True)
     ingl_vote_data_account_meta = AccountMeta(expected_vote_data_pubkey, False, True)
+    proposal_meta = AccountMeta(proposal_pubkey, False, False)
 
     accounts = [
         payer_account_meta,
         global_gem_meta,
         ingl_vote_data_account_meta,
+        proposal_meta,
     ]
 
     data = InstructionEnum.build(InstructionEnum.enum.CloseProposal())
@@ -614,7 +627,7 @@ async def init_rebalance(payer_keypair: Keypair, vote_account_pubkey: PublicKey,
         stake_program_meta,
         stake_program_meta,
     ]
-    # print(accounts)
+    print(accounts)
     data = InstructionEnum.build(InstructionEnum.enum.InitRebalance())
     transaction = Transaction()
     transaction.add(TransactionInstruction(accounts, ingl_constants.INGL_PROGRAM_ID, data))
@@ -639,7 +652,6 @@ async def finalize_rebalance(payer_keypair: Keypair, vote_account_pubkey: Public
     print(f"Validator_Id: {validator_id}")
 
     payer_account_meta = AccountMeta(payer_keypair.public_key, True, True)
-    rent_account_meta = AccountMeta(solana.sysvar.SYSVAR_RENT_PUBKEY, False, False)
     sysvar_clock_meta = AccountMeta(solana.sysvar.SYSVAR_CLOCK_PUBKEY, False, False)
     validator_meta = AccountMeta(validator_id, True, True)
     vote_account_meta = AccountMeta(expected_vote_pubkey, False, True)
@@ -659,7 +671,6 @@ async def finalize_rebalance(payer_keypair: Keypair, vote_account_pubkey: Public
         pd_pool_meta,
         ingl_vote_data_account_meta,
         sysvar_clock_meta,
-        rent_account_meta,
         stake_account_meta,
         t_withdraw_meta,
         sysvar_stake_history_meta,
