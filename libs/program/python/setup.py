@@ -8,6 +8,7 @@ setup(
         'solana',
         'borsh_construct',
         'base58',
+        'rich'
         ],
     entry_points = '''
     [console_scripts]

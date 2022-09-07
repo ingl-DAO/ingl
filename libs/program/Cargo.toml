@@ -34,4 +34,4 @@ build-deploy-address-testnet = "solana config set --url https://api.testnet.sola
 build-deploy-testnet = "solana config set --url https://api.testnet.solana.com && cargo build-bpf && solana program deploy ../../target/deploy/ingl.so"
 build-deploy-address-local = "solana config set --url http://127.0.0.1:8899 && cargo build-bpf && solana program deploy --program-id ./deploy/keypair.json ../../target/deploy/ingl.so"
 build-deploy-local = "solana config set --url http://127.0.0.1:8899 && cargo build-bpf && solana program deploy ../../target/deploy/ingl.so"
-bdp = "cargo-x build-deploy-address"
+bda = "cargo-x build-deploy-address"
