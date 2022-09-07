@@ -13,7 +13,7 @@ use solana_program::{
 use self::constants::*;
 pub mod constants {
     use solana_program::{declare_id, native_token::LAMPORTS_PER_SOL};
-    declare_id!("4LzASGSZoAJecciq81AJNN7gbU8F18BQ4g8ZPjJvJL1m");
+    declare_id!("5izbLh4Xk5mE9XneotmVGfWpBM1xZMK7fkdJxKr9k8MQ");
 
     pub const INGL_TREASURY_ACCOUNT_KEY: &str = "ingl_treasury_account_key";
     pub const INGL_NFT_COLLECTION_KEY: &str = "ingl_nft_collection_newer";
@@ -270,7 +270,7 @@ pub struct InglVoteAccountData {
     pub total_delegated: u64,
     pub last_withdraw_epoch: u64,
     pub dealloced: u64,
-    pub pending_validator_rewards: Option<u64>, // Field is also used to check if there is an ongoing rebalancing or not.
+    pub rebalancing_data: RebalancingData, // Field is also used to check if there is an ongoing rebalancing or not.
     pub validator_id: Pubkey,                   //To Reconsider.
     pub last_total_staked: u64,
     pub is_t_stake_initialized: bool,
@@ -299,4 +299,12 @@ impl VoteState {
     pub fn min_lamports() -> u64 {
         Rent::get().unwrap().minimum_balance(3731)
     }
+}
+
+
+#[derive(BorshDeserialize, Copy, Clone, BorshSerialize)]
+pub struct RebalancingData {
+    pub pending_validator_rewards: u64,
+    pub unclaimed_validator_rewards: u64,
+    pub is_rebalancing_active: bool,    
 }

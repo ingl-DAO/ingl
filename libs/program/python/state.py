@@ -8,7 +8,7 @@ class Constants:
     INGL_MINT_AUTHORITY_KEY = "mint_authority"
     INGL_MINTING_POOL_KEY = "minting_pool"
     COLLECTION_HOLDER_KEY = "collection_holder"
-    INGL_PROGRAM_ID = PublicKey("4LzASGSZoAJecciq81AJNN7gbU8F18BQ4g8ZPjJvJL1m")
+    INGL_PROGRAM_ID = PublicKey("5izbLh4Xk5mE9XneotmVGfWpBM1xZMK7fkdJxKr9k8MQ")
     STAKE_PROGRAM_ID = PublicKey("Stake11111111111111111111111111111111111111")
     GLOBAL_GEM_KEY = "global_gem_account"
     GEM_ACCOUNT_CONST = "gem_account"
@@ -72,7 +72,11 @@ InglVoteAccountData = CStruct(
     "total_delegated" / U64,
     "last_withdraw_epoch" / U64,
     "dealloced" / U64,
-    "pending_validator_rewards" / Option(U64), # Field is also used to check if there is an ongoing rebalancing or not.
+    "rebalancing_data" / CStruct(
+        "pending_validator_rewards" / U64,
+        "unclaimed_validator_rewards" / U64,
+        "is_rebalancing_active" / Bool
+    ), # Field is also used to check if there is an ongoing rebalancing or not.
     "validator_id" / U8[32], #To Reconsider.
     "last_total_staked" / U64,
     "is_t_stake_initialized" / Bool,
